@@ -1,0 +1,28 @@
+package domain
+
+import "errors"
+
+// Session errors
+var (
+	ErrInvalidLetters      = errors.New("letters cannot be empty")
+	ErrLetterCountMismatch = errors.New("letters count does not match letter_count")
+	ErrUnsupportedLanguage = errors.New("unsupported language")
+	ErrInvalidTimeLimit    = errors.New("time limit must be between 1 and 600 seconds")
+	ErrNoValidWords        = errors.New("no valid words provided")
+	ErrSessionExpired      = errors.New("session has expired")
+)
+
+// Result errors
+var (
+	ErrInvalidSessionID   = errors.New("invalid session ID")
+	ErrMissingFingerprint = errors.New("player fingerprint is required")
+	ErrInvalidDuration    = errors.New("duration must be positive")
+	ErrInvalidWord        = errors.New("word is not valid for this session")
+	ErrDuplicateResult    = errors.New("result already submitted for this session and player")
+)
+
+// Word errors
+var (
+	ErrWordTooShort = errors.New("word is too short")
+	ErrWordTooLong  = errors.New("word is too long")
+)

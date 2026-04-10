@@ -1,2 +1,28 @@
+# Environment
 .env
-.CLAUDE.md
+CLAUDE.md
+
+# Test coverage
+*.out
+coverage.html
+coverage.txt
+*.test
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+/server
+/main
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
