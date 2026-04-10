@@ -29,12 +29,10 @@ func NewResult(sessionID uuid.UUID, playerName, playerFingerprint string, foundW
 		return nil, ErrInvalidDuration
 	}
 
-	// Если имя не указано, ставим дефолтное
 	if playerName == "" {
 		playerName = "Anonymous"
 	}
 
-	// Вычисляем score
 	score := CalculateScore(foundWords)
 
 	return &Result{
