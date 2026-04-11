@@ -1,20 +1,28 @@
-# Environment
-.env
-CLAUDE.md
-
-# Test coverage
-*.out
-coverage.html
-coverage.txt
-*.test
-
-# Binaries
+# Binaries for programs and plugins
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
-/server
-/main
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Air tmp directory
+tmp/
+
+# Environment files
+.env
+.env.local
 
 # IDE
 .idea/
@@ -26,3 +34,13 @@ coverage.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+build-errors.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
