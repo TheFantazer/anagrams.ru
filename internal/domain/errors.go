@@ -26,3 +26,13 @@ var (
 	ErrWordTooShort = errors.New("word is too short")
 	ErrWordTooLong  = errors.New("word is too long")
 )
+
+// User errors
+var (
+	ErrInvalidUsername    = errors.New("username must be 3-30 characters")
+	ErrPasswordTooShort   = errors.New("password must be at least 6 characters")
+	ErrUsernameTaken      = errors.New("username is already taken")
+	ErrEmailTaken         = errors.New("email is already taken")
+	ErrInvalidCredentials = errors.New("invalid username or password")
+	ErrUserNotFound       = errors.New("user not found")
+)

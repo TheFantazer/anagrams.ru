@@ -52,10 +52,13 @@ func main() {
 
 	sessionRepo := postgres.NewSessionRepository(db)
 	resultRepo := postgres.NewResultRepository(db)
+	userRepo := postgres.NewUserRepository(db.DB)
+
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	authService := service.NewAuthService(userRepo)
 
-	router := handler.NewRouter(gameService, logger)
+	router := handler.NewRouter(gameService, authService, logger)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.App.Port,

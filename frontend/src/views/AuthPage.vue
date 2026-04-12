@@ -1,7 +1,78 @@
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 
+const router = useRouter()
 const userStore = useUserStore()
+
+const username = ref('')
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const loading = ref(false)
+
+async function handleSubmit() {
+  error.value = ''
+  loading.value = true
+
+  try {
+    if (userStore.loginTab === 'register') {
+      await register()
+    } else {
+      await login()
+    }
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function register() {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: username.value,
+      email: email.value,
+      password: password.value
+    })
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Registration failed')
+  }
+
+  // Сохраняем пользователя
+  userStore.setUser(data)
+  router.push('/')
+}
+
+async function login() {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Login failed')
+  }
+
+  // Сохраняем пользователя
+  userStore.setUser(data)
+  router.push('/')
+}
 </script>
 
 <template>
@@ -49,16 +120,28 @@ const userStore = useUserStore()
 
     <div v-if="userStore.loginTab === 'register'">
       <label class="label">Username</label>
-      <input class="input" placeholder="Choose a username" />
+      <input v-model="username" class="input" placeholder="Choose a username" />
     </div>
 
-    <label class="label">Email</label>
-    <input class="input" type="email" placeholder="you@example.com" />
+    <template v-if="userStore.loginTab === 'login'">
+      <label class="label">Username</label>
+      <input v-model="username" class="input" type="text" placeholder="Enter your username" />
+    </template>
+    <template v-else>
+      <label class="label">Email</label>
+      <input v-model="email" class="input" type="email" placeholder="you@example.com" />
+    </template>
 
     <label class="label">Password</label>
-    <input class="input" type="password" placeholder="********" />
-    <button class="btn-primary">
-      {{ userStore.loginTab === 'login' ? 'Sign in' : 'Create account' }}
+    <input v-model="password" class="input" type="password" placeholder="********" @keyup.enter="handleSubmit" />
+
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <button class="btn-primary" @click="handleSubmit" :disabled="loading">
+      <span v-if="loading">Loading...</span>
+      <span v-else>{{ userStore.loginTab === 'login' ? 'Sign in' : 'Create account' }}</span>
     </button>
 
     <p class="toggle-text" @click="userStore.setLoginTab(userStore.loginTab === 'login' ? 'register' : 'login')">
@@ -236,5 +319,22 @@ const userStore = useUserStore()
 
 .toggle-text:hover {
   color: #666;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 </style>

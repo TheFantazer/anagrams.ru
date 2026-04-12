@@ -3,10 +3,31 @@ import { ref } from 'vue'
 
 export const useUserStore = defineStore('user', () => {
   // User state
+  const userId = ref(null)
   const username = ref('player_one')
   const email = ref('player@example.com')
   const joinedDate = ref('April 2026')
   const isAuthenticated = ref(false)
+
+  // Load user from localStorage on init
+  const loadUser = () => {
+    const stored = localStorage.getItem('anagram_user')
+    if (stored) {
+      try {
+        const userData = JSON.parse(stored)
+        userId.value = userData.id
+        username.value = userData.username
+        email.value = userData.email
+        joinedDate.value = new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        isAuthenticated.value = true
+      } catch (e) {
+        console.error('Failed to load user from localStorage', e)
+      }
+    }
+  }
+
+  // Load user on store creation
+  loadUser()
 
   // Stats
   const gamesPlayed = ref(42)
@@ -72,12 +93,31 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function setUser(userData) {
+    userId.value = userData.id
+    username.value = userData.username
+    email.value = userData.email || null
+    joinedDate.value = new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    isAuthenticated.value = true
+
+    // Save to localStorage
+    localStorage.setItem('anagram_user', JSON.stringify(userData))
+  }
+
   function signOut() {
+    userId.value = null
+    username.value = 'player_one'
+    email.value = 'player@example.com'
+    joinedDate.value = 'April 2026'
     isAuthenticated.value = false
+
+    // Clear localStorage
+    localStorage.removeItem('anagram_user')
   }
 
   return {
     // State
+    userId,
     username,
     email,
     joinedDate,
@@ -95,6 +135,7 @@ export const useUserStore = defineStore('user', () => {
     easterEgg,
 
     // Actions
+    setUser,
     setShowHelp,
     setShowSoloSettings,
     setLoginTab,
