@@ -95,3 +95,26 @@ func (t *Trie) countWords(node *TrieNode) int {
 	}
 	return count
 }
+
+// GetWordsByLength возвращает все слова заданной длины из словаря
+func (t *Trie) GetWordsByLength(length int) []string {
+	var result []string
+	var current []rune
+	t.collectWordsByLength(t.root, length, current, &result)
+	return result
+}
+
+func (t *Trie) collectWordsByLength(node *TrieNode, targetLen int, current []rune, result *[]string) {
+	if len(current) == targetLen {
+		if node.isEnd {
+			*result = append(*result, string(current))
+		}
+		return
+	}
+
+	for ch, child := range node.children {
+		current = append(current, ch)
+		t.collectWordsByLength(child, targetLen, current, result)
+		current = current[:len(current)-1]
+	}
+}

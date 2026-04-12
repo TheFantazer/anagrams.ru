@@ -7,9 +7,9 @@ const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
 
-function startSoloGame() {
+async function startSoloGame() {
   userStore.setShowSoloSettings(false)
-  gameStore.startGame(userStore.soloTime, userStore.soloLetters, userStore.soloLang)
+  await gameStore.startGame(userStore.soloTime, userStore.soloLetters, userStore.soloLang)
   router.push('/game')
 }
 </script>

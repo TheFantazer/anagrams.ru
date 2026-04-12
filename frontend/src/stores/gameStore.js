@@ -2,11 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useGameStore = defineStore('game', () => {
-  // Letter pools
+  
   const RU_LETTERS = "АААААББВВВГГДДДЕЕЕЕЕЕЁЖЗИИИИЙКККЛЛЛМММНННННОООООППРРРСССТТТТУУУФХЦЧШЩЪЫЬЭЮЯ"
   const EN_LETTERS = "AAABCDDEEEEEFGHIIIJKLMNNOOOPQRRSSTTUUVWXYZ"
 
-  // Game state
+  const dictionaries = ref({
+    ru: null,
+    en: null
+  })
+
   const gameLetters = ref([])
   const inputWord = ref('')
   const foundWords = ref([])
@@ -16,12 +20,56 @@ export const useGameStore = defineStore('game', () => {
   const shake = ref(false)
   const initialTime = ref(60)
 
-  // Settings
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
 
-  // Generate random letters
-  function generateLetters(count, lang) {
+  async function loadDictionary(lang) {
+    if (dictionaries.value[lang]) {
+      return dictionaries.value[lang]
+    }
+
+    try {
+      const response = await fetch(`/dictionaries/${lang}.txt`)
+      const text = await response.text()
+      const words = text.split('\n').filter(w => w.trim().length > 0)
+
+      const byLength = {}
+      words.forEach(word => {
+        const len = word.length
+        if (!byLength[len]) {
+          byLength[len] = []
+        }
+        byLength[len].push(word.toLowerCase())
+      })
+
+      dictionaries.value[lang] = byLength
+      return byLength
+    } catch (error) {
+      console.error('Failed to load dictionary:', error)
+      return null
+    }
+  }
+
+  async function generateLettersFromDict(count, lang) {
+    const dict = await loadDictionary(lang)
+
+    if (!dict || !dict[count] || dict[count].length === 0) {
+      return generateLettersFallback(count, lang)
+    }
+
+    const words = dict[count]
+    const randomWord = words[Math.floor(Math.random() * words.length)]
+
+    const letters = randomWord.toUpperCase().split('')
+    for (let i = letters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[letters[i], letters[j]] = [letters[j], letters[i]]
+    }
+
+    return letters
+  }
+
+  function generateLettersFallback(count, lang) {
     const pool = lang === 'ru' ? RU_LETTERS : EN_LETTERS
     const letters = []
     const used = new Set()
@@ -38,9 +86,8 @@ export const useGameStore = defineStore('game', () => {
     return letters
   }
 
-  // Start new game
-  function startGame(time, letters, lang) {
-    const gl = generateLetters(letters, lang)
+  async function startGame(time, letters, lang) {
+    const gl = await generateLettersFromDict(letters, lang)
     gameLetters.value = gl
     inputWord.value = ''
     foundWords.value = []
@@ -50,19 +97,16 @@ export const useGameStore = defineStore('game', () => {
     gameActive.value = true
   }
 
-  // Add letter to input
   function addLetter(letter) {
     if (gameActive.value) {
       inputWord.value += letter
     }
   }
 
-  // Remove last letter
   function removeLast() {
     inputWord.value = inputWord.value.slice(0, -1)
   }
 
-  // Calculate points for word
   function calculatePoints(word) {
     const len = word.length
     if (len === 3) return 100
@@ -72,7 +116,7 @@ export const useGameStore = defineStore('game', () => {
     return 0
   }
 
-  // Submit word
+  
   function submitWord() {
     if (inputWord.value.length < 3) {
       triggerShake()
@@ -81,13 +125,13 @@ export const useGameStore = defineStore('game', () => {
 
     const upper = inputWord.value.toUpperCase()
 
-    // Check if already found
+    
     if (foundWords.value.includes(upper)) {
       triggerShake()
       return
     }
 
-    // Check if can be made from available letters
+    
     const available = [...gameLetters.value.map(l => l.toUpperCase())]
     for (const ch of upper) {
       const idx = available.indexOf(ch)
@@ -98,14 +142,14 @@ export const useGameStore = defineStore('game', () => {
       available.splice(idx, 1)
     }
 
-    // Valid word!
+    
     foundWords.value.push(upper)
     const pts = calculatePoints(upper)
     score.value += pts
     inputWord.value = ''
   }
 
-  // Trigger shake animation
+  
   function triggerShake() {
     shake.value = true
     setTimeout(() => {
@@ -113,7 +157,7 @@ export const useGameStore = defineStore('game', () => {
     }, 400)
   }
 
-  // Decrease timer
+  
   function decreaseTime() {
     if (gameActive.value && timeLeft.value > 0) {
       timeLeft.value--
@@ -123,12 +167,12 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  // End game
+  
   function endGame() {
     gameActive.value = false
   }
 
-  // Reset game
+  
   function resetGame() {
     gameLetters.value = []
     inputWord.value = ''
@@ -139,7 +183,7 @@ export const useGameStore = defineStore('game', () => {
     shake.value = false
   }
 
-  // Computed: available letters (remaining after input)
+  
   const availableLetters = computed(() => {
     const remaining = {}
     gameLetters.value.forEach(l => {
@@ -156,13 +200,13 @@ export const useGameStore = defineStore('game', () => {
     return remaining
   })
 
-  // Computed: timer percentage
+  
   const timerPercentage = computed(() => {
     return timeLeft.value / initialTime.value
   })
 
   return {
-    // State
+    
     gameLetters,
     inputWord,
     foundWords,
@@ -173,11 +217,11 @@ export const useGameStore = defineStore('game', () => {
     settingsLang,
     settingsLetters,
 
-    // Computed
+    
     availableLetters,
     timerPercentage,
 
-    // Actions
+    
     startGame,
     addLetter,
     removeLast,

@@ -42,7 +42,12 @@ func (s *gameService) CreateSession(ctx context.Context, language string, letter
 	if !ok {
 		return nil, domain.ErrUnsupportedLanguage
 	}
-	letters := s.letterGen.GenerateBalancedLetters(language, letterCount)
+
+	letters := s.letterGen.GenerateFromDictionary(dict, letterCount)
+
+	if letters == "" {
+		letters = s.letterGen.GenerateBalancedLetters(language, letterCount)
+	}
 
 	validWords := dict.FindAllWords(letters)
 	if len(validWords) == 0 {

@@ -91,3 +91,28 @@ func (lg *LetterGenerator) GenerateBalancedLetters(language string, count int) s
 
 	return string(runes)
 }
+
+// GenerateFromDictionary генерирует перемешанные буквы из случайного слова словаря
+// Гарантирует, что хотя бы одно слово полной длины может быть собрано
+func (lg *LetterGenerator) GenerateFromDictionary(trie *Trie, count int) string {
+	words := trie.GetWordsByLength(count)
+
+	if len(words) == 0 {
+		return ""
+	}
+
+	randomWord := words[lg.rng.Intn(len(words))]
+
+	runes := []rune(randomWord)
+	lg.shuffle(runes)
+
+	return string(runes)
+}
+
+// shuffle перемешивает срез рун методом Фишера-Йетса
+func (lg *LetterGenerator) shuffle(runes []rune) {
+	for i := len(runes) - 1; i > 0; i-- {
+		j := lg.rng.Intn(i + 1)
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+}
