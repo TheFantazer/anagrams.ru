@@ -19,6 +19,8 @@ export const useGameStore = defineStore('game', () => {
   const gameActive = ref(false)
   const shake = ref(false)
   const initialTime = ref(60)
+  const validWords = ref([])
+  const sessionId = ref(null)
 
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
@@ -87,14 +89,47 @@ export const useGameStore = defineStore('game', () => {
   }
 
   async function startGame(time, letters, lang) {
-    const gl = await generateLettersFromDict(letters, lang)
-    gameLetters.value = gl
-    inputWord.value = ''
-    foundWords.value = []
-    score.value = 0
-    timeLeft.value = time
-    initialTime.value = time
-    gameActive.value = true
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+      const response = await fetch(`${apiUrl}/api/v1/sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          language: lang,
+          letter_count: letters,
+          time_limit: time
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create session')
+      }
+
+      const session = await response.json()
+
+      sessionId.value = session.id
+      gameLetters.value = session.letters.toUpperCase().split('')
+      validWords.value = session.valid_words.map(w => w.toUpperCase())
+      inputWord.value = ''
+      foundWords.value = []
+      score.value = 0
+      timeLeft.value = time
+      initialTime.value = time
+      gameActive.value = true
+    } catch (error) {
+      console.error('Failed to start game:', error)
+      const gl = await generateLettersFromDict(letters, lang)
+      gameLetters.value = gl
+      validWords.value = []
+      inputWord.value = ''
+      foundWords.value = []
+      score.value = 0
+      timeLeft.value = time
+      initialTime.value = time
+      gameActive.value = true
+    }
   }
 
   function addLetter(letter) {
@@ -116,7 +151,6 @@ export const useGameStore = defineStore('game', () => {
     return 0
   }
 
-  
   function submitWord() {
     if (inputWord.value.length < 3) {
       triggerShake()
@@ -125,13 +159,11 @@ export const useGameStore = defineStore('game', () => {
 
     const upper = inputWord.value.toUpperCase()
 
-    
     if (foundWords.value.includes(upper)) {
       triggerShake()
       return
     }
 
-    
     const available = [...gameLetters.value.map(l => l.toUpperCase())]
     for (const ch of upper) {
       const idx = available.indexOf(ch)
@@ -142,7 +174,11 @@ export const useGameStore = defineStore('game', () => {
       available.splice(idx, 1)
     }
 
-    
+    if (validWords.value.length > 0 && !validWords.value.includes(upper)) {
+      triggerShake()
+      return
+    }
+
     foundWords.value.push(upper)
     const pts = calculatePoints(upper)
     score.value += pts
@@ -172,7 +208,6 @@ export const useGameStore = defineStore('game', () => {
     gameActive.value = false
   }
 
-  
   function resetGame() {
     gameLetters.value = []
     inputWord.value = ''
@@ -181,6 +216,8 @@ export const useGameStore = defineStore('game', () => {
     timeLeft.value = 60
     gameActive.value = false
     shake.value = false
+    validWords.value = []
+    sessionId.value = null
   }
 
   
@@ -206,7 +243,7 @@ export const useGameStore = defineStore('game', () => {
   })
 
   return {
-    
+
     gameLetters,
     inputWord,
     foundWords,
@@ -216,12 +253,12 @@ export const useGameStore = defineStore('game', () => {
     shake,
     settingsLang,
     settingsLetters,
+    validWords,
+    sessionId,
 
-    
     availableLetters,
     timerPercentage,
 
-    
     startGame,
     addLetter,
     removeLast,

@@ -59,6 +59,7 @@ func (h *GameHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		TimeLimit:   session.TimeLimit,
 		LetterCount: session.LetterCount,
 		MaxScore:    session.MaxScore,
+		ValidWords:  session.ValidWords,
 		CreatedAt:   session.CreatedAt,
 	}
 
@@ -92,6 +93,7 @@ func (h *GameHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 		TimeLimit:   session.TimeLimit,
 		LetterCount: session.LetterCount,
 		MaxScore:    session.MaxScore,
+		ValidWords:  session.ValidWords,
 		CreatedAt:   session.CreatedAt,
 	}
 

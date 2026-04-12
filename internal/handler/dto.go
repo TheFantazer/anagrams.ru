@@ -19,6 +19,7 @@ type SessionResponse struct {
 	TimeLimit   int       `json:"time_limit"`
 	LetterCount int       `json:"letter_count"`
 	MaxScore    int       `json:"max_score"`
+	ValidWords  []string  `json:"valid_words"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
