@@ -133,9 +133,16 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function addLetter(letter) {
-    if (gameActive.value) {
-      inputWord.value += letter
+    if (!gameActive.value) return
+
+    const upper = letter.toUpperCase()
+
+    
+    if (!availableLetters.value[upper] || availableLetters.value[upper] <= 0) {
+      return
     }
+
+    inputWord.value += upper
   }
 
   function removeLast() {
@@ -193,19 +200,56 @@ export const useGameStore = defineStore('game', () => {
     }, 400)
   }
 
-  
+
   function decreaseTime() {
     if (gameActive.value && timeLeft.value > 0) {
       timeLeft.value--
     }
     if (timeLeft.value === 0) {
-      gameActive.value = false
+      endGame()
     }
   }
 
-  
-  function endGame() {
+  async function endGame() {
+    if (!gameActive.value) return
     gameActive.value = false
+
+    
+    if (sessionId.value) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+        const durationMs = (initialTime.value - timeLeft.value) * 1000
+
+        await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            player_name: 'Player',
+            fingerprint: generateFingerprint(),
+            found_words: foundWords.value,
+            duration_ms: durationMs
+          })
+        })
+      } catch (error) {
+        console.error('Failed to submit results:', error)
+      }
+    }
+  }
+
+  function generateFingerprint() {
+    
+    const nav = navigator
+    const screen = window.screen
+    const components = [
+      nav.userAgent,
+      nav.language,
+      screen.colorDepth,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset()
+    ]
+    return btoa(components.join('|'))
   }
 
   function resetGame() {

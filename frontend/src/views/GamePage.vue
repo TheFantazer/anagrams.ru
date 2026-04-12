@@ -1,14 +1,23 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
-import TimerRing from '../components/TimerRing.vue'
 
 const router = useRouter()
 const gameStore = useGameStore()
 
 const inputRef = ref(null)
+const showAllWords = ref(false)
 let timerInterval = null
+
+watch(() => gameStore.gameActive, (isActive) => {
+  if (isActive) {
+    inputRef.value?.focus()
+    startTimer()
+  } else {
+    stopTimer()
+  }
+})
 
 onMounted(() => {
   if (gameStore.gameActive) {
@@ -22,6 +31,7 @@ onUnmounted(() => {
 })
 
 function startTimer() {
+  stopTimer() // stop previous timer if it was
   timerInterval = setInterval(() => {
     gameStore.decreaseTime()
     if (gameStore.timeLeft === 0) {
@@ -62,7 +72,27 @@ function isLetterUsed(letter) {
 
 function handlePlayAgain() {
   gameStore.resetGame()
+  showAllWords.value = false
   router.push('/')
+}
+
+function getMaskedWord(word) {
+  return '?'.repeat(word.length)
+}
+
+function getDisplayWords() {
+  if (!gameStore.validWords || gameStore.validWords.length === 0) {
+    return []
+  }
+
+  return gameStore.validWords.map(word => {
+    const found = gameStore.foundWords.includes(word)
+    return {
+      word: word,
+      found: found,
+      display: found || showAllWords.value ? word.toLowerCase() : getMaskedWord(word)
+    }
+  })
 }
 </script>
 
@@ -73,9 +103,11 @@ function handlePlayAgain() {
     @keydown="handleKeyDown"
   >
     <div v-if="gameStore.gameActive">
-      <div class="timer-score">
-        <TimerRing />
-        <div class="score-display">{{ gameStore.score }} pts</div>
+      <div class="score-display">{{ gameStore.score }} pts</div>
+
+      <!-- Timer progress bar -->
+      <div class="timer-bar-container">
+        <div class="timer-bar" :style="{ width: (gameStore.timerPercentage * 100) + '%' }"></div>
       </div>
 
       <input
@@ -84,7 +116,6 @@ function handlePlayAgain() {
         readonly
         :class="['word-input', { shake: gameStore.shake }]"
         placeholder="..."
-        @keydown="handleKeyDown"
       />
 
       <div class="letters-row">
@@ -121,24 +152,30 @@ function handlePlayAgain() {
     <div v-else class="game-over">
       <p class="game-over-title">{{ gameStore.score > 0 ? "Time's up!" : "Game Over" }}</p>
       <p class="final-score">{{ gameStore.score }}</p>
-      <p class="words-count">{{ gameStore.foundWords.length }} words found</p>
+      <p class="words-count">
+        {{ gameStore.foundWords.length }} / {{ gameStore.validWords.length }} words found
+      </p>
 
       <div class="words-area">
         <span
-          v-for="(word, i) in gameStore.foundWords"
+          v-for="(item, i) in getDisplayWords()"
           :key="i"
-          class="word-chip"
+          :class="['word-chip', { found: item.found, hidden: !item.found && !showAllWords }]"
         >
-          {{ word.toLowerCase() }}
+          {{ item.display }}
         </span>
       </div>
 
       <div class="button-row">
+        <button
+          v-if="!showAllWords && gameStore.sessionId"
+          class="btn-secondary"
+          @click="showAllWords = true"
+        >
+          Show all words
+        </button>
         <button class="btn-primary" @click="handlePlayAgain">
           Play again
-        </button>
-        <button class="btn-secondary" @click="() => {}">
-          Share link
         </button>
       </div>
     </div>
@@ -157,17 +194,30 @@ function handlePlayAgain() {
   outline: none;
 }
 
-.timer-score {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-}
-
 .score-display {
   font-family: 'Space Mono', monospace;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--accent);
   font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.timer-bar-container {
+  width: 100%;
+  max-width: 400px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width 0.3s linear;
+  border-radius: 3px;
 }
 
 .word-input {
@@ -288,6 +338,18 @@ function handlePlayAgain() {
   color: var(--accent);
 }
 
+.word-chip.hidden {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #555;
+}
+
+.word-chip.found {
+  background: rgba(99, 230, 190, 0.12);
+  border-color: rgba(99, 230, 190, 0.25);
+  color: var(--accent);
+}
+
 .game-over {
   text-align: center;
   padding: 40px;
@@ -313,5 +375,11 @@ function handlePlayAgain() {
   color: #666;
   font-size: 14px;
   margin-bottom: 32px;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
 }
 </style>
