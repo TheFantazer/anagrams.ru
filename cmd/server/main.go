@@ -53,10 +53,11 @@ func main() {
 	sessionRepo := postgres.NewSessionRepository(db)
 	resultRepo := postgres.NewResultRepository(db)
 	userRepo := postgres.NewUserRepository(db.DB)
+	statsRepo := postgres.NewStatsRepository(db)
 
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
-	authService := service.NewAuthService(userRepo)
+	authService := service.NewAuthService(userRepo, statsRepo)
 
 	router := handler.NewRouter(gameService, authService, logger)
 

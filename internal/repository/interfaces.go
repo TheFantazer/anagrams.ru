@@ -28,4 +28,17 @@ type UserRepository interface {
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
+	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
+}
+
+type UserStats struct {
+	GamesPlayed  int
+	BestScore    int
+	LongestWord  string
+	TotalWords   int
+	AverageScore float64
+}
+
+type StatsRepository interface {
+	GetUserStats(ctx context.Context, userID uuid.UUID) (*UserStats, error)
 }

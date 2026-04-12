@@ -2,14 +2,23 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useUserStore = defineStore('user', () => {
-  // User state
   const userId = ref(null)
   const username = ref('player_one')
   const email = ref('player@example.com')
   const joinedDate = ref('April 2026')
   const isAuthenticated = ref(false)
 
-  // Load user from localStorage on init
+  const gamesPlayed = ref(42)
+  const bestScore = ref(3200)
+  const longestWord = ref('КРОКОДИЛ')
+
+  const showHelp = ref(false)
+  const showSoloSettings = ref(false)
+
+  const soloTime = ref(60)
+  const soloLetters = ref(7)
+  const soloLang = ref('ru')
+
   const loadUser = () => {
     const stored = localStorage.getItem('anagram_user')
     if (stored) {
@@ -20,40 +29,31 @@ export const useUserStore = defineStore('user', () => {
         email.value = userData.email
         joinedDate.value = new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         isAuthenticated.value = true
+
+        if (userData.default_letter_count) {
+          soloLetters.value = userData.default_letter_count
+        }
+        if (userData.default_language) {
+          soloLang.value = userData.default_language
+        }
+        if (userData.default_time_limit) {
+          soloTime.value = userData.default_time_limit
+        }
       } catch (e) {
         console.error('Failed to load user from localStorage', e)
       }
     }
   }
 
-  // Load user on store creation
   loadUser()
 
-  // Stats
-  const gamesPlayed = ref(42)
-  const bestScore = ref(3200)
-  const longestWord = ref('КРОКОДИЛ')
-
-  // Modals
-  const showHelp = ref(false)
-  const showSoloSettings = ref(false)
-
-  // Solo game settings
-  const soloTime = ref(60)
-  const soloLetters = ref(7)
-  const soloLang = ref('ru')
-
-  // Auth
   const loginTab = ref('login')
 
-  // Leaderboard
   const lbPeriod = ref('week')
 
-  // Easter egg
   const easterEgg = ref(false)
   const konamiIdx = ref(0)
 
-  // Actions
   function setShowHelp(value) {
     showHelp.value = value
   }
@@ -100,7 +100,16 @@ export const useUserStore = defineStore('user', () => {
     joinedDate.value = new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     isAuthenticated.value = true
 
-    // Save to localStorage
+    if (userData.default_letter_count) {
+      soloLetters.value = userData.default_letter_count
+    }
+    if (userData.default_language) {
+      soloLang.value = userData.default_language
+    }
+    if (userData.default_time_limit) {
+      soloTime.value = userData.default_time_limit
+    }
+
     localStorage.setItem('anagram_user', JSON.stringify(userData))
   }
 
@@ -111,12 +120,10 @@ export const useUserStore = defineStore('user', () => {
     joinedDate.value = 'April 2026'
     isAuthenticated.value = false
 
-    // Clear localStorage
     localStorage.removeItem('anagram_user')
   }
 
   return {
-    // State
     userId,
     username,
     email,
@@ -134,7 +141,6 @@ export const useUserStore = defineStore('user', () => {
     lbPeriod,
     easterEgg,
 
-    // Actions
     setUser,
     setShowHelp,
     setShowSoloSettings,

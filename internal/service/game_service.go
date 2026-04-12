@@ -13,7 +13,7 @@ import (
 type GameService interface {
 	CreateSession(ctx context.Context, language string, letterCount, timeLimit int) (*domain.Session, error)
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*domain.Session, error)
-	SubmitResult(ctx context.Context, sessionID uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error)
+	SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error)
 	GetSessionResults(ctx context.Context, sessionID uuid.UUID, topN int) ([]*domain.Result, error)
 }
 
@@ -74,7 +74,7 @@ func (s *gameService) GetSession(ctx context.Context, sessionID uuid.UUID) (*dom
 	return session, nil
 }
 
-func (s *gameService) SubmitResult(ctx context.Context, sessionID uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error) {
+func (s *gameService) SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error) {
 	session, err := s.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
@@ -84,7 +84,7 @@ func (s *gameService) SubmitResult(ctx context.Context, sessionID uuid.UUID, pla
 		return nil, domain.ErrSessionExpired
 	}
 
-	result, err := domain.NewResult(sessionID, playerName, fingerprint, words, durationMs)
+	result, err := domain.NewResult(sessionID, userID, playerName, fingerprint, words, durationMs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create result: %w", err)
 	}

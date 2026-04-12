@@ -24,6 +24,7 @@ type SessionResponse struct {
 }
 
 type SubmitResultRequest struct {
+	UserID      *string  `json:"user_id,omitempty"`
 	PlayerName  string   `json:"player_name"`
 	Fingerprint string   `json:"fingerprint"`
 	FoundWords  []string `json:"found_words"`
@@ -57,8 +58,25 @@ type LoginRequest struct {
 }
 
 type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Username  string    `json:"username"`
-	Email     *string   `json:"email,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID                 uuid.UUID `json:"id"`
+	Username           string    `json:"username"`
+	Email              *string   `json:"email,omitempty"`
+	DefaultLetterCount int       `json:"default_letter_count"`
+	DefaultLanguage    string    `json:"default_language"`
+	DefaultTimeLimit   int       `json:"default_time_limit"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+type UpdateSettingsRequest struct {
+	LetterCount int    `json:"letter_count"`
+	Language    string `json:"language"`
+	TimeLimit   int    `json:"time_limit"`
+}
+
+type UserStatsResponse struct {
+	GamesPlayed  int     `json:"games_played"`
+	BestScore    int     `json:"best_score"`
+	LongestWord  string  `json:"longest_word"`
+	TotalWords   int     `json:"total_words"`
+	AverageScore float64 `json:"average_score"`
 }

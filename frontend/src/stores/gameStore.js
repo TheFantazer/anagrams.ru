@@ -220,12 +220,24 @@ export const useGameStore = defineStore('game', () => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
         const durationMs = (initialTime.value - timeLeft.value) * 1000
 
+        let userId = null
+        const storedUser = localStorage.getItem('anagram_user')
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser)
+            userId = userData.id
+          } catch (e) {
+            console.error('Failed to parse user data', e)
+          }
+        }
+
         await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
+            user_id: userId,
             player_name: 'Player',
             fingerprint: generateFingerprint(),
             found_words: foundWords.value,

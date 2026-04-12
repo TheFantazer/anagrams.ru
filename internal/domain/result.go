@@ -7,18 +7,19 @@ import (
 )
 
 type Result struct {
-	ID                uuid.UUID `json:"id"`
-	SessionID         uuid.UUID `json:"session_id"`
-	PlayerName        string    `json:"player_name"`
-	PlayerFingerprint string    `json:"player_fingerprint"`
-	FoundWords        []string  `json:"found_words"`
-	WordCount         int       `json:"word_count"`
-	Score             int       `json:"score"`
-	DurationMs        int       `json:"duration_ms"`
-	PlayedAt          time.Time `json:"played_at"`
+	ID                uuid.UUID  `json:"id"`
+	SessionID         uuid.UUID  `json:"session_id"`
+	UserID            *uuid.UUID `json:"user_id,omitempty"`
+	PlayerName        string     `json:"player_name"`
+	PlayerFingerprint string     `json:"player_fingerprint"`
+	FoundWords        []string   `json:"found_words"`
+	WordCount         int        `json:"word_count"`
+	Score             int        `json:"score"`
+	DurationMs        int        `json:"duration_ms"`
+	PlayedAt          time.Time  `json:"played_at"`
 }
 
-func NewResult(sessionID uuid.UUID, playerName, playerFingerprint string, foundWords []string, durationMs int) (*Result, error) {
+func NewResult(sessionID uuid.UUID, userID *uuid.UUID, playerName, playerFingerprint string, foundWords []string, durationMs int) (*Result, error) {
 	if sessionID == uuid.Nil {
 		return nil, ErrInvalidSessionID
 	}
@@ -38,6 +39,7 @@ func NewResult(sessionID uuid.UUID, playerName, playerFingerprint string, foundW
 	return &Result{
 		ID:                uuid.New(),
 		SessionID:         sessionID,
+		UserID:            userID,
 		PlayerName:        playerName,
 		PlayerFingerprint: playerFingerprint,
 		FoundWords:        foundWords,

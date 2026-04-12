@@ -119,9 +119,20 @@ func (h *GameHandler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var userID *uuid.UUID
+	if req.UserID != nil && *req.UserID != "" {
+		parsedID, err := uuid.Parse(*req.UserID)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+			return
+		}
+		userID = &parsedID
+	}
+
 	result, err := h.service.SubmitResult(
 		r.Context(),
 		sessionID,
+		userID,
 		req.PlayerName,
 		req.Fingerprint,
 		req.FoundWords,

@@ -27,6 +27,7 @@ func NewResultRepository(db *sqlx.DB) repository.ResultRepository {
 type resultDB struct {
 	ID                uuid.UUID       `db:"id"`
 	SessionID         uuid.UUID       `db:"session_id"`
+	UserID            *uuid.UUID      `db:"user_id"`
 	PlayerName        string          `db:"player_name"`
 	PlayerFingerprint string          `db:"player_fingerprint"`
 	FoundWords        json.RawMessage `db:"found_words"`
@@ -45,6 +46,7 @@ func (r *resultDB) toDomain() (*domain.Result, error) {
 	return &domain.Result{
 		ID:                r.ID,
 		SessionID:         r.SessionID,
+		UserID:            r.UserID,
 		PlayerName:        r.PlayerName,
 		PlayerFingerprint: r.PlayerFingerprint,
 		FoundWords:        foundWords,
@@ -64,6 +66,7 @@ func fromDomainResult(r *domain.Result) (*resultDB, error) {
 	return &resultDB{
 		ID:                r.ID,
 		SessionID:         r.SessionID,
+		UserID:            r.UserID,
 		PlayerName:        r.PlayerName,
 		PlayerFingerprint: r.PlayerFingerprint,
 		FoundWords:        foundWordsJSON,
@@ -81,9 +84,9 @@ func (r *postgresResultRepo) Create(ctx context.Context, result *domain.Result) 
 	}
 
 	query := `
-  		INSERT INTO game_results (id, session_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, 
+  		INSERT INTO game_results (id, session_id, user_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms,
   played_at)
-  		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
   	`
 
 	_, err = r.db.ExecContext(
@@ -91,6 +94,7 @@ func (r *postgresResultRepo) Create(ctx context.Context, result *domain.Result) 
 		query,
 		dbResult.ID,
 		dbResult.SessionID,
+		dbResult.UserID,
 		dbResult.PlayerName,
 		dbResult.PlayerFingerprint,
 		dbResult.FoundWords,
@@ -121,7 +125,7 @@ func (r *postgresResultRepo) Create(ctx context.Context, result *domain.Result) 
 
 func (r *postgresResultRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Result, error) {
 	query := `
-  		SELECT id, session_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
+  		SELECT id, session_id, user_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
   		FROM game_results
   		WHERE id = $1
   	`
@@ -140,7 +144,7 @@ func (r *postgresResultRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain
 
 func (r *postgresResultRepo) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]*domain.Result, error) {
 	query := `
-  		SELECT id, session_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
+  		SELECT id, session_id, user_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
   		FROM game_results
   		WHERE session_id = $1
   		ORDER BY played_at DESC
@@ -165,7 +169,7 @@ func (r *postgresResultRepo) GetBySessionID(ctx context.Context, sessionID uuid.
 }
 func (r *postgresResultRepo) GetTopBySessionID(ctx context.Context, sessionID uuid.UUID, limit int) ([]*domain.Result, error) {
 	query := `
-  		SELECT id, session_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
+  		SELECT id, session_id, user_id, player_name, player_fingerprint, found_words, word_count, score, duration_ms, played_at
   		FROM game_results
   		WHERE session_id = $1
   		ORDER BY score DESC, duration_ms ASC

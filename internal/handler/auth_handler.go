@@ -45,10 +45,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := UserResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
 	}
 
 	respondJSON(w, http.StatusCreated, response)
@@ -75,18 +78,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := UserResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
 	}
 
 	respondJSON(w, http.StatusOK, response)
 }
 
 func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
-	// Предполагается, что ID пользователя будет приходить из middleware после авторизации
-	// Пока используем query parameter для демонстрации
 	userIDStr := r.URL.Query().Get("user_id")
 	if userIDStr == "" {
 		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
@@ -107,10 +111,104 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := UserResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+func (h *AuthHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	var req UpdateSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_request", "Invalid JSON format")
+		return
+	}
+
+	if req.LetterCount < 6 || req.LetterCount > 10 {
+		respondError(w, http.StatusBadRequest, "invalid_letter_count", "Letter count must be between 6 and 10")
+		return
+	}
+
+	if req.Language != "ru" && req.Language != "en" {
+		respondError(w, http.StatusBadRequest, "invalid_language", "Language must be 'ru' or 'en'")
+		return
+	}
+
+	if req.TimeLimit <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid_time_limit", "Time limit must be positive")
+		return
+	}
+
+	err = h.authService.UpdateSettings(r.Context(), userID, req.LetterCount, req.Language, req.TimeLimit)
+	if err != nil {
+		h.logger.Error("Failed to update settings", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "update_failed", "Failed to update settings")
+		return
+	}
+
+	user, err := h.authService.GetUserByID(r.Context(), userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to fetch updated user")
+		return
+	}
+
+	response := UserResponse{
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+func (h *AuthHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	stats, err := h.authService.GetUserStats(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to get user stats", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "stats_error", "Failed to get statistics")
+		return
+	}
+
+	response := UserStatsResponse{
+		GamesPlayed:  stats.GamesPlayed,
+		BestScore:    stats.BestScore,
+		LongestWord:  stats.LongestWord,
+		TotalWords:   stats.TotalWords,
+		AverageScore: stats.AverageScore,
 	}
 
 	respondJSON(w, http.StatusOK, response)

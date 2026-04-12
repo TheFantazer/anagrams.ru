@@ -21,7 +21,7 @@ const modes = [
     name: 'Fast game',
     desc: 'Jump in instantly with defaults',
     action: () => {
-      gameStore.startGame(60, 7, gameStore.settingsLang || 'ru')
+      gameStore.startGame(userStore.soloTime, userStore.soloLetters, userStore.soloLang)
       router.push('/game')
     }
   },

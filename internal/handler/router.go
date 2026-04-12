@@ -23,6 +23,8 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/v1/auth/me", authHandler.GetMe)
+	mux.HandleFunc("PUT /api/v1/auth/settings", authHandler.UpdateSettings)
+	mux.HandleFunc("GET /api/v1/auth/stats", authHandler.GetStats)
 
 	handler := RecoveryMiddleware(logger)(
 		RequestIDMiddleware(
