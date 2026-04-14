@@ -62,11 +62,26 @@ func CalculateScore(words []string) int {
 // ValidateWords проверяет слова против сессии
 func (r *Result) ValidateWords(session *Session) error {
 	for _, word := range r.FoundWords {
-		if !session.IsValid(word) {
+		wordLower := toLower(word)
+		if !session.IsValid(wordLower) {
 			return ErrInvalidWord
 		}
 	}
 	return nil
+}
+
+func toLower(s string) string {
+	runes := []rune(s)
+	for i, r := range runes {
+		if r >= 'A' && r <= 'Z' {
+			runes[i] = r + 32
+		} else if r >= 'А' && r <= 'Я' {
+			runes[i] = r + 32
+		} else if r == 'Ё' {
+			runes[i] = 'ё'
+		}
+	}
+	return string(runes)
 }
 
 // CalculateAccuracy вычисляет процент найденных слов

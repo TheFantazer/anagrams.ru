@@ -22,7 +22,7 @@ func ScoreWord(word string) int {
 	case length == 6:
 		return 2000
 	case length == 7:
-		return 3000
+		return 2800
 	default:
 		return 0
 	}

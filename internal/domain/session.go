@@ -48,7 +48,8 @@ func NewSession(letters, language string, timeLimit, letterCount int, validWords
 }
 
 func (s *Session) IsExpired() bool {
-	expiresAt := s.CreatedAt.Add(time.Duration(s.TimeLimit) * time.Second)
+	gracePeriod := 5 * time.Minute
+	expiresAt := s.CreatedAt.Add(time.Duration(s.TimeLimit)*time.Second + gracePeriod)
 	return time.Now().UTC().After(expiresAt)
 }
 func (s *Session) IsValid(word string) bool {
