@@ -8,9 +8,9 @@ export const useUserStore = defineStore('user', () => {
   const joinedDate = ref('April 2026')
   const isAuthenticated = ref(false)
 
-  const gamesPlayed = ref(42)
-  const bestScore = ref(3200)
-  const longestWord = ref('КРОКОДИЛ')
+  const gamesPlayed = ref(0)
+  const bestScore = ref(0)
+  const longestWord = ref('-')
 
   const showHelp = ref(false)
   const showSoloSettings = ref(false)

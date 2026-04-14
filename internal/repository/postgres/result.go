@@ -112,7 +112,6 @@ func (r *postgresResultRepo) Create(ctx context.Context, result *domain.Result) 
 					return repository.ErrDuplicateResult
 				}
 			}
-			// Проверяем на нарушение FK constraint
 			if pqErr.Code == "23503" { // foreign_key_violation
 				return repository.ErrForeignKeyViolation
 			}

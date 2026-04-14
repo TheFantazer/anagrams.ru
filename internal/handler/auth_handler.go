@@ -214,6 +214,43 @@ func (h *AuthHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, response)
 }
 
+func (h *AuthHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "week"
+	}
+
+	validPeriods := map[string]bool{"day": true, "week": true, "month": true, "all": true}
+	if !validPeriods[period] {
+		respondError(w, http.StatusBadRequest, "invalid_period", "Period must be day, week, month, or all")
+		return
+	}
+
+	leaderboard, err := h.authService.GetLeaderboard(r.Context(), period, 20)
+	if err != nil {
+		h.logger.Error("Failed to get leaderboard", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "leaderboard_error", "Failed to get leaderboard")
+		return
+	}
+
+	type LeaderboardResponse struct {
+		Name  string `json:"name"`
+		Score int    `json:"score"`
+		Words int    `json:"words"`
+	}
+
+	response := make([]LeaderboardResponse, 0)
+	for _, entry := range leaderboard {
+		response = append(response, LeaderboardResponse{
+			Name:  entry.Username,
+			Score: entry.BestScore,
+			Words: entry.TotalWords,
+		})
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
 func mapAuthError(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, domain.ErrInvalidUsername):

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
 
@@ -10,8 +10,9 @@ const inputRef = ref(null)
 const showAllWords = ref(false)
 let timerInterval = null
 
-watch(() => gameStore.gameActive, (isActive) => {
+watch(() => gameStore.gameActive, async (isActive) => {
   if (isActive) {
+    await nextTick()
     inputRef.value?.focus()
     startTimer()
   } else {
@@ -19,8 +20,9 @@ watch(() => gameStore.gameActive, (isActive) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (gameStore.gameActive) {
+    await nextTick()
     inputRef.value?.focus()
     startTimer()
   }
@@ -64,10 +66,8 @@ function handleKeyDown(e) {
 }
 
 
-function isLetterUsed(letter) {
-  const upper = letter.toUpperCase()
-  const remaining = gameStore.availableLetters[upper] || 0
-  return remaining <= 0
+function isLetterUsed(letter, index) {
+  return gameStore.usedLetterIndices.includes(index)
 }
 
 function handlePlayAgain() {
@@ -85,13 +85,20 @@ function getDisplayWords() {
     return []
   }
 
-  return gameStore.validWords.map(word => {
+  const words = gameStore.validWords.map(word => {
     const found = gameStore.foundWords.includes(word)
     return {
       word: word,
       found: found,
       display: found || showAllWords.value ? word.toLowerCase() : getMaskedWord(word)
     }
+  })
+
+  return words.sort((a, b) => {
+    if (a.word.length !== b.word.length) {
+      return b.word.length - a.word.length
+    }
+    return a.word.localeCompare(b.word)
   })
 }
 </script>
@@ -122,8 +129,8 @@ function getDisplayWords() {
         <div
           v-for="(letter, i) in gameStore.gameLetters"
           :key="i"
-          :class="['letter-tile', { used: isLetterUsed(letter) }]"
-          @click="!isLetterUsed(letter) && gameStore.addLetter(letter.toUpperCase())"
+          :class="['letter-tile', { used: isLetterUsed(letter, i) }]"
+          @click="!isLetterUsed(letter, i) && gameStore.addLetterByIndex(i)"
         >
           {{ letter.toUpperCase() }}
         </div>
@@ -136,16 +143,6 @@ function getDisplayWords() {
         <button class="btn-primary" @click="gameStore.submitWord">
           Submit &crarr;
         </button>
-      </div>
-
-      <div class="words-area">
-        <span
-          v-for="(word, i) in gameStore.foundWords"
-          :key="i"
-          class="word-chip"
-        >
-          {{ word.toLowerCase() }}
-        </span>
       </div>
     </div>
 
@@ -282,6 +279,7 @@ function getDisplayWords() {
   display: flex;
   gap: 10px;
   margin-top: 4px;
+  justify-content: flex-end;
 }
 
 .btn-primary,
@@ -321,32 +319,35 @@ function getDisplayWords() {
 
 .words-area {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
-  justify-content: center;
+  align-items: center;
   max-width: 500px;
+  width: 100%;
 }
 
 .word-chip {
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(99, 230, 190, 0.08);
-  border: 1px solid rgba(99, 230, 190, 0.15);
-  font-size: 13px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 14px;
   font-family: 'Space Mono', monospace;
   font-weight: 500;
-  color: var(--accent);
+  color: #999;
+  width: 100%;
+  text-align: left;
 }
 
 .word-chip.hidden {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.04);
   color: #555;
 }
 
 .word-chip.found {
-  background: rgba(99, 230, 190, 0.12);
-  border-color: rgba(99, 230, 190, 0.25);
+  background: rgba(99, 230, 190, 0.06);
+  border-color: rgba(99, 230, 190, 0.15);
   color: var(--accent);
 }
 

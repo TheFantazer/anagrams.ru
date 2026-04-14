@@ -39,6 +39,13 @@ type UserStats struct {
 	AverageScore float64
 }
 
+type LeaderboardEntry struct {
+	Username   string
+	BestScore  int
+	TotalWords int
+}
+
 type StatsRepository interface {
 	GetUserStats(ctx context.Context, userID uuid.UUID) (*UserStats, error)
+	GetLeaderboard(ctx context.Context, period string, limit int) ([]*LeaderboardEntry, error)
 }

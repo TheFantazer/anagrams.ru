@@ -21,6 +21,7 @@ export const useGameStore = defineStore('game', () => {
   const initialTime = ref(60)
   const validWords = ref([])
   const sessionId = ref(null)
+  const usedLetterIndices = ref([])
 
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
@@ -118,6 +119,7 @@ export const useGameStore = defineStore('game', () => {
       timeLeft.value = time
       initialTime.value = time
       gameActive.value = true
+      usedLetterIndices.value = []
     } catch (error) {
       console.error('Failed to start game:', error)
       const gl = await generateLettersFromDict(letters, lang)
@@ -129,7 +131,17 @@ export const useGameStore = defineStore('game', () => {
       timeLeft.value = time
       initialTime.value = time
       gameActive.value = true
+      usedLetterIndices.value = []
     }
+  }
+
+  function addLetterByIndex(index) {
+    if (!gameActive.value) return
+    if (usedLetterIndices.value.includes(index)) return
+
+    const letter = gameLetters.value[index]
+    usedLetterIndices.value.push(index)
+    inputWord.value += letter.toUpperCase()
   }
 
   function addLetter(letter) {
@@ -137,24 +149,34 @@ export const useGameStore = defineStore('game', () => {
 
     const upper = letter.toUpperCase()
 
-    
     if (!availableLetters.value[upper] || availableLetters.value[upper] <= 0) {
       return
     }
 
+    const availableIndex = gameLetters.value.findIndex((l, idx) =>
+      l.toUpperCase() === upper && !usedLetterIndices.value.includes(idx)
+    )
+
+    if (availableIndex === -1) return
+
+    usedLetterIndices.value.push(availableIndex)
     inputWord.value += upper
   }
 
   function removeLast() {
-    inputWord.value = inputWord.value.slice(0, -1)
+    if (inputWord.value.length > 0) {
+      inputWord.value = inputWord.value.slice(0, -1)
+      usedLetterIndices.value.pop()
+    }
   }
 
   function calculatePoints(word) {
     const len = word.length
     if (len === 3) return 100
-    if (len === 4) return 300
-    if (len === 5) return 500
-    if (len >= 6) return 1000 + (len - 6) * 500
+    if (len === 4) return 400
+    if (len === 5) return 1200
+    if (len === 6) return 2000
+    if (len === 7) return 2800
     return 0
   }
 
@@ -190,6 +212,7 @@ export const useGameStore = defineStore('game', () => {
     const pts = calculatePoints(upper)
     score.value += pts
     inputWord.value = ''
+    usedLetterIndices.value = []
   }
 
   
@@ -274,6 +297,7 @@ export const useGameStore = defineStore('game', () => {
     shake.value = false
     validWords.value = []
     sessionId.value = null
+    usedLetterIndices.value = []
   }
 
   
@@ -311,12 +335,14 @@ export const useGameStore = defineStore('game', () => {
     settingsLetters,
     validWords,
     sessionId,
+    usedLetterIndices,
 
     availableLetters,
     timerPercentage,
 
     startGame,
     addLetter,
+    addLetterByIndex,
     removeLast,
     submitWord,
     triggerShake,

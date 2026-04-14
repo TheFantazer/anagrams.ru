@@ -16,6 +16,7 @@ type AuthService interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
 	GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error)
+	GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error)
 }
 
 type authService struct {
@@ -83,4 +84,8 @@ func (s *authService) UpdateSettings(ctx context.Context, userID uuid.UUID, lett
 
 func (s *authService) GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error) {
 	return s.statsRepo.GetUserStats(ctx, userID)
+}
+
+func (s *authService) GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error) {
+	return s.statsRepo.GetLeaderboard(ctx, period, limit)
 }

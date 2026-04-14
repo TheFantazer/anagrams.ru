@@ -1,18 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 
 const userStore = useUserStore()
 
-const leaderboard = ref([
-  { name: 'wordmaster_42', score: 4200, words: 18 },
-  { name: 'лексикон', score: 3800, words: 15 },
-  { name: 'anagram_pro', score: 3100, words: 14 },
-  { name: 'буквоед', score: 2900, words: 12 },
-  { name: 'solver99', score: 2400, words: 11 },
-  { name: 'слововед', score: 2100, words: 10 },
-  { name: 'quicktype', score: 1800, words: 9 },
-])
+const leaderboard = ref([])
+const loading = ref(false)
 
 const periods = ['day', 'week', 'month', 'all']
 
@@ -20,6 +13,34 @@ function getPeriodLabel(period) {
   if (period === 'all') return 'All time'
   return period.charAt(0).toUpperCase() + period.slice(1)
 }
+
+async function loadLeaderboard() {
+  loading.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/leaderboard?period=${userStore.lbPeriod}`)
+
+    if (response.ok) {
+      const data = await response.json()
+      leaderboard.value = data || []
+    } else {
+      leaderboard.value = []
+    }
+  } catch (error) {
+    console.error('Failed to load leaderboard:', error)
+    leaderboard.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => userStore.lbPeriod, () => {
+  loadLeaderboard()
+})
+
+onMounted(() => {
+  loadLeaderboard()
+})
 </script>
 
 <template>
@@ -37,7 +58,10 @@ function getPeriodLabel(period) {
       </button>
     </div>
 
+    <div v-if="loading" class="loading-text">Loading...</div>
+    <div v-else-if="leaderboard.length === 0" class="empty-text">No results yet for this period</div>
     <div
+      v-else
       v-for="(user, i) in leaderboard"
       :key="i"
       :class="['lb-row', { first: i === 0 }]"
@@ -145,5 +169,13 @@ function getPeriodLabel(period) {
   font-size: 14px;
   font-weight: 700;
   color: var(--accent);
+}
+
+.loading-text,
+.empty-text {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 14px;
 }
 </style>
