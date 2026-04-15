@@ -172,6 +172,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 		result, err := service.SubmitResult(
 			ctx,
 			session.ID,
+			nil, // userID для анонимного игрока
 			"TestPlayer",
 			"fingerprint123",
 			[]string{"еда", "баг"},
@@ -194,6 +195,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 		result, err := service.SubmitResult(
 			ctx,
 			nonExistentID,
+			nil,
 			"Player",
 			"fp",
 			[]string{"word"},
@@ -223,6 +225,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 		result, err := service.SubmitResult(
 			ctx,
 			expiredSession.ID,
+			nil,
 			"Player",
 			"fp",
 			[]string{"еда"},
@@ -250,6 +253,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 		result, err := service.SubmitResult(
 			ctx,
 			session.ID,
+			nil,
 			"Player",
 			"fp",
 			[]string{"invalid"},
@@ -275,11 +279,11 @@ func TestGameService_SubmitResult(t *testing.T) {
 		require.NoError(t, err)
 
 		// Первая попытка - успешна
-		_, err = service.SubmitResult(ctx, session.ID, "Player1", "fp123", []string{"еда"}, 1000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player1", "fp123", []string{"еда"}, 1000)
 		require.NoError(t, err)
 
 		// Вторая попытка с тем же fingerprint - ошибка
-		result, err := service.SubmitResult(ctx, session.ID, "Player1", "fp123", []string{"еда"}, 2000)
+		result, err := service.SubmitResult(ctx, session.ID, nil, "Player1", "fp123", []string{"еда"}, 2000)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -300,7 +304,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 		err := sessionRepo.Create(ctx, session)
 		require.NoError(t, err)
 
-		result, err := service.SubmitResult(ctx, session.ID, "Player", "", []string{"еда"}, 1000)
+		result, err := service.SubmitResult(ctx, session.ID, nil, "Player", "", []string{"еда"}, 1000)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -333,13 +337,13 @@ func TestGameService_GetSessionResults(t *testing.T) {
 		require.NoError(t, err)
 
 		// Добавляем 3 результата
-		_, err = service.SubmitResult(ctx, session.ID, "Player1", "fp1", []string{"еда"}, 30000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player1", "fp1", []string{"еда"}, 30000)
 		require.NoError(t, err)
 
-		_, err = service.SubmitResult(ctx, session.ID, "Player2", "fp2", []string{"еда", "баг"}, 40000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player2", "fp2", []string{"еда", "баг"}, 40000)
 		require.NoError(t, err)
 
-		_, err = service.SubmitResult(ctx, session.ID, "Player3", "fp3", []string{"еж"}, 20000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player3", "fp3", []string{"еж"}, 20000)
 		require.NoError(t, err)
 
 		// Получаем все результаты (topN = 0)
@@ -369,13 +373,13 @@ func TestGameService_GetSessionResults(t *testing.T) {
 		require.NoError(t, err)
 
 		// Добавляем результаты с разными очками
-		_, err = service.SubmitResult(ctx, session.ID, "Player1", "fp1", []string{"еда"}, 30000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player1", "fp1", []string{"еда"}, 30000)
 		require.NoError(t, err)
 
-		_, err = service.SubmitResult(ctx, session.ID, "Player2", "fp2", []string{"еда", "баг"}, 40000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player2", "fp2", []string{"еда", "баг"}, 40000)
 		require.NoError(t, err)
 
-		_, err = service.SubmitResult(ctx, session.ID, "Player3", "fp3", []string{"еда", "баг", "еж"}, 20000)
+		_, err = service.SubmitResult(ctx, session.ID, nil, "Player3", "fp3", []string{"еда", "баг", "еж"}, 20000)
 		require.NoError(t, err)
 
 		// Получаем топ-2

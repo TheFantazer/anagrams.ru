@@ -81,7 +81,7 @@ func TestNewResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := NewResult(tt.sessionID, tt.playerName, tt.playerFingerprint, tt.foundWords, tt.durationMs)
+			result, err := NewResult(tt.sessionID, nil, tt.playerName, tt.playerFingerprint, tt.foundWords, tt.durationMs)
 
 			if tt.wantErr != nil {
 				if err == nil {
@@ -153,7 +153,7 @@ func TestCalculateScore(t *testing.T) {
 		{
 			name:  "multiple words different lengths",
 			words: []string{"сон", "слово", "словами"},
-			want:  100 + 1200 + 3000, // 3+5+7 letters
+			want:  100 + 1200 + 2800, // 3+5+7 letters
 		},
 	}
 

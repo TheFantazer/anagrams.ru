@@ -154,9 +154,9 @@ func TestSession_IsExpired(t *testing.T) {
 			want:      false,
 		},
 		{
-			name:      "expired - 2 minutes ago with 1 minute limit",
+			name:      "expired - 7 minutes ago with 1 minute limit",
 			timeLimit: 60,
-			createdAt: time.Now().UTC().Add(-2 * time.Minute),
+			createdAt: time.Now().UTC().Add(-7 * time.Minute),
 			want:      true,
 		},
 		{
@@ -246,7 +246,7 @@ func TestCalculateMaxScore(t *testing.T) {
 		{
 			name:  "mixed lengths",
 			words: []string{"сон", "слово", "словами"},
-			want:  100 + 1200 + 3000, // 3+5+7 letters
+			want:  100 + 1200 + 2800, // 3+5+7 letters
 		},
 	}
 

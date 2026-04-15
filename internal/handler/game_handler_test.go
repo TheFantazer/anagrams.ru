@@ -44,8 +44,9 @@ func setupTestService() service.GameService {
 
 func setupTestRouter() http.Handler {
 	gameService := setupTestService()
+	authService := newMockAuthService()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	return NewRouter(gameService, logger)
+	return NewRouter(gameService, authService, logger)
 }
 
 func TestCreateSession_Success(t *testing.T) {
@@ -262,8 +263,9 @@ func TestSubmitResult_Success(t *testing.T) {
 
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	authService := newMockAuthService()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, logger)
+	router := NewRouter(gameService, authService, logger)
 
 	// Создаем сессию с известными буквами напрямую в репозитории
 	knownSession := &domain.Session{
@@ -400,8 +402,9 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	authService := newMockAuthService()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, logger)
+	router := NewRouter(gameService, authService, logger)
 
 	// Создаем просроченную сессию напрямую в репозитории
 	expiredSession := &domain.Session{
