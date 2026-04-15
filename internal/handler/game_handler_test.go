@@ -237,7 +237,7 @@ func TestGetSession_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
 	assert.Equal(t, "not_found", errResp.Error)
 }
 
@@ -252,7 +252,7 @@ func TestGetSession_InvalidUUID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
 	assert.Equal(t, "invalid_uuid", errResp.Error)
 }
 
@@ -306,7 +306,7 @@ func TestSubmitResult_Success(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rec.Code)
 
 	var result ResultResponse
-	json.NewDecoder(rec.Body).Decode(&result)
+	_ = json.NewDecoder(rec.Body).Decode(&result)
 	assert.Equal(t, "TestPlayer", result.PlayerName)
 	assert.Equal(t, 2, result.WordCount)
 	assert.Equal(t, 200, result.Score)
@@ -328,7 +328,7 @@ func TestSubmitResult_InvalidWord(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var session SessionResponse
-	json.NewDecoder(rec.Body).Decode(&session)
+	_ = json.NewDecoder(rec.Body).Decode(&session)
 
 	// Отправляем результат с невалидным словом
 	submitReq := SubmitResultRequest{
@@ -348,7 +348,7 @@ func TestSubmitResult_InvalidWord(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
 	assert.Equal(t, "invalid_word", errResp.Error)
 }
 
@@ -368,7 +368,7 @@ func TestSubmitResult_DuplicateFingerprint(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var session SessionResponse
-	json.NewDecoder(rec.Body).Decode(&session)
+	_ = json.NewDecoder(rec.Body).Decode(&session)
 
 	// Первая отправка
 	submitReq := SubmitResultRequest{
@@ -394,7 +394,7 @@ func TestSubmitResult_DuplicateFingerprint(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
 	assert.Equal(t, "duplicate_result", errResp.Error)
 }
 
@@ -446,7 +446,7 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
 	assert.Equal(t, "session_expired", errResp.Error)
 }
 
@@ -466,7 +466,7 @@ func TestGetSessionResults_Success(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var session SessionResponse
-	json.NewDecoder(rec.Body).Decode(&session)
+	_ = json.NewDecoder(rec.Body).Decode(&session)
 
 	// Отправляем несколько результатов
 	for i := 0; i < 3; i++ {
@@ -492,7 +492,7 @@ func TestGetSessionResults_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var results []ResultResponse
-	json.NewDecoder(rec.Body).Decode(&results)
+	_ = json.NewDecoder(rec.Body).Decode(&results)
 	assert.Len(t, results, 3)
 }
 
@@ -560,7 +560,7 @@ func TestGetSessionResults_EmptyList(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var session SessionResponse
-	json.NewDecoder(rec.Body).Decode(&session)
+	_ = json.NewDecoder(rec.Body).Decode(&session)
 
 	// Получаем результаты
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/sessions/"+session.ID.String()+"/results", nil)
@@ -570,7 +570,7 @@ func TestGetSessionResults_EmptyList(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var results []ResultResponse
-	json.NewDecoder(rec.Body).Decode(&results)
+	_ = json.NewDecoder(rec.Body).Decode(&results)
 	assert.Empty(t, results)
 }
 
