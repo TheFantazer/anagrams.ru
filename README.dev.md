@@ -78,7 +78,9 @@ Vite предоставляет Hot Module Replacement (HMR):
 ├── Dockerfile.dev              # Development image с Air
 ├── .air.toml                   # Конфигурация Air
 └── frontend/
-    ├── Dockerfile              # Frontend (одинаковый для dev/prod)
+    ├── Dockerfile              # Production build (multi-stage с nginx)
+    ├── Dockerfile.dev          # Development с Vite dev server
+    ├── nginx.conf              # Nginx конфиг для production
     └── src/                    # Hot reload работает здесь
 ```
 
