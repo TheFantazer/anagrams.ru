@@ -56,7 +56,11 @@ func (r *statsRepository) GetUserStats(ctx context.Context, userID uuid.UUID) (*
 	if err != nil {
 		return stats, nil
 	}
-	defer rows.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			err = cerr
+		}
+	}()
 
 	longestWord := ""
 	for rows.Next() {
@@ -113,7 +117,11 @@ func (r *statsRepository) GetLeaderboard(ctx context.Context, period string, lim
 	if err != nil {
 		return nil, fmt.Errorf("failed to get leaderboard: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close rows: %w", cerr)
+		}
+	}()
 
 	var entries []*repository.LeaderboardEntry
 	for rows.Next() {

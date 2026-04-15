@@ -66,7 +66,9 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 	require.NoError(t, err, "Failed to connect to database")
 
 	t.Cleanup(func() {
-		db.Close()
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close database: %v", err)
+		}
 	})
 
 	return db

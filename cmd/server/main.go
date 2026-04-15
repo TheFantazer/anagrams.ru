@@ -40,7 +40,11 @@ func main() {
 		slog.Error("failed to connect to database", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close database", slog.String("error", err.Error()))
+		}
+	}()
 	slog.Info("connected to database")
 
 	dictionaries, err := loadDictionaries(cfg.Dict)

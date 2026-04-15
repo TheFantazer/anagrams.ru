@@ -97,7 +97,8 @@ func TestCreateSession_InvalidLanguage(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	err := json.NewDecoder(rec.Body).Decode(&errResp)
+	require.NoError(t, err)
 	assert.Equal(t, "invalid_language", errResp.Error)
 }
 
@@ -130,7 +131,8 @@ func TestCreateSession_InvalidLetterCount(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 			var errResp ErrorResponse
-			json.NewDecoder(rec.Body).Decode(&errResp)
+			err := json.NewDecoder(rec.Body).Decode(&errResp)
+			require.NoError(t, err)
 			assert.Equal(t, "invalid_letter_count", errResp.Error)
 		})
 	}
@@ -165,7 +167,8 @@ func TestCreateSession_InvalidTimeLimit(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 			var errResp ErrorResponse
-			json.NewDecoder(rec.Body).Decode(&errResp)
+			err := json.NewDecoder(rec.Body).Decode(&errResp)
+			require.NoError(t, err)
 			assert.Equal(t, "invalid_time_limit", errResp.Error)
 		})
 	}
@@ -278,7 +281,8 @@ func TestSubmitResult_Success(t *testing.T) {
 		MaxScore:    300,
 		CreatedAt:   time.Now(),
 	}
-	sessionRepo.Create(nil, knownSession)
+	err := sessionRepo.Create(nil, knownSession)
+	require.NoError(t, err)
 
 	// Отправляем результат
 	submitReq := SubmitResultRequest{
@@ -417,7 +421,8 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 		MaxScore:    100,
 		CreatedAt:   time.Now().Add(-2 * time.Hour), // Сессия создана 2 часа назад
 	}
-	sessionRepo.Create(nil, expiredSession)
+	err := sessionRepo.Create(nil, expiredSession)
+	require.NoError(t, err)
 
 	// Пытаемся отправить результат
 	submitReq := SubmitResultRequest{
