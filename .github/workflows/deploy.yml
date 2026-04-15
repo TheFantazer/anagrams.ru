@@ -3,19 +3,72 @@ name: Deploy
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v4
 
-    steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+      - name: set up Go
+        uses: actions/setup-go@v5
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd ~/anagrams.ru
-            git pull
-            docker compose up -d --build
+          go-version: '1.24'
+      - name: run tests
+        run: |
+          go mod download
+          go test -v -race -count=1 ./...
+
+      - name: run linter
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+  build: 
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: build backend
+        run: docker build -t anagrams-backend-test .
+      - name: build frontend
+        run: |
+          cd frontend
+          docker build \
+            --build-arg VITE_API_URL=https://api.anagrams.ru \
+            -t anagrams-frontend-test .
+
+  deploy:
+      needs: [test, build]
+      runs-on: ubuntu-latest
+      steps: 
+        - name: deploy to server
+          uses: appleboy/ssh-action@v1.0.3
+          with:
+            host: ${{ secrets.SSH_HOST }}
+            username: ${{ secrets.SSH_USER }}
+            key: ${{ secrets.SSH_KEY }}
+            script: |
+              set -e
+              cd ~/anagrams.ru
+
+              CURRENT_COMMIT=$(git rev-parse HEAD)
+              echo "Current commit: $CURRENT_COMMIT"
+
+              git pull origin main
+              docker compose --profile tools run --rm migrate || echo "No new migrations"
+              docker compose up -d --build
+
+              sleep 5
+              if ! docker compose ps | grep -q "Up"; then 
+                echo "ERROR: Containers failed to start"
+                git reset --hard $CURRENT_COMMIT
+                docker compose up -d
+                exit 1
+              fi
+
+              docker image prune -f
+              echo "Deployment successful!"
