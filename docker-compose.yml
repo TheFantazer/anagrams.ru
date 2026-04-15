@@ -6,7 +6,7 @@ services:
       args:
         VITE_API_URL: https://api.anagrams.ru
     ports:
-      - "80:80"
+      - "3000:80"
     restart: unless-stopped
 
   app:
