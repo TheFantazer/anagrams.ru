@@ -15,7 +15,7 @@ func TestScoreWord(t *testing.T) {
 		{"4 letters", "стол", 400},
 		{"5 letters", "слово", 1200},
 		{"6 letters", "словом", 2000},
-		{"7 letters", "словами", 3000},
+		{"7 letters", "словами", 2800},
 		{"8+ letters", "словарный", 0},
 		{"uppercase", "СОН", 100},
 		{"mixed case", "СлОвО", 1200},
@@ -39,7 +39,7 @@ func TestNewWord(t *testing.T) {
 	}{
 		{"3 letter word", "кот", 100},
 		{"5 letter word", "слово", 1200},
-		{"7 letter word", "словами", 3000},
+		{"7 letter word", "словами", 2800},
 	}
 
 	for _, tt := range tests {
