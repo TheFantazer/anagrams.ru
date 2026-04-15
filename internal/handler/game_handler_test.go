@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -186,7 +187,8 @@ func TestCreateSession_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var errResp ErrorResponse
-	json.NewDecoder(rec.Body).Decode(&errResp)
+	err := json.NewDecoder(rec.Body).Decode(&errResp)
+	require.NoError(t, err)
 	assert.Equal(t, "invalid_request", errResp.Error)
 }
 
@@ -206,7 +208,8 @@ func TestGetSession_Success(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var createResp SessionResponse
-	json.NewDecoder(rec.Body).Decode(&createResp)
+	err := json.NewDecoder(rec.Body).Decode(&createResp)
+	require.NoError(t, err)
 
 	// Теперь получаем сессию
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/sessions/"+createResp.ID.String(), nil)
@@ -216,7 +219,8 @@ func TestGetSession_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var getResp SessionResponse
-	json.NewDecoder(rec.Body).Decode(&getResp)
+	err = json.NewDecoder(rec.Body).Decode(&getResp)
+	require.NoError(t, err)
 	assert.Equal(t, createResp.ID, getResp.ID)
 	assert.Equal(t, createResp.Letters, getResp.Letters)
 }
@@ -281,7 +285,7 @@ func TestSubmitResult_Success(t *testing.T) {
 		MaxScore:    300,
 		CreatedAt:   time.Now(),
 	}
-	err := sessionRepo.Create(nil, knownSession)
+	err := sessionRepo.Create(context.Background(), knownSession)
 	require.NoError(t, err)
 
 	// Отправляем результат
@@ -421,7 +425,7 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 		MaxScore:    100,
 		CreatedAt:   time.Now().Add(-2 * time.Hour), // Сессия создана 2 часа назад
 	}
-	err := sessionRepo.Create(nil, expiredSession)
+	err := sessionRepo.Create(context.Background(), expiredSession)
 	require.NoError(t, err)
 
 	// Пытаемся отправить результат
@@ -508,7 +512,8 @@ func TestGetSessionResults_WithTopFilter(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	var session SessionResponse
-	json.NewDecoder(rec.Body).Decode(&session)
+	err := json.NewDecoder(rec.Body).Decode(&session)
+	require.NoError(t, err)
 
 	// Отправляем 5 результатов
 	for i := 0; i < 5; i++ {
@@ -534,7 +539,8 @@ func TestGetSessionResults_WithTopFilter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var results []ResultResponse
-	json.NewDecoder(rec.Body).Decode(&results)
+	err = json.NewDecoder(rec.Body).Decode(&results)
+	require.NoError(t, err)
 	assert.Len(t, results, 2)
 }
 
