@@ -22,9 +22,9 @@ jobs:
           go test -v -race -count=1 ./...
 
       - name: run linter
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.11
   build: 
     needs: test
     runs-on: ubuntu-latest
