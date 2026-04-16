@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TheFantazer/anagrams.ru/internal/config"
 	"github.com/TheFantazer/anagrams.ru/internal/dictionary"
 	"github.com/TheFantazer/anagrams.ru/internal/domain"
 	"github.com/TheFantazer/anagrams.ru/internal/service"
@@ -46,8 +47,19 @@ func setupTestService() service.GameService {
 func setupTestRouter() http.Handler {
 	gameService := setupTestService()
 	authService := newMockAuthService()
+	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	cfg := &config.Config{
+		GoogleOAuth: config.GoogleOAuthConfig{
+			ClientID:     "test_client_id",
+			ClientSecret: "test_client_secret",
+			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		},
+		App: config.AppConfig{
+			FrontendURL: "http://localhost:3000",
+		},
+	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	return NewRouter(gameService, authService, logger)
+	return NewRouter(gameService, authService, jwtService, cfg, logger)
 }
 
 func TestCreateSession_Success(t *testing.T) {
@@ -271,8 +283,19 @@ func TestSubmitResult_Success(t *testing.T) {
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
 	authService := newMockAuthService()
+	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	cfg := &config.Config{
+		GoogleOAuth: config.GoogleOAuthConfig{
+			ClientID:     "test_client_id",
+			ClientSecret: "test_client_secret",
+			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		},
+		App: config.AppConfig{
+			FrontendURL: "http://localhost:3000",
+		},
+	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, authService, logger)
+	router := NewRouter(gameService, authService, jwtService, cfg, logger)
 
 	// Создаем сессию с известными буквами напрямую в репозитории
 	knownSession := &domain.Session{
@@ -411,8 +434,19 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
 	authService := newMockAuthService()
+	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	cfg := &config.Config{
+		GoogleOAuth: config.GoogleOAuthConfig{
+			ClientID:     "test_client_id",
+			ClientSecret: "test_client_secret",
+			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		},
+		App: config.AppConfig{
+			FrontendURL: "http://localhost:3000",
+		},
+	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, authService, logger)
+	router := NewRouter(gameService, authService, jwtService, cfg, logger)
 
 	// Создаем просроченную сессию напрямую в репозитории
 	expiredSession := &domain.Session{

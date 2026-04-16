@@ -5,20 +5,24 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
-	App      AppConfig
-	Postgres PostgresConfig
-	Redis    RedisConfig
-	Dict     DictConfig
-	Game     GameConfig
+	App         AppConfig
+	Postgres    PostgresConfig
+	Redis       RedisConfig
+	Dict        DictConfig
+	Game        GameConfig
+	GoogleOAuth GoogleOAuthConfig
+	JWT         JWTConfig
 }
 
 type AppConfig struct {
-	Port     string
-	Env      string
-	LogLevel string
+	Port        string
+	Env         string
+	LogLevel    string
+	FrontendURL string
 }
 
 type PostgresConfig struct {
@@ -49,12 +53,25 @@ type GameConfig struct {
 	MinWordLength      int
 }
 
+type GoogleOAuthConfig struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURI  string
+}
+
+type JWTConfig struct {
+	Secret     string
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
+}
+
 func Load() (*Config, error) {
 	cfg := &Config{
 		App: AppConfig{
-			Port:     getEnv("APP_PORT", "8080"),
-			Env:      getEnv("APP_ENV", "development"),
-			LogLevel: getEnv("APP_LOG_LEVEL", "info"),
+			Port:        getEnv("APP_PORT", "8080"),
+			Env:         getEnv("APP_ENV", "development"),
+			LogLevel:    getEnv("APP_LOG_LEVEL", "info"),
+			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
 		},
 		Postgres: PostgresConfig{
 			Host:     getEnv("POSTGRES_HOST", "localhost"),
@@ -80,12 +97,22 @@ func Load() (*Config, error) {
 			DefaultLetterCount: getEnvInt("GAME_DEFAULT_LETTER_COUNT", 7),
 			MinWordLength:      getEnvInt("GAME_MIN_WORD_LENGTH", 3),
 		},
+		GoogleOAuth: GoogleOAuthConfig{
+			ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+			ClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+			RedirectURI:  getEnv("GOOGLE_REDIRECT_URI", ""),
+		},
+		JWT: JWTConfig{
+			Secret:     getEnv("JWT_SECRET", ""),
+			AccessTTL:  getDuration("JWT_ACCESS_TTL", 15*time.Minute),
+			RefreshTTL: getDuration("JWT_REFRESH_TTL", 168*time.Hour),
+		},
 	}
 
 	return cfg, nil
 }
 
-// PostgresDSN возвращает строку подключения к PostgreSQL
+// DSN PostgresDSN возвращает строку подключения к PostgreSQL
 func (c *PostgresConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Database, c.SSLMode)
@@ -117,4 +144,13 @@ func getEnvSlice(key, defaultValue string) []string {
 		}
 	}
 	return result
+}
+
+func getDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
 }

@@ -38,3 +38,7 @@ func (m *MockAuthService) GetUserStats(ctx context.Context, userID uuid.UUID) (*
 func (m *MockAuthService) GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error) {
 	return nil, nil
 }
+
+func (m *MockAuthService) LoginOrRegisterWithOAuth(ctx context.Context, provider, oauthID, email, username string) (*domain.User, error) {
+	return nil, nil
+}

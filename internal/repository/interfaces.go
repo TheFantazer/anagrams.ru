@@ -27,8 +27,10 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetByOAuthID(ctx context.Context, provider, oauthID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
+	LinkOAuth(ctx context.Context, userID uuid.UUID, provider, oauthID string) error
 }
 
 type UserStats struct {

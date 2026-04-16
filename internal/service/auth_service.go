@@ -17,6 +17,7 @@ type AuthService interface {
 	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
 	GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error)
 	GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error)
+	LoginOrRegisterWithOAuth(ctx context.Context, provider, oauthID, email, username string) (*domain.User, error)
 }
 
 type authService struct {
@@ -88,4 +89,36 @@ func (s *authService) GetUserStats(ctx context.Context, userID uuid.UUID) (*repo
 
 func (s *authService) GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error) {
 	return s.statsRepo.GetLeaderboard(ctx, period, limit)
+}
+
+func (s *authService) LoginOrRegisterWithOAuth(ctx context.Context, provider string, oauthID string, email string, username string) (*domain.User, error) {
+	user, err := s.userRepo.GetByOAuthID(ctx, provider, oauthID)
+	if err == nil {
+		return user, nil
+	}
+
+	if email != "" {
+		user, err = s.userRepo.GetByEmail(ctx, email)
+		if err == nil {
+			err = s.userRepo.LinkOAuth(ctx, user.ID, provider, oauthID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to link oauth: %w", err)
+			}
+			return user, nil
+		}
+	}
+
+	newUser := &domain.User{
+		Username:      username,
+		Email:         &email,
+		OAuthProvider: &provider,
+		OAuthID:       &oauthID,
+	}
+
+	err = s.userRepo.Create(ctx, newUser)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return newUser, nil
 }

@@ -163,6 +163,64 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	return user, nil
 }
 
+func (r *userRepository) GetByOAuthID(ctx context.Context, provider, oauthID string) (*domain.User, error) {
+	query := `
+		SELECT id, username, email, password, oauth_provider, oauth_id,
+		       default_letter_count, default_language, default_time_limit,
+		       created_at, updated_at
+		FROM users
+		WHERE oauth_provider = $1 AND oauth_id = $2
+	`
+
+	user := &domain.User{}
+	err := r.db.QueryRowContext(ctx, query, provider, oauthID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.OAuthProvider,
+		&user.OAuthID,
+		&user.DefaultLetterCount,
+		&user.DefaultLanguage,
+		&user.DefaultTimeLimit,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, repository.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by oauth id: %w", err)
+	}
+
+	return user, nil
+}
+
+func (r *userRepository) LinkOAuth(ctx context.Context, userID uuid.UUID, provider, oauthID string) error {
+	query := `
+		UPDATE users
+		SET oauth_provider = $1, oauth_id = $2, updated_at = $3
+		WHERE id = $4
+	`
+
+	result, err := r.db.ExecContext(ctx, query, provider, oauthID, time.Now().UTC(), userID)
+	if err != nil {
+		return fmt.Errorf("failed to link oauth: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return repository.ErrNotFound
+	}
+
+	return nil
+}
+
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `
 		UPDATE users

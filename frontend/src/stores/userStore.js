@@ -113,6 +113,40 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('anagram_user', JSON.stringify(userData))
   }
 
+  async function loadUserFromToken() {
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userIdFromToken = payload.user_id
+
+      if (!userIdFromToken) {
+        console.error('No user_id in token')
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        return
+      }
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+      const response = await fetch(`${apiUrl}/api/v1/auth/me?user_id=${userIdFromToken}`)
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+      } else {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        localStorage.removeItem('anagram_user')
+      }
+    } catch (error) {
+      console.error('Failed to load user from token', error)
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('anagram_user')
+    }
+  }
+
   function signOut() {
     userId.value = null
     username.value = ''
@@ -121,6 +155,8 @@ export const useUserStore = defineStore('user', () => {
     isAuthenticated.value = false
 
     localStorage.removeItem('anagram_user')
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
   }
 
   return {
@@ -142,6 +178,7 @@ export const useUserStore = defineStore('user', () => {
     easterEgg,
 
     setUser,
+    loadUserFromToken,
     setShowHelp,
     setShowSoloSettings,
     setLoginTab,

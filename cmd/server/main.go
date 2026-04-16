@@ -62,8 +62,9 @@ func main() {
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
 	authService := service.NewAuthService(userRepo, statsRepo)
+	jwtService := service.NewJWTService(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
 
-	router := handler.NewRouter(gameService, authService, logger)
+	router := handler.NewRouter(gameService, authService, jwtService, cfg, logger)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.App.Port,
