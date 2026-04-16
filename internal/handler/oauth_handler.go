@@ -62,7 +62,11 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "oauth_error", "Failed to get user info")
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			h.logger.Error("failed to close response body", slog.String("error", cerr.Error()))
+		}
+	}()
 
 	var userInfo struct {
 		ID    string `json:"id"`
