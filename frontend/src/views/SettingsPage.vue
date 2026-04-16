@@ -8,6 +8,11 @@ const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
 
+// Redirect to auth if not logged in
+if (!userStore.isAuthenticated) {
+  router.push('/auth')
+}
+
 const saving = ref(false)
 const saveMessage = ref('')
 const stats = ref({

@@ -3,9 +3,9 @@ import { ref } from 'vue'
 
 export const useUserStore = defineStore('user', () => {
   const userId = ref(null)
-  const username = ref('player_one')
-  const email = ref('player@example.com')
-  const joinedDate = ref('April 2026')
+  const username = ref('')
+  const email = ref('')
+  const joinedDate = ref('')
   const isAuthenticated = ref(false)
 
   const gamesPlayed = ref(0)
@@ -115,9 +115,9 @@ export const useUserStore = defineStore('user', () => {
 
   function signOut() {
     userId.value = null
-    username.value = 'player_one'
-    email.value = 'player@example.com'
-    joinedDate.value = 'April 2026'
+    username.value = ''
+    email.value = ''
+    joinedDate.value = ''
     isAuthenticated.value = false
 
     localStorage.removeItem('anagram_user')
