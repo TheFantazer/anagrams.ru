@@ -152,6 +152,9 @@ function getDisplayWords() {
       <p class="words-count">
         {{ gameStore.foundWords.length }} / {{ gameStore.validWords.length }} words found
       </p>
+      <p class="percent-found">
+        {{Math.trunc(gameStore.foundWords.length * 100 / gameStore.validWords.length)}} % found
+      </p>
 
       <div class="words-area">
         <span
@@ -375,7 +378,13 @@ function getDisplayWords() {
 .words-count {
   color: #666;
   font-size: 14px;
+}
+
+.percent-found{
+  color: #666;
+  font-size: 14px;
   margin-bottom: 32px;
+
 }
 
 @keyframes shake {
