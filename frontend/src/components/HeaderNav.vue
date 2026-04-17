@@ -16,7 +16,9 @@ function goHome() {
 <template>
   <header class="header">
     <div class="logo-box" @click="goHome">
-      <span class="logo-text">A</span>
+      <span class="logo-text">
+        <img src="../../public/ChatGPT%20Image%20Apr%2017,%202026,%2011_36_24%20AM.png" alt="icon" style="border-radius: 8px">
+      </span>
     </div>
     <div class="header-right">
       <div class="icon-btn" @click="userStore.setShowHelp(true)" title="How to play">
@@ -60,7 +62,7 @@ function goHome() {
   height: 36px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(255, 255, 255);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,6 +80,16 @@ function goHome() {
   font-weight: 700;
   font-size: 20px;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 .header-right {
