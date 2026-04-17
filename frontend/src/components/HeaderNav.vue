@@ -17,7 +17,7 @@ function goHome() {
   <header class="header">
     <div class="logo-box" @click="goHome">
       <span class="logo-text">
-        <img src="../../public/ChatGPT%20Image%20Apr%2017,%202026,%2011_36_24%20AM.png" alt="icon" style="border-radius: 8px">
+        <img src="../../public/icon.png" alt="icon" style="border-radius: 8px">
       </span>
     </div>
     <div class="header-right">
