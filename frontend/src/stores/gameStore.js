@@ -25,6 +25,9 @@ export const useGameStore = defineStore('game', () => {
 
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
+  const lastGameTime = ref(60)
+  const lastGameLetters = ref(7)
+  const lastGameLang = ref('ru')
 
   async function loadDictionary(lang) {
     if (dictionaries.value[lang]) {
@@ -90,6 +93,11 @@ export const useGameStore = defineStore('game', () => {
   }
 
   async function startGame(time, letters, lang) {
+    // Save last game parameters
+    lastGameTime.value = time
+    lastGameLetters.value = letters
+    lastGameLang.value = lang
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
       const response = await fetch(`${apiUrl}/api/v1/sessions`, {
@@ -183,14 +191,14 @@ export const useGameStore = defineStore('game', () => {
   function submitWord() {
     if (inputWord.value.length < 3) {
       triggerShake()
-      return
+      return { valid: false }
     }
 
     const upper = inputWord.value.toUpperCase()
 
     if (foundWords.value.includes(upper)) {
       triggerShake()
-      return
+      return { valid: false }
     }
 
     const available = [...gameLetters.value.map(l => l.toUpperCase())]
@@ -198,14 +206,14 @@ export const useGameStore = defineStore('game', () => {
       const idx = available.indexOf(ch)
       if (idx === -1) {
         triggerShake()
-        return
+        return { valid: false }
       }
       available.splice(idx, 1)
     }
 
     if (validWords.value.length > 0 && !validWords.value.includes(upper)) {
       triggerShake()
-      return
+      return { valid: false }
     }
 
     foundWords.value.push(upper)
@@ -213,6 +221,7 @@ export const useGameStore = defineStore('game', () => {
     score.value += pts
     inputWord.value = ''
     usedLetterIndices.value = []
+    return { valid: true }
   }
 
   
@@ -336,6 +345,9 @@ export const useGameStore = defineStore('game', () => {
     validWords,
     sessionId,
     usedLetterIndices,
+    lastGameTime,
+    lastGameLetters,
+    lastGameLang,
 
     availableLetters,
     timerPercentage,

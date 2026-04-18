@@ -1,0 +1,250 @@
+/* =========================================================================
+   Anagrams.ru — Design Tokens
+   Warm, paper-like, considered. Milk/beige with cocoa accent and deep navy
+   for type & contrast. Display: Unbounded. Body: Manrope. Mono: JetBrains Mono.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* -----------------------------------------------------------------------
+     COLOR — base
+     Palette: milk (page) → beige (cards) → cocoa (accent) → deep-navy (ink)
+     ----------------------------------------------------------------------- */
+  --milk:               #fbf6ec;   /* page background, warm cream */
+  --milk-2:             #f0e6d2;   /* hover tint on milk */
+  --beige:              #e9dcc3;   /* card fill, chip rest */
+  --beige-deep:         #d8c5a0;   /* pressed, subtle border */
+  --cocoa:              #7a4a2b;   /* primary accent, "found" highlight */
+  --cocoa-light:        #a86a42;   /* accent hover */
+  --cocoa-dark:         #5a3520;   /* accent pressed */
+  --navy:               #1e2a46;   /* primary ink, header, tiles */
+  --navy-2:             #2c3a5e;   /* navy hover, focus ring */
+  --navy-3:             #3a4870;   /* navy disabled */
+
+  /* Surface aliases */
+  --bg-page:            var(--milk);
+  --bg-surface:         #ffffff;       /* modals & elevated panels */
+  --bg-card:            var(--beige);
+  --bg-hover:           var(--milk-2);
+  --bg-pressed:         var(--beige-deep);
+
+  /* Accent aliases */
+  --accent:             var(--cocoa);
+  --accent-hover:       var(--cocoa-light);
+  --accent-pressed:     var(--cocoa-dark);
+  --accent-soft:        rgba(122, 74, 43, 0.08);    /* tile fill at rest */
+  --accent-soft-hover:  rgba(122, 74, 43, 0.14);
+  --accent-glow:        rgba(122, 74, 43, 0.22);    /* button shadow / focus */
+
+  /* Text on light surfaces (navy is the ink) */
+  --fg-primary:         var(--navy);                /* body + heading text */
+  --fg-secondary:       #4a5878;                    /* secondary body */
+  --fg-muted:           #6a7494;                    /* labels, uppercase micro */
+  --fg-subtle:          #8e96b0;                    /* subtitles, counts */
+  --fg-faint:           #b8becf;                    /* empty-state, unreached */
+  --fg-ghost:           #d0d4e0;                    /* version tag, placeholder chrome */
+  --fg-on-accent:       var(--milk);                /* text on cocoa buttons */
+  --fg-on-navy:         var(--milk);                /* text on navy surfaces */
+
+  /* Borders (additive on warm bg) */
+  --border-hairline:    rgba(30, 42, 70, 0.06);
+  --border-subtle:      rgba(30, 42, 70, 0.10);
+  --border-default:     rgba(30, 42, 70, 0.14);
+  --border-strong:      rgba(30, 42, 70, 0.22);
+  --border-accent:      rgba(122, 74, 43, 0.30);
+  --border-accent-strong:rgba(122, 74, 43, 0.50);
+
+  /* Semantic (state colors) — tuned warm */
+  --success:            #4a7a3a;     /* deep moss — reads "correct" */
+  --success-soft:       rgba(74, 122, 58, 0.12);
+  --warning:            #c98a1f;     /* mustard, timer low */
+  --warning-2:          #b9651a;     /* escalating */
+  --danger:             #b03a2e;     /* terracotta-red error */
+  --danger-soft:        rgba(176, 58, 46, 0.08);
+  --danger-border:      rgba(176, 58, 46, 0.30);
+
+  /* Gradients (subtle — warm-to-warm) */
+  --grad-accent:        linear-gradient(135deg, #7a4a2b, #5a3520);
+  --grad-accent-light:  linear-gradient(135deg, #a86a42, #7a4a2b);
+  --grad-timer-bar:     linear-gradient(90deg, #c98a1f, #7a4a2b);
+  --grad-page-glow:     radial-gradient(ellipse, rgba(122,74,43,0.05) 0%, transparent 70%);
+  --grad-paper:         linear-gradient(180deg, #fbf6ec 0%, #f4ecdb 100%);
+
+  /* Shadows / elevation — soft, warm-tinted */
+  --shadow-sm:          0 1px 2px rgba(30, 42, 70, 0.06);
+  --shadow-md:          0 4px 12px rgba(30, 42, 70, 0.08);
+  --shadow-lg:          0 12px 32px rgba(30, 42, 70, 0.10);
+  --shadow-button:      0 2px 6px rgba(122, 74, 43, 0.18);
+  --shadow-button-hover:0 4px 12px rgba(122, 74, 43, 0.26);
+  --shadow-banner:      0 8px 24px rgba(30, 42, 70, 0.12);
+  --shadow-card:        0 0 0 1px var(--border-subtle);
+  --shadow-inset:       inset 0 1px 2px rgba(30, 42, 70, 0.06);
+
+  /* -----------------------------------------------------------------------
+     TYPE — families
+     Display: Unbounded (Cyrillic-first geometric display)
+     Body:    Manrope   (clean, friendly, excellent Cyrillic)
+     Mono:    JetBrains Mono (tiles, timer, code)
+     ----------------------------------------------------------------------- */
+  --font-display:       'Unbounded', 'Inter Tight', system-ui, sans-serif;
+  --font-body:          'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:          'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* TYPE — scale */
+  --fs-hero:            48px;      /* home title "ANAGRAM" */
+  --fs-display:         34px;      /* game-over title */
+  --fs-final-score:     56px;      /* giant score */
+  --fs-word-input:      28px;      /* in-game input */
+  --fs-letter-tile:     24px;      /* letter tile face */
+  --fs-h1:              22px;      /* page titles */
+  --fs-h2:              20px;      /* modal titles */
+  --fs-h3:              16px;      /* section headers */
+  --fs-body:            14px;      /* default body */
+  --fs-body-sm:         13px;      /* buttons, tab text */
+  --fs-caption:         12px;      /* subtitles, mode desc, labels */
+  --fs-micro:           11px;      /* version tag */
+  --fs-nano:            10px;      /* badges */
+
+  --fw-light:           300;
+  --fw-regular:         400;
+  --fw-medium:          500;
+  --fw-semibold:        600;
+  --fw-bold:            700;
+  --fw-black:           800;
+
+  --ls-tight:           -1.5px;    /* hero */
+  --ls-snug:            -0.5px;    /* display */
+  --ls-normal:          0;
+  --ls-loose:           0.5px;     /* subtitle */
+  --ls-upper:           1.2px;     /* uppercase micro-labels */
+  --ls-widest:          2px;
+  --ls-tile:            4px;       /* spaced-out word input */
+
+  --lh-tight:           1.05;
+  --lh-snug:            1.25;
+  --lh-normal:          1.5;
+  --lh-loose:           1.7;       /* help modal body */
+
+  /* -----------------------------------------------------------------------
+     SPACING — 4/8 rhythm
+     ----------------------------------------------------------------------- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* -----------------------------------------------------------------------
+     RADII
+     ----------------------------------------------------------------------- */
+  --radius-xs:  6px;
+  --radius-sm:  10px;
+  --radius-md:  12px;
+  --radius-lg:  14px;
+  --radius-xl:  18px;   /* card */
+  --radius-2xl: 24px;   /* modal */
+  --radius-pill:9999px;
+
+  /* -----------------------------------------------------------------------
+     MOTION
+     ----------------------------------------------------------------------- */
+  --dur-fast:   0.15s;
+  --dur-base:   0.22s;
+  --dur-slow:   0.32s;
+  --dur-x-slow: 0.5s;
+  --ease-std:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:    cubic-bezier(0.4, 0, 1, 1);
+
+  /* -----------------------------------------------------------------------
+     LAYOUT
+     ----------------------------------------------------------------------- */
+  --max-content:  900px;
+  --max-narrow:   600px;
+  --max-form:     500px;
+  --max-auth:     400px;
+  --header-h:     68px;
+}
+
+/* =========================================================================
+   SEMANTIC ELEMENT RESETS
+   ========================================================================= */
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--fg-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  color: var(--fg-primary);
+  margin: 0 0 var(--sp-4);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-snug);
+}
+
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 {
+  font-size: var(--fs-h3);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-upper);
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+}
+h4 {
+  font-size: var(--fs-body);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-upper);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semibold);
+}
+
+p  { margin: 0 0 var(--sp-3); color: var(--fg-primary); }
+
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--accent);
+}
+
+::selection { background: rgba(122, 74, 43, 0.20); color: var(--navy); }
+
+::-webkit-scrollbar          { width: 8px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--beige-deep); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cocoa-light); }
+
+/* =========================================================================
+   KEYFRAMES
+   ========================================================================= */
+@keyframes an-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX( 8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX( 6px); }
+}
+@keyframes an-slide-down {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes an-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

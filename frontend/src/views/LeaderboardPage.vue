@@ -44,138 +44,83 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="lb-page">
-    <h2 class="page-title">Leaderboard</h2>
+  <div class="page">
+    <div class="shell lb-wrap">
+      <header class="page-head">
+        <div>
+          <div class="page-eyebrow">Leaderboard</div>
+          <h1 class="page-title-display">Who's hunting words best.</h1>
+        </div>
+        <div class="lb-tabs">
+          <button
+            v-for="period in [{ id: 'day', label: 'Today' }, { id: 'week', label: 'This week' }, { id: 'month', label: 'Month' }, { id: 'all', label: 'All time' }]"
+            :key="period.id"
+            class="chip-toggle"
+            :data-active="userStore.lbPeriod === period.id"
+            @click="userStore.setLbPeriod(period.id)"
+          >
+            {{ period.label }}
+          </button>
+        </div>
+      </header>
 
-    <div class="lb-tabs">
-      <button
-        v-for="period in periods"
-        :key="period"
-        :class="['lb-tab', { active: userStore.lbPeriod === period }]"
-        @click="userStore.setLbPeriod(period)"
-      >
-        {{ getPeriodLabel(period) }}
-      </button>
-    </div>
+      <!-- Loading/Empty state -->
+      <div v-if="loading" style="text-align:center; padding:60px; color:var(--fg-muted)">
+        Loading leaderboard...
+      </div>
+      <div v-else-if="leaderboard.length === 0" style="text-align:center; padding:60px; color:var(--fg-muted)">
+        No results yet for this period
+      </div>
 
-    <div v-if="loading" class="loading-text">Loading...</div>
-    <div v-else-if="leaderboard.length === 0" class="empty-text">No results yet for this period</div>
-    <div
-      v-else
-      v-for="(user, i) in leaderboard"
-      :key="i"
-      :class="['lb-row', { first: i === 0 }]"
-    >
-      <span :class="['lb-rank', `rank-${i}`]">
-        {{ i === 0 ? '👑' : `#${i + 1}` }}
-      </span>
-      <span class="lb-name">{{ user.name }}</span>
-      <span class="lb-words">{{ user.words }} words</span>
-      <span class="lb-score">{{ user.score.toLocaleString() }}</span>
+      <!-- Podium (top 3) -->
+      <div v-else-if="leaderboard.length > 0" class="lb-podium">
+        <div
+          v-for="(user, i) in leaderboard.slice(0, 3)"
+          :key="i"
+          :class="['podium', `podium-${i + 1}`]"
+          :data-you="user.name === userStore.username"
+        >
+          <div class="podium-rank">{{ i === 0 ? '👑' : `0${i + 1}` }}</div>
+          <div class="podium-name">{{ user.name }}</div>
+          <div class="podium-score">{{ user.score.toLocaleString() }}</div>
+          <div class="podium-words">{{ user.words }} words</div>
+        </div>
+      </div>
+
+      <!-- Table (rest of leaderboard) -->
+      <div v-if="!loading && leaderboard.length > 0" class="lb-table">
+        <div class="lb-row lb-row--head">
+          <span style="width:40px">#</span>
+          <span style="flex:1">Player</span>
+          <span style="width:80px; text-align:right">Words</span>
+          <span style="width:100px; text-align:right">Score</span>
+        </div>
+        <div
+          v-for="(user, i) in leaderboard"
+          :key="i"
+          :class="['lb-row', { you: user.name === userStore.username }]"
+        >
+          <span :class="['lb-rank', `r-${i}`]">
+            {{ i < 3 ? ['①', '②', '③'][i] : String(i + 1).padStart(2, '0') }}
+          </span>
+          <span class="lb-name">
+            <span
+              class="lb-avatar"
+              :style="{ background: `hsl(${i * 37} 40% 40%)` }"
+            >
+              {{ user.name[0].toUpperCase() }}
+            </span>
+            {{ user.name }}
+            <span v-if="user.name === userStore.username" class="lb-youtag">you</span>
+          </span>
+          <span class="lb-words">{{ user.words }}</span>
+          <span class="lb-score mono">{{ user.score.toLocaleString() }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.lb-page {
-  max-width: 600px;
-  margin: 40px auto;
-  padding: 0 24px;
-}
-
-.page-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0 0 24px;
-  color: #e8e6e1;
-}
-
-.lb-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 24px;
-}
-
-.lb-tab {
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: rgba(255, 255, 255, 0.03);
-  color: #666;
-  font-family: 'Outfit', sans-serif;
-  transition: all 0.2s;
-}
-
-.lb-tab.active {
-  background: rgba(99, 230, 190, 0.12);
-  color: var(--accent);
-}
-
-.lb-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  margin-bottom: 8px;
-}
-
-.lb-row.first {
-  background: rgba(99, 230, 190, 0.06);
-  border-color: rgba(99, 230, 190, 0.15);
-}
-
-.lb-rank {
-  font-family: 'Space Mono', monospace;
-  font-size: 16px;
-  font-weight: 700;
-  width: 32px;
-  text-align: center;
-  color: #555;
-}
-
-.lb-rank.rank-0 {
-  color: var(--accent);
-}
-
-.lb-rank.rank-1 {
-  color: #fbbf24;
-}
-
-.lb-rank.rank-2 {
-  color: #fb923c;
-}
-
-.lb-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.lb-words {
-  font-size: 12px;
-  color: #555;
-  margin-right: 8px;
-}
-
-.lb-score {
-  font-family: 'Space Mono', monospace;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.loading-text,
-.empty-text {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-  font-size: 14px;
-}
+/* All styles are in pages.css and app.css */
 </style>

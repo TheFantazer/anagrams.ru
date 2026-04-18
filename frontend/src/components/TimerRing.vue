@@ -4,14 +4,21 @@ import { useGameStore } from '../stores/gameStore'
 
 const gameStore = useGameStore()
 
-const radius = 34
+const radius = 42
 const circumference = 2 * Math.PI * radius
 
-const strokeColor = computed(() => {
+const timerState = computed(() => {
   const pct = gameStore.timerPercentage
-  if (pct > 0.3) return '#63e6be'
-  if (pct > 0.1) return '#fbbf24'
-  return '#ef4444'
+  if (pct > 0.3) return 'ok'
+  if (pct > 0.1) return 'low'
+  return 'crit'
+})
+
+const strokeColor = computed(() => {
+  const state = timerState.value
+  if (state === 'ok') return 'var(--accent)'
+  if (state === 'low') return 'var(--warning)'
+  return 'var(--danger)'
 })
 
 const strokeDashoffset = computed(() => {
@@ -26,19 +33,24 @@ const formattedTime = computed(() => {
 </script>
 
 <template>
-  <div class="timer-ring">
-    <svg width="80" height="80" viewBox="0 0 80 80">
+  <div
+    :class="['timer-ring', {
+      'low': timerState === 'low',
+      'crit': timerState === 'crit'
+    }]"
+  >
+    <svg width="96" height="96" viewBox="0 0 96 96">
       <circle
-        cx="40"
-        cy="40"
+        cx="48"
+        cy="48"
         :r="radius"
         fill="none"
-        stroke="rgba(255,255,255,0.06)"
+        stroke="var(--border-hairline)"
         stroke-width="4"
       />
       <circle
-        cx="40"
-        cy="40"
+        cx="48"
+        cy="48"
         :r="radius"
         fill="none"
         :stroke="strokeColor"
@@ -46,35 +58,15 @@ const formattedTime = computed(() => {
         stroke-linecap="round"
         :stroke-dasharray="circumference"
         :stroke-dashoffset="strokeDashoffset"
-        transform="rotate(-90 40 40)"
-        class="progress-ring"
+        style="transition: stroke-dashoffset 0.95s linear, stroke 0.3s"
       />
     </svg>
-    <div class="timer-text" :style="{ color: strokeColor }">
+    <div class="timer-label">
       {{ formattedTime }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.timer-ring {
-  position: relative;
-  width: 80px;
-  height: 80px;
-}
-
-.timer-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Space Mono', monospace;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.progress-ring {
-  transition: stroke-dashoffset 1s linear, stroke 0.5s;
-}
+/* Styles are in game.css */
 </style>

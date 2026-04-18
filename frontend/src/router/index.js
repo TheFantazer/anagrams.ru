@@ -32,6 +32,11 @@ const router = createRouter({
             path: '/leaderboard',
             name: 'leaderboard',
             component: () => import('../views/LeaderboardPage.vue')
+        },
+        {
+            path: '/multiplayer',
+            name: 'multiplayer',
+            component: () => import('../views/MultiplayerPage.vue')
         }
     ]
 })

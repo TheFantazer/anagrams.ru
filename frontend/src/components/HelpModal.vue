@@ -6,19 +6,51 @@ const userStore = useUserStore()
 
 <template>
   <Teleport to="body">
-    <div v-if="userStore.showHelp" class="overlay" @click="userStore.setShowHelp(false)">
-      <div class="modal" @click.stop>
-        <button class="modal-close" @click="userStore.setShowHelp(false)">&times;</button>
-        <h3 class="modal-title">How to play</h3>
-        <div class="modal-content">
-          <p><span class="step">1.</span> You get a set of letters and a timer.</p>
-          <p><span class="step">2.</span> Make as many words as you can (3+ letters).</p>
-          <p><span class="step">3.</span> Longer words = more points.</p>
-          <p><span class="step">4.</span> Share the link — your friend plays the same letters.</p>
-          <p><span class="step">5.</span> Compare results. Best score wins.</p>
-          <div class="scoring-box">
-            <p>3 letters → 100 pts &nbsp;·&nbsp; 4 → 300 &nbsp;·&nbsp; 5 → 500 &nbsp;·&nbsp; 6+ → 1000+</p>
+    <div v-if="userStore.showHelp" class="modal-overlay" @click="userStore.setShowHelp(false)">
+      <div class="modal-shell" @click.stop>
+        <button class="modal-close-btn" @click="userStore.setShowHelp(false)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+
+        <h2 class="modal-title">How to play</h2>
+
+        <ol class="help-list">
+          <li>You get a <b>set of letters</b> and a timer.</li>
+          <li>Make as many words as you can (<b>3+ letters</b>).</li>
+          <li><b>Longer words</b> = more points.</li>
+          <li>Share the link — your friend plays the <b>same letters</b>.</li>
+          <li>Compare results. <b>Best score wins</b>.</li>
+        </ol>
+
+        <div class="help-scoring">
+          <div class="help-score-cell">
+            <span class="mono">100</span>
+            <span class="lbl">3 let</span>
           </div>
+          <div class="help-score-cell">
+            <span class="mono">400</span>
+            <span class="lbl">4 let</span>
+          </div>
+          <div class="help-score-cell">
+            <span class="mono">1.2k</span>
+            <span class="lbl">5 let</span>
+          </div>
+          <div class="help-score-cell">
+            <span class="mono">2k</span>
+            <span class="lbl">6 let</span>
+          </div>
+          <div class="help-score-cell">
+            <span class="mono">2.8k</span>
+            <span class="lbl">7 let</span>
+          </div>
+        </div>
+
+        <div class="help-keys">
+          <span><kbd class="kbd">Enter</kbd> submit</span>
+          <span><kbd class="kbd">Esc</kbd> clear</span>
+          <span><kbd class="kbd">⌫</kbd> delete</span>
         </div>
       </div>
     </div>
@@ -26,81 +58,72 @@ const userStore = useUserStore()
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  counter-reset: h;
 }
-
-.modal {
-  background: #141419;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 32px;
-  max-width: 420px;
-  width: calc(100% - 48px);
+.help-list li {
+  counter-increment: h;
+  padding: 10px 0 10px 36px;
   position: relative;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 24px;
-  color: var(--accent);
-}
-
-.modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  transition: color 0.2s;
-}
-
-.modal-close:hover {
-  color: #e8e6e1;
-}
-
-.modal-content {
   font-size: 14px;
-  line-height: 1.8;
-  color: #aaa;
+  color: var(--fg-secondary);
+  border-bottom: 1px solid var(--border-hairline);
 }
-
-.modal-content p {
-  margin: 0 0 12px;
-}
-
-.step {
+.help-list li:last-child { border-bottom: 0; }
+.help-list li::before {
+  content: counter(h, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
   color: var(--accent);
+}
+.help-list b {
+  color: var(--fg-primary);
   font-weight: 600;
 }
 
-.scoring-box {
-  background: rgba(99, 230, 190, 0.06);
-  border-radius: 10px;
-  padding: 16px;
-  border: 1px solid rgba(99, 230, 190, 0.1);
-  margin-top: 20px;
+.help-scoring {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 10px;
+}
+.help-score-cell {
+  text-align: center;
+  padding: 8px 4px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+}
+.help-score-cell .mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--accent);
+  display: block;
+}
+.help-score-cell .lbl {
+  font-size: 10px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
 }
 
-.scoring-box p {
-  margin: 0;
+.help-keys {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
   font-size: 12px;
-  color: #888;
-  font-family: 'Space Mono', monospace;
+  color: var(--fg-muted);
+  align-items: center;
 }
 </style>

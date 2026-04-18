@@ -1,0 +1,315 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const linkCopied = ref(false)
+
+function copyLink() {
+  const link = 'anagrams.ru/r/streami-7a9'
+  navigator.clipboard?.writeText(link)
+  linkCopied.value = true
+  setTimeout(() => linkCopied.value = false, 2200)
+}
+
+// Sample data for demo
+const sampleLetters = ['S','T','R','E','A','M','I']
+</script>
+
+<template>
+  <div class="page">
+    <div class="shell multi-wrap">
+      <header class="page-head">
+        <div>
+          <div class="page-eyebrow">Multiplayer</div>
+          <h1 class="page-title-display">Send a set. Compare scores.</h1>
+        </div>
+      </header>
+
+      <!-- Coming Soon Banner -->
+      <div class="coming-soon-banner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <div>
+          <strong>Multiplayer mode coming soon!</strong>
+          <span class="muted">This feature is under development. Play solo mode for now.</span>
+        </div>
+      </div>
+
+      <div class="multi-grid">
+        <!-- Create Challenge Section -->
+        <section class="card card--paper multi-new">
+          <div class="multi-eye">
+            <span class="multi-num">01</span>
+            Start a challenge
+          </div>
+          <h3 style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.5px;margin:6px 0 10px;color:var(--fg-primary);text-transform:none">
+            Pick letters, share link.
+          </h3>
+          <p class="muted" style="margin:0 0 20px;font-size:13px;max-width:360px">
+            We generate a fresh 7-letter set. Your friend plays the exact same puzzle — the highest score wins.
+          </p>
+
+          <div class="multi-set">
+            <span v-for="(letter, i) in sampleLetters" :key="i" class="multi-tile">{{ letter }}</span>
+          </div>
+
+          <div class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn--soft btn--sm" disabled>Shuffle set</button>
+            <button class="btn btn--soft btn--sm" disabled>60 sec</button>
+            <button class="btn btn--soft btn--sm" disabled>English</button>
+          </div>
+
+          <div class="multi-link">
+            <span class="mono" style="color:var(--fg-secondary)">anagrams.ru/r/streami-7a9</span>
+            <button class="btn btn--primary btn--sm" @click="copyLink" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path v-if="!linkCopied" d="M20 6L9 17l-5-5"/>
+                <template v-else>
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </template>
+              </svg>
+              {{ linkCopied ? 'Copied' : 'Copy link' }}
+            </button>
+          </div>
+
+          <div class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn--accent" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 4l14 8-14 8z"/>
+              </svg>
+              Play it now
+            </button>
+            <button class="btn btn--ghost" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+              More options
+            </button>
+          </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="multi-how">
+          <div class="multi-eye"><span class="multi-num">02</span>How it works</div>
+          <ol class="multi-steps">
+            <li><b>Generate</b> a 7-letter set (or reuse one you liked).</li>
+            <li><b>Share</b> the link — messenger, DM, anywhere.</li>
+            <li><b>Play</b> the set yourself. Same letters, same timer.</li>
+            <li><b>Compare</b> scores when your friend finishes.</li>
+          </ol>
+          <div class="multi-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <span>Challenges stay open for 48 hours. Async — nobody waits.</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Placeholder for challenges -->
+      <section style="margin-top:32px">
+        <div class="multi-eye" style="margin-bottom:16px">
+          <span class="multi-num">03</span>Active challenges
+        </div>
+        <div class="empty-state">
+          <p class="muted">No active challenges yet. Create one above to get started!</p>
+        </div>
+      </section>
+
+      <!-- CTA to go back -->
+      <div style="margin-top:32px;text-align:center">
+        <button class="btn btn--primary btn--lg" @click="router.push('/')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back to solo mode
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.multi-wrap { max-width: 980px; margin: 0 auto; }
+
+.coming-soon-banner {
+  background: var(--warning);
+  color: var(--navy);
+  padding: 16px 20px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.coming-soon-banner strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.coming-soon-banner .muted {
+  font-size: 13px;
+  color: var(--navy);
+  opacity: 0.7;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.page-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--fg-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.page-title-display {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  color: var(--fg-primary);
+  margin: 0;
+  line-height: 1;
+}
+
+.multi-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+}
+
+.multi-eye {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  margin-bottom: 12px;
+}
+
+.multi-num {
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  color: var(--fg-primary);
+}
+
+.multi-new {
+  padding: 32px;
+}
+
+.multi-set {
+  display: flex; gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.multi-tile {
+  width: 48px; height: 54px;
+  border-radius: 12px;
+  background: var(--navy);
+  color: var(--milk);
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  box-shadow: 0 3px 0 var(--navy-2);
+}
+
+.multi-link {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.multi-how {
+  padding: 28px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  height: fit-content;
+}
+
+.multi-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step;
+}
+
+.multi-steps li {
+  counter-increment: step;
+  padding: 12px 0 12px 40px;
+  border-bottom: 1px solid var(--border-hairline);
+  position: relative;
+  font-size: 14px;
+  color: var(--fg-secondary);
+}
+
+.multi-steps li:last-child { border-bottom: 0; }
+
+.multi-steps li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.multi-steps li b { color: var(--fg-primary); font-weight: 600; }
+
+.multi-tip {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  display: flex; gap: 10px; align-items: center;
+  color: var(--fg-secondary);
+  font-size: 12px;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: 14px;
+}
+
+@media (max-width: 820px) {
+  .multi-grid { grid-template-columns: 1fr; }
+  .page-title-display { font-size: 30px; letter-spacing: -0.8px; }
+}
+</style>

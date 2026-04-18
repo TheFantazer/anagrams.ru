@@ -1,126 +1,335 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const gameStore = useGameStore()
+
+const drawer = ref(false)
+
+const links = [
+  { id: '/', label: 'Play', icon: 'play' },
+  { id: '/multiplayer', label: 'Multiplayer', icon: 'users' },
+  { id: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
+]
 
 function goHome() {
   gameStore.endGame()
   router.push('/')
+  drawer.value = false
 }
+
+function navigateTo(path) {
+  router.push(path)
+  drawer.value = false
+}
+
+const userInitial = computed(() => {
+  if (!userStore.user?.username) return '?'
+  return userStore.user.username[0].toUpperCase()
+})
 </script>
 
 <template>
-  <header class="header">
-    <div class="logo-box" @click="goHome">
-      <span class="logo-text">
-        <img src="../../public/icon.png" alt="icon" style="border-radius: 8px">
-      </span>
+  <nav class="nav">
+    <div class="shell nav-inner">
+      <!-- Brand -->
+      <div class="nav-brand" @click="goHome">
+        <div class="nav-mark">AN</div>
+        <span class="nav-wordmark">anagrams<span class="dot">.</span></span>
+      </div>
+
+      <!-- Desktop Links -->
+      <div class="nav-links">
+        <button
+          v-for="link in links"
+          :key="link.id"
+          class="nav-link"
+          :data-active="route.path === link.id"
+          @click="navigateTo(link.id)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path v-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
+            <template v-else-if="link.icon === 'users'">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </template>
+            <template v-else-if="link.icon === 'trophy'">
+              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 4h3v3a3 3 0 0 1-3 3M7 4H4v3a3 3 0 0 0 3 3"/>
+            </template>
+          </svg>
+          {{ link.label }}
+        </button>
+      </div>
+
+      <!-- Right Side -->
+      <div class="nav-right">
+        <!-- Help Button -->
+        <button class="nav-icon" title="How to play" @click="userStore.setShowHelp(true)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
+          </svg>
+        </button>
+
+        <!-- Sign In / Avatar -->
+        <button
+          v-if="!userStore.isAuthenticated"
+          class="nav-pill"
+          @click="navigateTo('/auth')"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          Sign in
+        </button>
+        <button
+          v-else
+          class="nav-avatar"
+          title="Settings"
+          @click="navigateTo('/settings')"
+        >
+          {{ userInitial }}
+        </button>
+
+        <!-- Mobile Menu Button -->
+        <button class="nav-burger" @click="drawer = !drawer">
+          <svg v-if="!drawer" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="header-right">
-      <div class="icon-btn" @click="userStore.setShowHelp(true)" title="How to play">
-        ?
-      </div>
-      <div class="icon-btn" @click="router.push('/leaderboard')" title="Leaderboard">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8 21V12h8v9M3 21V15h5v6M16 21V9h5v12"/>
+
+    <!-- Mobile Drawer -->
+    <div v-if="drawer" class="nav-drawer">
+      <button
+        v-for="link in links"
+        :key="link.id"
+        class="nav-link"
+        :data-active="route.path === link.id"
+        @click="navigateTo(link.id)"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path v-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
+          <template v-else-if="link.icon === 'users'">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </template>
+          <template v-else-if="link.icon === 'trophy'">
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 4h3v3a3 3 0 0 1-3 3M7 4H4v3a3 3 0 0 0 3 3"/>
+          </template>
         </svg>
-      </div>
-      <div v-if="!userStore.isAuthenticated" class="icon-btn account-btn" @click="router.push('/auth')" title="Sign In">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
-        </svg>
-      </div>
-      <div v-else class="icon-btn account-btn" @click="router.push('/settings')" title="Account">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="8" r="4"/>
-          <path d="M4 21v-1a6 6 0 0112 0v1"/>
-        </svg>
-      </div>
+        {{ link.label }}
+      </button>
     </div>
-  </header>
+  </nav>
 </template>
 
 <style scoped>
-.header {
+/* Most styles are in app.css, only component-specific overrides here */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in oklab, var(--milk) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.nav-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  position: relative;
-  z-index: 10;
-  backdrop-filter: blur(12px);
-  background: rgba(10, 10, 15, 0.8);
+  height: 68px;
 }
 
-.logo-box {
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-mark {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgb(255, 255, 255);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+  border-radius: 10px;
+  background: var(--navy);
+  display: grid;
+  place-items: center;
+  color: var(--milk);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
-.logo-box:hover {
-  background: rgba(99, 230, 190, 0.15);
-  border-color: rgba(99, 230, 190, 0.3);
+.nav-brand:hover .nav-mark {
+  transform: rotate(-4deg);
 }
 
-.logo-text {
-  font-family: 'Space Mono', monospace;
+.nav-wordmark {
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 20px;
-  color: #fff;
+  font-size: 15px;
+  color: var(--fg-primary);
+  letter-spacing: -0.2px;
+}
+
+.nav-wordmark .dot {
+  color: var(--accent);
+}
+
+.nav-links {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
 }
 
-.logo-text img {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.header-right {
-  display: flex;
+.nav-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-std);
+  display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #999;
-  transition: all 0.2s;
-  font-size: 16px;
+.nav-link:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
 }
 
-.icon-btn.account-btn {
-  width: auto;
-  padding: 0 12px;
+.nav-link[data-active="true"] {
+  background: var(--navy);
+  color: var(--milk);
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e8e6e1;
+.nav-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  color: var(--fg-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-std);
+}
+
+.nav-icon:hover {
+  background: var(--milk-2);
+  color: var(--navy);
+  border-color: var(--border-default);
+}
+
+.nav-pill {
+  padding: 0 14px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--navy);
+  color: var(--milk);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: transform var(--dur-base) var(--ease-out), background var(--dur-base);
+}
+
+.nav-pill:hover {
+  background: var(--navy-2);
+  transform: translateY(-1px);
+}
+
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--grad-accent);
+  color: var(--milk);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 2px solid var(--milk);
+  box-shadow: 0 0 0 1px var(--border-default);
+}
+
+.nav-burger {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .nav-links {
+    display: none;
+  }
+
+  .nav-burger {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border-hairline);
+    color: var(--navy);
+    cursor: pointer;
+  }
+
+  .nav-drawer {
+    position: absolute;
+    top: 68px;
+    left: 0;
+    right: 0;
+    background: var(--milk);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-drawer .nav-link {
+    padding: 12px 14px;
+    font-size: 15px;
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

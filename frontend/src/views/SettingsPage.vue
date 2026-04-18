@@ -105,191 +105,136 @@ function handleSignOut() {
 </script>
 
 <template>
-  <div class="settings-page">
-    <h2 class="page-title">Settings</h2>
+  <div class="page">
+    <div class="shell settings-wrap">
+      <header class="page-head">
+        <div>
+          <div class="page-eyebrow">Settings</div>
+          <h1 class="page-title-display">Your account, your defaults.</h1>
+        </div>
+        <button class="btn btn--ghost" @click="handleSignOut">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          Sign out
+        </button>
+      </header>
 
-    <div class="settings-card">
-      <h3 class="settings-h">Account</h3>
-      <div class="info-row">
-        <span class="info-label">Username</span>
-        <span class="info-value">{{ userStore.username }}</span>
+      <div class="settings-grid">
+        <!-- Account card -->
+        <section class="card">
+          <h3 style="margin:0 0 16px">Account</h3>
+          <div class="kv">
+            <span class="kv-k">Username</span>
+            <span class="kv-v">{{ userStore.username }}</span>
+          </div>
+          <div class="kv">
+            <span class="kv-k">Email</span>
+            <span class="kv-v">{{ userStore.email }}</span>
+          </div>
+          <div class="kv" style="border-bottom:0">
+            <span class="kv-k">Joined</span>
+            <span class="kv-v mono">{{ userStore.joinedDate }}</span>
+          </div>
+        </section>
+
+        <!-- Game defaults card -->
+        <section class="card">
+          <h3 style="margin:0 0 16px">Game defaults</h3>
+          <div class="field">
+            <label class="field-label">Language</label>
+            <div class="checkbox-row">
+              <button
+                v-for="lang in [{ id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }]"
+                :key="lang.id"
+                class="chip-toggle"
+                :data-active="userStore.soloLang === lang.id"
+                @click="userStore.soloLang = lang.id"
+              >
+                {{ lang.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Letters</label>
+            <div class="checkbox-row">
+              <button
+                v-for="n in [6, 7, 8, 9, 10]"
+                :key="n"
+                class="chip-toggle chip-toggle--mono"
+                :data-active="userStore.soloLetters === n"
+                @click="userStore.soloLetters = n"
+              >
+                {{ n }}
+              </button>
+            </div>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label class="field-label">Time limit</label>
+            <div class="checkbox-row">
+              <button
+                v-for="time in [{ val: 30, label: '30s' }, { val: 60, label: '1:00' }, { val: 90, label: '1:30' }, { val: 120, label: '2:00' }]"
+                :key="time.val"
+                class="chip-toggle chip-toggle--mono"
+                :data-active="userStore.soloTime === time.val"
+                @click="userStore.soloTime = time.val"
+              >
+                {{ time.label }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="saveMessage" style="margin-top:12px; padding:10px; background:var(--success-soft); border:1px solid var(--success); border-radius:10px; color:var(--success); font-size:13px; text-align:center">
+            {{ saveMessage }}
+          </div>
+        </section>
+
+        <!-- Stats card -->
+        <section class="card" style="grid-column:1 / -1">
+          <h3 style="margin:0 0 16px">Your stats</h3>
+          <div v-if="loadingStats" style="text-align:center; padding:40px; color:var(--fg-muted)">
+            Loading stats...
+          </div>
+          <div v-else class="stats-grid">
+            <div class="stat-cell">
+              <div class="stat-k">Games played</div>
+              <div class="stat-v">{{ userStore.gamesPlayed }}</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-k">Best score</div>
+              <div class="stat-v accent-text">{{ userStore.bestScore.toLocaleString() }}</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-k">Longest word</div>
+              <div class="stat-v mono" style="font-size:22px">{{ userStore.longestWord || '—' }}</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-k">Words found</div>
+              <div class="stat-v">{{ stats.total_words?.toLocaleString() || '—' }}</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-k">Avg score</div>
+              <div class="stat-v">{{ stats.average_score?.toLocaleString() || '—' }}</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-k">Current streak</div>
+              <div class="stat-v">— <span class="muted" style="font-size:14px">days</span></div>
+            </div>
+          </div>
+        </section>
       </div>
-      <div class="info-row">
-        <span class="info-label">Email</span>
-        <span class="info-value">{{ userStore.email }}</span>
-      </div>
-      <div class="info-row no-border">
-        <span class="info-label">Joined</span>
-        <span class="info-value">{{ userStore.joinedDate }}</span>
+
+      <div style="margin-top:24px">
+        <button class="btn btn--accent btn--lg" @click="$router.push('/')">
+          Start a new game
+        </button>
       </div>
     </div>
-
-    <div class="settings-card">
-      <h3 class="settings-h">Game defaults</h3>
-      <label class="label">Language</label>
-      <select v-model="userStore.soloLang" class="select">
-        <option value="ru">Русский</option>
-        <option value="en">English</option>
-      </select>
-
-      <label class="label">Default letters</label>
-      <select v-model.number="userStore.soloLetters" class="select">
-        <option v-for="n in [6, 7, 8, 9, 10]" :key="n" :value="n">{{ n }} letters</option>
-      </select>
-
-      <label class="label">Time limit (seconds)</label>
-      <select v-model.number="userStore.soloTime" class="select">
-        <option :value="30">30 seconds</option>
-        <option :value="60">60 seconds</option>
-        <option :value="90">90 seconds</option>
-        <option :value="120">2 minutes</option>
-      </select>
-
-      <div v-if="saveMessage" class="save-message">{{ saveMessage }}</div>
-    </div>
-
-    <div class="settings-card">
-      <h3 class="settings-h">Stats</h3>
-      <div v-if="loadingStats" class="loading-text">Loading stats...</div>
-      <div v-else>
-        <div class="info-row">
-        <span class="info-label">Games played</span>
-        <span class="info-value">{{ userStore.gamesPlayed }}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Best score</span>
-        <span class="info-value">{{ userStore.bestScore.toLocaleString() }}</span>
-      </div>
-      <div class="info-row no-border">
-        <span class="info-label">Longest word</span>
-        <span class="info-value accent">{{ userStore.longestWord }}</span>
-      </div>
-      </div>
-    </div>
-
-    <button class="btn-secondary" @click="handleSignOut">
-      Sign out
-    </button>
   </div>
 </template>
 
 <style scoped>
-.settings-page {
-  max-width: 500px;
-  margin: 40px auto;
-  padding: 0 24px;
-}
-
-.page-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0 0 24px;
-  color: #e8e6e1;
-}
-
-.settings-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 16px;
-}
-
-.settings-h {
-  font-family: 'Space Mono', monospace;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 0 0 20px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 14px;
-}
-
-.info-row.no-border {
-  border-bottom: none;
-}
-
-.info-label {
-  color: #666;
-}
-
-.info-value {
-  color: #ccc;
-  font-weight: 500;
-}
-
-.info-value.accent {
-  color: var(--accent);
-}
-
-.label {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 0 0 8px;
-  display: block;
-  font-weight: 500;
-}
-
-.select {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e8e6e1;
-  font-size: 14px;
-  outline: none;
-  font-family: 'Outfit', sans-serif;
-  appearance: none;
-  margin-bottom: 20px;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e8e6e1;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  transition: all 0.2s;
-  margin-top: 8px;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.save-message {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: rgba(99, 230, 190, 0.15);
-  border: 1px solid rgba(99, 230, 190, 0.3);
-  color: #63e6be;
-  font-size: 13px;
-  text-align: center;
-}
-
-.loading-text {
-  color: #999;
-  font-size: 14px;
-  text-align: center;
-  padding: 20px;
-}
+/* All styles are in pages.css and app.css */
 </style>

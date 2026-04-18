@@ -1,19 +1,33 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
+import TimerRing from '../components/TimerRing.vue'
 
 const router = useRouter()
 const gameStore = useGameStore()
 
-const inputRef = ref(null)
+const wrapRef = ref(null)
 const showAllWords = ref(false)
+const shake = ref(false)
+const winFx = ref(false)
+const errHint = ref('')
+
 let timerInterval = null
+
+// Letter points for Scrabble-style scoring
+const letterPoints = {
+  A:1,E:1,I:1,O:1,U:1,L:1,N:1,R:1,S:1,T:1,
+  D:2,G:2,B:3,C:3,M:3,P:3,F:4,H:4,V:4,W:4,Y:4,K:5,J:8,X:8,Q:10,Z:10,
+  // Russian letters
+  А:1,Е:1,И:1,О:1,У:1,Л:1,Н:1,Р:1,С:1,Т:1,
+  Д:2,Г:2,Б:3,К:3,М:3,П:3,Ф:4,Х:4,В:4,Ц:4,Ы:4,Ж:5,Й:8,Щ:8,Ю:10,Я:10,Ё:10,Ч:10
+}
 
 watch(() => gameStore.gameActive, async (isActive) => {
   if (isActive) {
     await nextTick()
-    inputRef.value?.focus()
+    wrapRef.value?.focus()
     startTimer()
   } else {
     stopTimer()
@@ -23,7 +37,7 @@ watch(() => gameStore.gameActive, async (isActive) => {
 onMounted(async () => {
   if (gameStore.gameActive) {
     await nextTick()
-    inputRef.value?.focus()
+    wrapRef.value?.focus()
     startTimer()
   }
 })
@@ -33,7 +47,7 @@ onUnmounted(() => {
 })
 
 function startTimer() {
-  stopTimer() // stop previous timer if it was
+  stopTimer()
   timerInterval = setInterval(() => {
     gameStore.decreaseTime()
     if (gameStore.timeLeft === 0) {
@@ -54,128 +68,296 @@ function handleKeyDown(e) {
 
   if (e.key === 'Enter') {
     e.preventDefault()
-    gameStore.submitWord()
+    submitWord()
   } else if (e.key === 'Backspace') {
     e.preventDefault()
-    gameStore.removeLast()
+    removeLast()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    clearAll()
   } else if (/^[a-zA-Zа-яА-ЯёЁ]$/.test(e.key)) {
     e.preventDefault()
-    const upper = e.key.toUpperCase()
-    gameStore.addLetter(upper)
+    addByKey(e.key)
   }
 }
 
+function addByKey(key) {
+  const upper = key.toUpperCase()
+  const index = gameStore.gameLetters.findIndex((letter, idx) =>
+    letter === upper && !gameStore.usedLetterIndices.includes(idx)
+  )
+  if (index !== -1) {
+    gameStore.addLetterByIndex(index)
+  }
+  errHint.value = ''
+}
 
-function isLetterUsed(letter, index) {
+function removeLast() {
+  gameStore.removeLast()
+  errHint.value = ''
+}
+
+function clearAll() {
+  while (gameStore.inputWord.length > 0) {
+    gameStore.removeLast()
+  }
+  errHint.value = ''
+}
+
+function submitWord() {
+  const word = gameStore.inputWord.toUpperCase()
+
+  if (word.length < 3) {
+    shake.value = true
+    errHint.value = 'too short — 3+ letters'
+    setTimeout(() => { shake.value = false }, 420)
+    return
+  }
+
+  if (gameStore.foundWords.includes(word)) {
+    shake.value = true
+    errHint.value = 'already found'
+    setTimeout(() => { shake.value = false }, 420)
+    clearAll()
+    return
+  }
+
+  const result = gameStore.submitWord()
+  if (result.valid) {
+    winFx.value = true
+    setTimeout(() => { winFx.value = false }, 620)
+    errHint.value = ''
+  } else {
+    shake.value = true
+    errHint.value = 'not in dictionary'
+    setTimeout(() => { shake.value = false }, 420)
+  }
+}
+
+function isLetterUsed(index) {
   return gameStore.usedLetterIndices.includes(index)
 }
 
-function handlePlayAgain() {
+function getLetterPoints(letter) {
+  return letterPoints[letter] || 1
+}
+
+function endGame() {
+  gameStore.endGame()
+}
+
+function exitGame() {
   gameStore.resetGame()
-  showAllWords.value = false
   router.push('/')
 }
 
-function getMaskedWord(word) {
-  return '?'.repeat(word.length)
+async function handlePlayAgain() {
+  showAllWords.value = false
+  gameStore.resetGame()
+  await gameStore.startGame(
+    gameStore.lastGameTime,
+    gameStore.lastGameLetters,
+    gameStore.lastGameLang
+  )
 }
 
-function getDisplayWords() {
-  if (!gameStore.validWords || gameStore.validWords.length === 0) {
-    return []
-  }
-
-  const words = gameStore.validWords.map(word => {
-    const found = gameStore.foundWords.includes(word)
-    return {
-      word: word,
-      found: found,
-      display: found || showAllWords.value ? word.toLowerCase() : getMaskedWord(word)
-    }
+const sortedWords = computed(() => {
+  if (!gameStore.validWords) return []
+  return [...gameStore.validWords].sort((a, b) => {
+    if (a.length !== b.length) return b.length - a.length
+    return a.localeCompare(b)
   })
+})
 
-  return words.sort((a, b) => {
-    if (a.word.length !== b.word.length) {
-      return b.word.length - a.word.length
-    }
-    return a.word.localeCompare(b.word)
-  })
-}
+const percentFound = computed(() => {
+  if (!gameStore.validWords || gameStore.validWords.length === 0) return 0
+  return Math.round((gameStore.foundWords.length / gameStore.validWords.length) * 100)
+})
+
+const longestWord = computed(() => {
+  if (!gameStore.foundWords || gameStore.foundWords.length === 0) return ''
+  return gameStore.foundWords.reduce((a, b) => a.length >= b.length ? a : b)
+})
 </script>
 
 <template>
-  <div
-    class="game-wrap"
-    tabindex="0"
-    @keydown="handleKeyDown"
-  >
-    <div v-if="gameStore.gameActive">
-      <div class="score-display">{{ gameStore.score }} pts</div>
+  <div class="page">
+    <!-- Active Game View -->
+    <div
+      v-if="gameStore.gameActive"
+      ref="wrapRef"
+      class="shell game-wrap"
+      tabindex="0"
+      @keydown="handleKeyDown"
+      style="outline: none"
+    >
+      <!-- HUD: Score, Timer, Actions -->
+      <div class="game-hud">
+        <div class="hud-left">
+          <div class="hud-stat">
+            <div>
+              <div class="hud-stat-label">Score</div>
+              <div class="hud-stat-value accent">{{ gameStore.score.toLocaleString() }}</div>
+            </div>
+          </div>
+          <div class="hud-stat">
+            <div>
+              <div class="hud-stat-label">Found</div>
+              <div class="hud-stat-value">
+                {{ gameStore.foundWords.length }}<span style="color:var(--fg-faint);font-size:13px">/{{ gameStore.validWords?.length || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <!-- Timer progress bar -->
-      <div class="timer-bar-container">
-        <div class="timer-bar" :style="{ width: (gameStore.timerPercentage * 100) + '%' }"></div>
-      </div>
+        <TimerRing />
 
-      <input
-        ref="inputRef"
-        :value="gameStore.inputWord"
-        readonly
-        :class="['word-input', { shake: gameStore.shake }]"
-        placeholder="..."
-      />
-
-      <div class="letters-row">
-        <div
-          v-for="(letter, i) in gameStore.gameLetters"
-          :key="i"
-          :class="['letter-tile', { used: isLetterUsed(letter, i) }]"
-          @click="!isLetterUsed(letter, i) && gameStore.addLetterByIndex(i)"
-        >
-          {{ letter.toUpperCase() }}
+        <div class="hud-right">
+          <button class="btn btn--soft btn--sm" @click="endGame">End game</button>
+          <button class="btn btn--ghost btn--sm" @click="exitGame">Exit</button>
         </div>
       </div>
 
-      <div class="button-row">
-        <button class="btn-secondary" @click="gameStore.removeLast">
-          &larr; Delete
-        </button>
-        <button class="btn-primary" @click="gameStore.submitWord">
-          Submit &crarr;
-        </button>
+      <!-- Input & Letters -->
+      <div class="game-input-wrap">
+        <div
+          :class="['game-input', {
+            'active': gameStore.inputWord,
+            'empty': !gameStore.inputWord,
+            'shake': shake,
+            'win': winFx
+          }]"
+        >
+          {{ gameStore.inputWord || '•••' }}
+        </div>
+
+        <div class="game-input-hint" :data-visible="!!errHint">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+          {{ errHint }}
+        </div>
+
+        <!-- Letter Tiles -->
+        <div class="letters-grid">
+          <div
+            v-for="(letter, i) in gameStore.gameLetters"
+            :key="i"
+            class="letter-tile"
+            :data-used="isLetterUsed(i)"
+            @click="!isLetterUsed(i) && gameStore.addLetterByIndex(i)"
+          >
+            {{ letter }}
+            <span class="pts">{{ getLetterPoints(letter) }}</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="letter-actions">
+          <button class="btn btn--soft" @click="removeLast">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/>
+            </svg>
+            Delete <span class="kbd">⌫</span>
+          </button>
+          <button class="btn btn--ghost" @click="clearAll">
+            Clear <span class="kbd">Esc</span>
+          </button>
+          <button class="btn btn--accent" @click="submitWord">
+            Submit <span class="kbd" style="background:rgba(255,255,255,0.18);color:var(--milk);border-color:transparent">↵</span>
+          </button>
+        </div>
+
+        <!-- Progress Rail -->
+        <div class="progress-rail">
+          <div class="progress-rail-fill" :style="{ width: `${gameStore.timerPercentage * 100}%` }" />
+        </div>
+      </div>
+
+      <!-- Found Words Rail -->
+      <div class="found-rail">
+        <div class="found-rail-head">
+          <span class="title">Words you've found</span>
+          <span class="count">{{ gameStore.foundWords.length }} / {{ gameStore.validWords?.length || 0 }}</span>
+        </div>
+        <p v-if="gameStore.foundWords.length === 0" class="muted" style="font-size:13px;margin:4px 0 0">
+          Submit your first word to start the streak. Longer words score more.
+        </p>
+        <div v-else class="found-chips">
+          <span v-for="(word, i) in gameStore.foundWords" :key="i" class="found-chip">
+            {{ word.toLowerCase() }}
+          </span>
+        </div>
       </div>
     </div>
 
-    <div v-else class="game-over">
-      <p class="game-over-title">{{ gameStore.score > 0 ? "Time's up!" : "Game Over" }}</p>
-      <p class="final-score">{{ gameStore.score }}</p>
-      <p class="words-count">
-        {{ gameStore.foundWords.length }} / {{ gameStore.validWords.length }} words found
-      </p>
-      <p class="percent-found">
-        {{Math.trunc(gameStore.foundWords.length * 100 / gameStore.validWords.length)}} % found
-      </p>
+    <!-- Game Over View -->
+    <div v-else class="shell over-wrap">
+      <div class="over-eyebrow">Time's up</div>
+      <h1 class="over-title">{{ gameStore.score > 0 ? 'Nice game.' : 'No words this round.' }}</h1>
+      <div class="over-score">{{ gameStore.score.toLocaleString() }}</div>
 
-      <div class="words-area">
+      <div class="over-meta">
+        <div class="cell">
+          <div class="cell-num">{{ gameStore.foundWords.length }}/{{ gameStore.validWords?.length || 0 }}</div>
+          <div class="cell-lbl">words</div>
+        </div>
+        <div class="cell">
+          <div class="cell-num">{{ percentFound }}%</div>
+          <div class="cell-lbl">found</div>
+        </div>
+        <div class="cell">
+          <div class="cell-num">{{ longestWord.length || 0 }}</div>
+          <div class="cell-lbl">longest</div>
+        </div>
+        <div class="cell">
+          <div class="cell-num mono" style="font-size:14px">{{ gameStore.gameLetters?.join('').toLowerCase() || '' }}</div>
+          <div class="cell-lbl">set</div>
+        </div>
+      </div>
+
+      <div class="row gap-2" style="justify-content:center;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn--accent btn--lg" @click="handlePlayAgain">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+          </svg>
+          Play again
+        </button>
+        <button class="btn btn--primary btn--lg" @click="router.push('/multiplayer')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+          </svg>
+          Challenge a friend
+        </button>
+      </div>
+
+      <div class="found-rail-head" style="margin-top:32px;border-top:1px solid var(--border-hairline);padding-top:24px">
+        <span class="title">All words — {{ gameStore.validWords?.length || 0 }}</span>
+        <button v-if="!showAllWords" class="btn btn--sm btn--ghost" @click="showAllWords = true">Show missed</button>
+      </div>
+
+      <div class="result-grid">
         <span
-          v-for="(item, i) in getDisplayWords()"
+          v-for="(word, i) in sortedWords"
           :key="i"
-          :class="['word-chip', { found: item.found, hidden: !item.found && !showAllWords }]"
+          :class="['word-chip', {
+            'found': gameStore.foundWords.includes(word),
+            'revealed': !gameStore.foundWords.includes(word) && showAllWords
+          }]"
         >
-          {{ item.display }}
+          {{ gameStore.foundWords.includes(word) || showAllWords ? word.toLowerCase() : '•'.repeat(word.length) }}
         </span>
       </div>
 
-      <div class="button-row">
-        <button
-          v-if="!showAllWords && gameStore.sessionId"
-          class="btn-secondary"
-          @click="showAllWords = true"
-        >
-          Show all words
-        </button>
-        <button class="btn-primary" @click="handlePlayAgain">
-          Play again
+      <div style="margin-top:28px">
+        <button class="btn btn--ghost" @click="router.push('/')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back home
         </button>
       </div>
     </div>
@@ -183,213 +365,5 @@ function getDisplayWords() {
 </template>
 
 <style scoped>
-.game-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 100px);
-  gap: 24px;
-  padding: 20px 0;
-  outline: none;
-}
-
-.score-display {
-  font-family: 'Space Mono', monospace;
-  font-size: 18px;
-  color: var(--accent);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.timer-bar-container {
-  width: 100%;
-  max-width: 400px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 24px;
-}
-
-.timer-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-  transition: width 0.3s linear;
-  border-radius: 3px;
-}
-
-.word-input {
-  font-family: 'Space Mono', monospace;
-  font-size: 28px;
-  font-weight: 700;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(99, 230, 190, 0.2);
-  border-radius: 14px;
-  padding: 16px 24px;
-  color: #e8e6e1;
-  min-width: 260px;
-  outline: none;
-  letter-spacing: 4px;
-  caret-color: var(--accent);
-}
-
-.word-input.shake {
-  animation: shake 0.4s ease;
-}
-
-.letters-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin: 8px 0;
-}
-
-.letter-tile {
-  width: 52px;
-  height: 56px;
-  border-radius: 12px;
-  background: rgba(99, 230, 190, 0.08);
-  border: 1.5px solid rgba(99, 230, 190, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Space Mono', monospace;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.15s;
-  user-select: none;
-}
-
-.letter-tile.used {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.04);
-  color: #333;
-  cursor: default;
-}
-
-.letter-tile:not(.used):hover {
-  transform: scale(1.1);
-  background: rgba(99, 230, 190, 0.15);
-}
-
-.button-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-  justify-content: flex-end;
-}
-
-.btn-primary,
-.btn-secondary {
-  padding: 10px 28px;
-  font-size: 13px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.btn-primary {
-  padding: 10px 28px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  color: var(--bg-dark);
-  font-weight: 600;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 230, 190, 0.3);
-}
-
-.btn-secondary {
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e8e6e1;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.words-area {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  max-width: 500px;
-  width: 100%;
-}
-
-.word-chip {
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 14px;
-  font-family: 'Space Mono', monospace;
-  font-weight: 500;
-  color: #999;
-  width: 100%;
-  text-align: left;
-}
-
-.word-chip.hidden {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.04);
-  color: #555;
-}
-
-.word-chip.found {
-  background: rgba(99, 230, 190, 0.06);
-  border-color: rgba(99, 230, 190, 0.15);
-  color: var(--accent);
-}
-
-.game-over {
-  text-align: center;
-  padding: 40px;
-}
-
-.game-over-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 0 0 8px;
-}
-
-.final-score {
-  font-size: 48px;
-  font-family: 'Space Mono', monospace;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 8px 0;
-}
-
-.words-count {
-  color: #666;
-  font-size: 14px;
-}
-
-.percent-found{
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 32px;
-
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
-  20%, 40%, 60%, 80% { transform: translateX(8px); }
-}
+/* All styles are in game.css */
 </style>
