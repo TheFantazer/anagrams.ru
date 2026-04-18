@@ -8,7 +8,6 @@ const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
 
-// Redirect to auth if not logged in
 if (!userStore.isAuthenticated) {
   router.push('/auth')
 }
@@ -23,6 +22,7 @@ const stats = ref({
   average_score: 0
 })
 const loadingStats = ref(false)
+let saveMessageTimeout = null
 
 watch([() => userStore.soloLang, () => userStore.soloLetters, () => userStore.soloTime], async () => {
   if (!userStore.isAuthenticated || !userStore.userId) return
@@ -33,7 +33,6 @@ watch([() => userStore.soloLang, () => userStore.soloLetters, () => userStore.so
 async function saveSettings() {
   if (saving.value) return
   saving.value = true
-  saveMessage.value = ''
 
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -55,9 +54,18 @@ async function saveSettings() {
 
     const data = await response.json()
     userStore.setUser(data)
-    saveMessage.value = 'Settings saved!'
-    setTimeout(() => {
+
+    if (!saveMessage.value) {
+      saveMessage.value = 'Settings saved!'
+    }
+
+    if (saveMessageTimeout) {
+      clearTimeout(saveMessageTimeout)
+    }
+
+    saveMessageTimeout = setTimeout(() => {
       saveMessage.value = ''
+      saveMessageTimeout = null
     }, 2000)
   } catch (error) {
     console.error('Failed to save settings:', error)
