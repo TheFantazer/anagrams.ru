@@ -246,11 +246,14 @@ export const useGameStore = defineStore('game', () => {
     if (!gameActive.value) return
     gameActive.value = false
 
-    
+
     if (sessionId.value) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-        const durationMs = (initialTime.value - timeLeft.value) * 1000
+        // Calculate duration: time spent playing (in milliseconds)
+        // If timeLeft is 0, player used full time; otherwise they ended early
+        const timeSpent = initialTime.value - timeLeft.value
+        const durationMs = Math.max(timeSpent * 1000, 1) // Ensure at least 1ms
 
         let userId = null
         const storedUser = localStorage.getItem('anagram_user')
@@ -263,7 +266,7 @@ export const useGameStore = defineStore('game', () => {
           }
         }
 
-        await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`, {
+        const response = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -276,6 +279,11 @@ export const useGameStore = defineStore('game', () => {
             duration_ms: durationMs
           })
         })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Failed to submit results:', errorData)
+        }
       } catch (error) {
         console.error('Failed to submit results:', error)
       }

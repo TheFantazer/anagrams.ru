@@ -216,7 +216,7 @@ function handleSignOut() {
             </div>
             <div class="stat-cell">
               <div class="stat-k">Avg score</div>
-              <div class="stat-v">{{ stats.average_score?.toLocaleString() || '—' }}</div>
+              <div class="stat-v">{{ Math.round(stats.average_score) || '—' }}</div>
             </div>
             <div class="stat-cell">
               <div class="stat-k">Current streak</div>

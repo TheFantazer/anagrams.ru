@@ -39,7 +39,9 @@ const userInitial = computed(() => {
     <div class="shell nav-inner">
       <!-- Brand -->
       <div class="nav-brand" @click="goHome">
-        <div class="nav-mark">AN</div>
+        <div class="nav-mark">
+          <img src="/icon.png" alt="logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 10px;">
+        </div>
         <span class="nav-wordmark">anagrams<span class="dot">.</span></span>
       </div>
 

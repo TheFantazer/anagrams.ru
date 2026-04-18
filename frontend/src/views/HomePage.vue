@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
@@ -27,6 +27,39 @@ function startFastGame() {
 function openCustomSetup() {
   userStore.setShowSoloSettings(true)
 }
+
+function handleKeyPress(e) {
+  // Ignore if typing in input field
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    return
+  }
+
+  const key = e.key.toLowerCase()
+
+  // F or А (russian A) - Fast game
+  if (key === 'f' || key === 'а') {
+    e.preventDefault()
+    startFastGame()
+  }
+  // C or С (russian C) - Custom setup
+  else if (key === 'c' || key === 'с') {
+    e.preventDefault()
+    openCustomSetup()
+  }
+  // ? or / - Help
+  else if (key === '?' || key === '/' || key === 'ю' || key === '.') {
+    e.preventDefault()
+    userStore.setShowHelp(true)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyPress)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyPress)
+})
 </script>
 
 <template>
@@ -186,6 +219,13 @@ function openCustomSetup() {
           <button class="btn btn--primary" @click="router.push('/auth')">Create account</button>
         </div>
       </section>
+
+      <!-- Keyboard Shortcuts Hint -->
+      <div style="display:flex;justify-content:center;gap:20px;margin-top:32px;font-size:12px;color:var(--fg-muted)">
+        <span><kbd class="kbd">F</kbd> Fast game</span>
+        <span><kbd class="kbd">C</kbd> Custom</span>
+        <span><kbd class="kbd">?</kbd> Help</span>
+      </div>
     </div>
   </div>
 </template>

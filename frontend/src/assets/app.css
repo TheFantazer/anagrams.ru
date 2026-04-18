@@ -169,7 +169,7 @@ body {
 }
 
 /* ===== modal =========================================================== */
-.overlay {
+.overlay, .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(30, 42, 70, 0.4);
   backdrop-filter: blur(6px);
@@ -178,7 +178,7 @@ body {
   padding: 24px;
   animation: fade var(--dur-base) var(--ease-out);
 }
-.modal {
+.modal, .modal-shell {
   background: var(--bg-surface);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--border-subtle);
@@ -191,7 +191,7 @@ body {
   box-shadow: var(--shadow-lg);
   animation: pop var(--dur-base) var(--ease-out);
 }
-.modal-close {
+.modal-close, .modal-close-btn {
   position: absolute; top: 16px; right: 16px;
   width: 32px; height: 32px; border-radius: 10px;
   background: transparent; border: 1px solid var(--border-hairline);
@@ -199,13 +199,13 @@ body {
   display: grid; place-items: center; cursor: pointer;
   transition: all var(--dur-base) var(--ease-std);
 }
-.modal-close:hover { background: var(--milk-2); color: var(--navy); }
+.modal-close:hover, .modal-close-btn:hover { background: var(--milk-2); color: var(--navy); }
 .modal-title {
   font-family: var(--font-display);
   font-size: 24px; font-weight: 700;
   color: var(--fg-primary);
   letter-spacing: -0.5px;
-  margin: 0 0 4px;
+  margin: 0 0 20px;
 }
 .modal-sub {
   color: var(--fg-muted);
