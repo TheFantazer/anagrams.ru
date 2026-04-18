@@ -179,6 +179,8 @@
     "showLetters": "Show letters",
     "card01": {
       "title": "Start a challenge",
+      "header": "How it works",
+      "subtitle": "We generate letter set. Your friend plays the exact same puzzle — the highest score wins.",
       "playBtn": "Play it now",
       "gameSettings": "More options",
       "copied": "Copied",

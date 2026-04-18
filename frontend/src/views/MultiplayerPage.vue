@@ -13,6 +13,8 @@ const linkCopied = ref(false)
 const creating = ref(false)
 const createdSessionId = ref(null)
 const sessionLetters = ref([])
+const activeChallenges = ref([])
+const loadingChallenges = ref(false)
 
 // Form settings
 const language = ref('ru')
@@ -44,7 +46,14 @@ async function createChallenge() {
   creating.value = true
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-    const response = await fetch(`${apiUrl}/api/v1/sessions`, {
+
+    // Build URL with optional user_id query param
+    let url = `${apiUrl}/api/v1/sessions`
+    if (userStore.isAuthenticated && userStore.user?.id) {
+      url += `?user_id=${userStore.user.id}`
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -63,11 +72,58 @@ async function createChallenge() {
     const session = await response.json()
     createdSessionId.value = session.id
     sessionLetters.value = session.letters.toUpperCase().split('')
+
+    // Reload challenges after creating a new one
+    if (userStore.isAuthenticated) {
+      await loadActiveChallenges()
+    }
   } catch (error) {
     console.error('Failed to create challenge:', error)
     alert('Failed to create challenge. Please try again.')
   } finally {
     creating.value = false
+  }
+}
+
+async function loadActiveChallenges() {
+  if (!userStore.isAuthenticated || !userStore.user?.id) {
+    return
+  }
+
+  loadingChallenges.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.user.id}`)
+
+    if (!response.ok) {
+      throw new Error('Failed to load challenges')
+    }
+
+    const sessions = await response.json()
+
+    // Загружаем результаты для каждой сессии
+    const sessionsWithResults = await Promise.all(
+      sessions.map(async (session) => {
+        try {
+          const resultsResponse = await fetch(`${apiUrl}/api/v1/sessions/${session.id}/results?top=5`)
+          if (resultsResponse.ok) {
+            session.results = await resultsResponse.json()
+          } else {
+            session.results = []
+          }
+        } catch (error) {
+          console.error(`Failed to load results for session ${session.id}:`, error)
+          session.results = []
+        }
+        return session
+      })
+    )
+
+    activeChallenges.value = sessionsWithResults
+  } catch (error) {
+    console.error('Failed to load challenges:', error)
+  } finally {
+    loadingChallenges.value = false
   }
 }
 
@@ -95,6 +151,9 @@ function resetForm() {
 }
 
 onMounted(() => {
+  // Загружаем активные челленджи
+  loadActiveChallenges()
+
   // Проверяем query параметры для автоматического создания челленджа
   if (route.query.create === 'true') {
     if (route.query.language) {
@@ -131,10 +190,10 @@ onMounted(() => {
             {{$t('multiplayer.card01.title')}}
           </div>
           <h3 style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.5px;margin:6px 0 10px;color:var(--fg-primary);text-transform:none">
-            {{ $t('multiplayer.card02.title') }}
+            {{ $t('multiplayer.card01.header') }}
           </h3>
           <p class="muted" style="margin:0 0 20px;font-size:13px;max-width:360px">
-            {{ $t('multiplayer.card03.title') }}
+            {{ $t('multiplayer.card01.subtitle') }}
           </p>
 
           <div v-if="!createdSessionId" class="multi-set">
@@ -264,13 +323,73 @@ onMounted(() => {
         </section>
       </div>
 
-      <!-- Placeholder for challenges -->
+      <!-- Active Challenges Section -->
       <section style="margin-top:32px">
         <div class="multi-eye" style="margin-bottom:16px">
           <span class="multi-num">03</span>{{$t('multiplayer.card03.title')}}
         </div>
-        <div class="empty-state">
+
+        <div v-if="loadingChallenges" class="empty-state">
+          <p class="muted">{{$t('common.loading')}}</p>
+        </div>
+
+        <div v-else-if="!userStore.isAuthenticated" class="empty-state">
+          <p class="muted">Sign in to view your challenges</p>
+        </div>
+
+        <div v-else-if="activeChallenges.length === 0" class="empty-state">
           <p class="muted">{{$t('multiplayer.card03.description')}}</p>
+        </div>
+
+        <div v-else class="challenges-grid">
+          <div
+            v-for="challenge in activeChallenges"
+            :key="challenge.id"
+            class="challenge-card"
+            @click="router.push(`/play/${challenge.id}`)"
+          >
+            <div class="challenge-letters">
+              <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="challenge-tile">
+                {{ letter.toLowerCase() }}
+              </span>
+            </div>
+            <div class="challenge-meta">
+              <span class="challenge-badge">{{ challenge.language.toUpperCase() }}</span>
+              <span class="challenge-badge">{{ challenge.letter_count }} letters</span>
+              <span class="challenge-badge">{{ Math.floor(challenge.time_limit / 60) }}:{{ String(challenge.time_limit % 60).padStart(2, '0') }}</span>
+            </div>
+
+            <!-- Results -->
+            <div v-if="challenge.results && challenge.results.length > 0" class="challenge-results">
+              <div class="challenge-results-header">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"/>
+                  <circle cx="6" cy="12" r="3"/>
+                  <circle cx="18" cy="19" r="3"/>
+                  <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                </svg>
+                {{ challenge.results.length }} {{ challenge.results.length === 1 ? 'player' : 'players' }}
+              </div>
+              <div class="challenge-results-list">
+                <div
+                  v-for="(result, idx) in challenge.results.slice(0, 3)"
+                  :key="result.id"
+                  class="challenge-result-item"
+                >
+                  <span class="result-rank">#{{ idx + 1 }}</span>
+                  <span class="result-name">{{ result.player_name || 'Anonymous' }}</span>
+                  <span class="result-score">{{ result.score }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="challenge-no-results">
+              No one played yet
+            </div>
+
+            <div class="challenge-date">
+              {{ new Date(challenge.created_at).toLocaleDateString() }}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -464,8 +583,139 @@ onMounted(() => {
   border-color: var(--navy);
 }
 
+.challenges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.challenge-card {
+  padding: 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.challenge-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.challenge-letters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.challenge-tile {
+  width: 32px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--milk);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 2px 0 var(--navy-2);
+}
+
+.challenge-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.challenge-badge {
+  padding: 4px 10px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.challenge-date {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 8px;
+}
+
+.challenge-results {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.challenge-results-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.challenge-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.challenge-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border-radius: 6px;
+}
+
+.result-rank {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+}
+
+.result-name {
+  flex: 1;
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-score {
+  font-weight: 700;
+  color: var(--fg-primary);
+}
+
+.challenge-no-results {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-hairline);
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
 @media (max-width: 820px) {
   .multi-grid { grid-template-columns: 1fr; }
   .page-title-display { font-size: 30px; letter-spacing: -0.8px; }
+  .challenges-grid { grid-template-columns: 1fr; }
 }
 </style>
