@@ -39,7 +39,7 @@ const formattedTime = computed(() => {
       'crit': timerState === 'crit'
     }]"
   >
-    <svg width="96" height="96" viewBox="0 0 96 96">
+    <svg width="96" height="96" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid meet">
       <circle
         cx="48"
         cy="48"

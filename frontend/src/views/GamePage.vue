@@ -15,15 +15,6 @@ const errHint = ref('')
 
 let timerInterval = null
 
-// Letter points for Scrabble-style scoring
-const letterPoints = {
-  A:1,E:1,I:1,O:1,U:1,L:1,N:1,R:1,S:1,T:1,
-  D:2,G:2,B:3,C:3,M:3,P:3,F:4,H:4,V:4,W:4,Y:4,K:5,J:8,X:8,Q:10,Z:10,
-  // Russian letters
-  А:1,Е:1,И:1,О:1,У:1,Л:1,Н:1,Р:1,С:1,Т:1,
-  Д:2,Г:2,Б:3,К:3,М:3,П:3,Ф:4,Х:4,В:4,Ц:4,Ы:4,Ж:5,Й:8,Щ:8,Ю:10,Я:10,Ё:10,Ч:10
-}
-
 watch(() => gameStore.gameActive, async (isActive) => {
   if (isActive) {
     await nextTick()
@@ -138,10 +129,6 @@ function isLetterUsed(index) {
   return gameStore.usedLetterIndices.includes(index)
 }
 
-function getLetterPoints(letter) {
-  return letterPoints[letter] || 1
-}
-
 function endGame() {
   gameStore.endGame()
 }
@@ -248,7 +235,6 @@ const longestWord = computed(() => {
             @click="!isLetterUsed(i) && gameStore.addLetterByIndex(i)"
           >
             {{ letter }}
-            <span class="pts">{{ getLetterPoints(letter) }}</span>
           </div>
         </div>
 
@@ -280,7 +266,7 @@ const longestWord = computed(() => {
           <span class="title">Words you've found</span>
           <span class="count">{{ gameStore.foundWords.length }} / {{ gameStore.validWords?.length || 0 }}</span>
         </div>
-        <p v-if="gameStore.foundWords.length === 0" class="muted" style="font-size:13px;margin:4px 0 0">
+        <p v-if="gameStore.foundWords.length === 0" class="muted found-rail-empty">
           Submit your first word to start the streak. Longer words score more.
         </p>
         <div v-else class="found-chips">

@@ -52,15 +52,26 @@
 .timer-ring {
   position: relative;
   width: 96px; height: 96px;
-  display: grid; place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.timer-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.timer-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
 .timer-ring .timer-label {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 22px;
   color: var(--fg-primary);
   letter-spacing: -0.5px;
+  line-height: 1;
 }
 .timer-ring.low .timer-label { color: var(--warning); }
 .timer-ring.crit .timer-label { color: var(--danger); animation: pulse 0.6s ease-in-out infinite; }
@@ -238,6 +249,10 @@
   font-size: 12px; font-weight: 700;
   color: var(--navy);
 }
+.found-rail-empty {
+  font-size: 13px;
+  margin: 8px 0 0 0;
+}
 .found-chips {
   display: flex; flex-wrap: wrap; gap: 6px;
 }
@@ -315,17 +330,58 @@
 
 /* mobile */
 @media (max-width: 600px) {
+  .game-wrap {
+    padding: 16px 0 80px;
+  }
   .game-hud {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 20px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin-bottom: 40px;
   }
-  .hud-left, .hud-right {
-    justify-content: space-between;
+  .hud-left {
+    justify-content: center;
+    width: 100%;
+    gap: 8px;
+    order: 1;
+  }
+  .hud-right {
+    order: 2;
+    justify-content: flex-start;
     width: 100%;
   }
-  .timer-ring { width: 80px; height: 80px; }
+  .hud-right button:last-child {
+    display: none;
+  }
+  .timer-ring {
+    order: 2;
+    position: absolute;
+    left: 50%;
+    top: calc(100% / 2 + 10px);
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+  }
+  .hud-stat {
+    min-width: 0;
+    flex: 1;
+    padding: 8px 12px;
+  }
   .letter-tile { width: 52px; height: 60px; font-size: 22px; }
   .game-input { min-width: 100%; font-size: 24px; letter-spacing: 4px; }
+  .game-input-wrap {
+    padding: 0 16px;
+  }
+  .found-rail {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .found-rail-head {
+    padding: 0;
+  }
   .over-title { font-size: 32px; }
   .over-score { font-size: 64px; }
 }
