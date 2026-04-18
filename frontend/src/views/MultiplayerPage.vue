@@ -1,21 +1,115 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '../stores/userStore'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+
 const linkCopied = ref(false)
+const creating = ref(false)
+const createdSessionId = ref(null)
+const sessionLetters = ref([])
+
+// Form settings
+const language = ref('ru')
+const letterCount = ref(7)
+const timeLimit = ref(60)
+const hideLetters = ref(false)
+
+const availableLanguages = computed(() => [
+  { id: 'ru', label: t('settings.gameDefaults.languages.ru') },
+  { id: 'en', label: t('settings.gameDefaults.languages.en') }
+])
+
+const letterCounts = [
+  { value: 5, label: '5' },
+  { value: 6, label: '6' },
+  { value: 7, label: '7' },
+  { value: 8, label: '8' },
+  { value: 9, label: '9' }
+]
+
+const timeLimits = [
+  { value: 30, label: '30s' },
+  { value: 60, label: '1:00' },
+  { value: 90, label: '1:30' },
+  { value: 120, label: '2:00' }
+]
+
+async function createChallenge() {
+  creating.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        language: language.value,
+        letter_count: letterCount.value,
+        time_limit: timeLimit.value
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create session')
+    }
+
+    const session = await response.json()
+    createdSessionId.value = session.id
+    sessionLetters.value = session.letters.toUpperCase().split('')
+  } catch (error) {
+    console.error('Failed to create challenge:', error)
+    alert('Failed to create challenge. Please try again.')
+  } finally {
+    creating.value = false
+  }
+}
+
+const shareLink = computed(() => {
+  if (!createdSessionId.value) return ''
+  return `${window.location.origin}/play/${createdSessionId.value}`
+})
 
 function copyLink() {
-  const link = 'anagrams.ru/r/streami-7a9'
-  navigator.clipboard?.writeText(link)
+  if (!shareLink.value) return
+  navigator.clipboard?.writeText(shareLink.value)
   linkCopied.value = true
   setTimeout(() => linkCopied.value = false, 2200)
 }
 
-// Sample data for demo
-const sampleLetters = ['S','T','R','E','A','M','I']
+function playChallenge() {
+  if (!createdSessionId.value) return
+  router.push(`/play/${createdSessionId.value}`)
+}
+
+function resetForm() {
+  createdSessionId.value = null
+  sessionLetters.value = []
+  linkCopied.value = false
+}
+
+onMounted(() => {
+  // Проверяем query параметры для автоматического создания челленджа
+  if (route.query.create === 'true') {
+    if (route.query.language) {
+      language.value = route.query.language
+    }
+    if (route.query.letterCount) {
+      letterCount.value = parseInt(route.query.letterCount)
+    }
+    if (route.query.timeLimit) {
+      timeLimit.value = parseInt(route.query.timeLimit)
+    }
+    // Автоматически создаём челлендж
+    createChallenge()
+  }
+})
 </script>
 
 <template>
@@ -28,17 +122,6 @@ const sampleLetters = ['S','T','R','E','A','M','I']
         </div>
       </header>
 
-      <!-- Coming Soon Banner -->
-      <div class="coming-soon-banner">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v6l4 2"/>
-        </svg>
-        <div>
-          <strong>{{ $t('multiplayer.comingSoon') }}</strong>
-          <span class="muted">{{ $t('multiplayer.description') }}</span>
-        </div>
-      </div>
 
       <div class="multi-grid">
         <!-- Create Challenge Section -->
@@ -54,46 +137,111 @@ const sampleLetters = ['S','T','R','E','A','M','I']
             {{ $t('multiplayer.card03.title') }}
           </p>
 
-          <div class="multi-set">
-            <span v-for="(letter, i) in sampleLetters" :key="i" class="multi-tile">{{ letter }}</span>
+          <div v-if="!createdSessionId" class="multi-set">
+            <span v-for="i in letterCount" :key="i" class="multi-tile">?</span>
+          </div>
+          <div v-else class="multi-set">
+            <span v-for="(letter, i) in sessionLetters" :key="i" class="multi-tile">
+              {{ hideLetters ? '?' : letter }}
+            </span>
           </div>
 
-          <div class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
-            <button class="btn btn--soft btn--sm" disabled>Shuffle set</button>
-            <button class="btn btn--soft btn--sm" disabled>60 sec</button>
-            <button class="btn btn--soft btn--sm" disabled>English</button>
+          <div v-if="!createdSessionId" class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
+            <button
+              v-for="count in letterCounts"
+              :key="count.value"
+              class="btn btn--soft btn--sm"
+              :class="{ 'btn--active': letterCount === count.value }"
+              @click="letterCount = count.value"
+            >
+              {{ count.label }} {{ $t('multiplayer.letters') }}
+            </button>
+            <div style="width:100%"></div>
+            <button
+              v-for="time in timeLimits"
+              :key="time.value"
+              class="btn btn--soft btn--sm"
+              :class="{ 'btn--active': timeLimit === time.value }"
+              @click="timeLimit = time.value"
+            >
+              {{ time.label }}
+            </button>
+            <button
+              v-for="lang in availableLanguages"
+              :key="lang.id"
+              class="btn btn--soft btn--sm"
+              :class="{ 'btn--active': language === lang.id }"
+              @click="language = lang.id"
+            >
+              {{ lang.label }}
+            </button>
           </div>
-
-          <div class="multi-link">
-            <span class="mono" style="color:var(--fg-secondary)">anagrams.ru/r/streami-7a9</span>
-            <button class="btn btn--primary btn--sm" @click="copyLink" disabled>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path v-if="!linkCopied" d="M20 6L9 17l-5-5"/>
+          <div v-else class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn--soft btn--sm" disabled>{{ letterCount }} {{ $t('multiplayer.letters') }}</button>
+            <button class="btn btn--soft btn--sm" disabled>{{ timeLimits.find(t => t.value === timeLimit)?.label }}</button>
+            <button class="btn btn--soft btn--sm" disabled>{{ availableLanguages.find(l => l.id === language)?.label }}</button>
+            <button
+              class="btn btn--soft btn--sm"
+              :class="{ 'btn--active': hideLetters }"
+              @click="hideLetters = !hideLetters"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <template v-if="hideLetters">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </template>
                 <template v-else>
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </template>
+              </svg>
+              {{ hideLetters ? $t('multiplayer.showLetters') : $t('multiplayer.hideLetters') }}
+            </button>
+          </div>
+
+          <div v-if="createdSessionId" class="multi-link">
+            <span class="mono" style="color:var(--fg-secondary);word-break:break-all">{{ shareLink }}</span>
+            <button class="btn btn--primary btn--sm" @click="copyLink">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <template v-if="!linkCopied">
                   <rect x="9" y="9" width="13" height="13" rx="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </template>
+                <path v-else d="M20 6L9 17l-5-5"/>
               </svg>
               {{ linkCopied ? $t('multiplayer.card01.copied') : $t('multiplayer.card01.copyLink') }}
             </button>
           </div>
 
           <div class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
-            <button class="btn btn--accent" disabled>
+            <button
+              v-if="!createdSessionId"
+              class="btn btn--accent"
+              @click="createChallenge"
+              :disabled="creating"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 4l14 8-14 8z"/>
               </svg>
-              {{ $t('multiplayer.card01.playBtn')}}
+              {{ creating ? $t('common.creating') : $t('multiplayer.createChallenge') }}
             </button>
-            <button class="btn btn--ghost" disabled>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3"/>
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="19" r="3"/>
-                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
-              </svg>
-              {{$t('multiplayer.card01.gameSettings')}}
-            </button>
+            <template v-else>
+              <button class="btn btn--accent" @click="playChallenge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 4l14 8-14 8z"/>
+                </svg>
+                {{ $t('multiplayer.card01.playBtn')}}
+              </button>
+              <button class="btn btn--ghost" @click="resetForm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
+                {{ $t('common.newChallenge') }}
+              </button>
+            </template>
           </div>
         </section>
 
@@ -308,6 +456,12 @@ const sampleLetters = ['S','T','R','E','A','M','I']
   background: var(--bg-surface);
   border: 1px dashed var(--border-default);
   border-radius: 14px;
+}
+
+.btn--active {
+  background: var(--navy);
+  color: var(--milk);
+  border-color: var(--navy);
 }
 
 @media (max-width: 820px) {

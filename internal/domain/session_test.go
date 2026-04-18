@@ -154,15 +154,21 @@ func TestSession_IsExpired(t *testing.T) {
 			want:      false,
 		},
 		{
-			name:      "expired - 7 minutes ago with 1 minute limit",
+			name:      "not expired - 6 days ago",
 			timeLimit: 60,
-			createdAt: time.Now().UTC().Add(-7 * time.Minute),
+			createdAt: time.Now().UTC().Add(-6 * 24 * time.Hour),
+			want:      false,
+		},
+		{
+			name:      "expired - 8 days ago",
+			timeLimit: 60,
+			createdAt: time.Now().UTC().Add(-8 * 24 * time.Hour),
 			want:      true,
 		},
 		{
-			name:      "not expired - 30 seconds ago with 60 second limit",
+			name:      "not expired - 1 hour ago",
 			timeLimit: 60,
-			createdAt: time.Now().UTC().Add(-30 * time.Second),
+			createdAt: time.Now().UTC().Add(-1 * time.Hour),
 			want:      false,
 		},
 	}

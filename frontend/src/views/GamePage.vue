@@ -1,12 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/gameStore'
 import TimerRing from '../components/TimerRing.vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const gameStore = useGameStore()
 
 const wrapRef = ref(null)
@@ -14,6 +15,8 @@ const showAllWords = ref(false)
 const shake = ref(false)
 const winFx = ref(false)
 const errHint = ref('')
+const sessionId = ref(null)
+const isMultiplayer = ref(false)
 
 let timerInterval = null
 
@@ -28,7 +31,14 @@ watch(() => gameStore.gameActive, async (isActive) => {
 })
 
 onMounted(async () => {
-  if (gameStore.gameActive) {
+  // Проверяем, есть ли session_id в query params
+  sessionId.value = route.query.session_id
+  isMultiplayer.value = !!sessionId.value
+
+  if (sessionId.value) {
+    // Загружаем сессию с сервера и запускаем игру
+    await loadMultiplayerSession()
+  } else if (gameStore.gameActive) {
     await nextTick()
     wrapRef.value?.focus()
     startTimer()
@@ -38,6 +48,34 @@ onMounted(async () => {
 onUnmounted(() => {
   stopTimer()
 })
+
+async function loadMultiplayerSession() {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}`)
+
+    if (!response.ok) {
+      throw new Error('Failed to load session')
+    }
+
+    const session = await response.json()
+
+    // Запускаем игру с параметрами из сессии
+    gameStore.startGame(
+      session.letters.toUpperCase(),
+      session.language,
+      session.time_limit,
+      sessionId.value  // передаем session_id
+    )
+
+    await nextTick()
+    wrapRef.value?.focus()
+  } catch (error) {
+    console.error('Failed to load multiplayer session:', error)
+    alert('Failed to load challenge. Please try again.')
+    router.push('/')
+  }
+}
 
 function startTimer() {
   stopTimer()
@@ -143,11 +181,27 @@ function exitGame() {
 async function handlePlayAgain() {
   showAllWords.value = false
   gameStore.resetGame()
+
+  // Всегда создаём новую сессию с теми же параметрами
+  // (для соло это обычное поведение, для мультиплеера - реванш)
   await gameStore.startGame(
     gameStore.lastGameTime,
     gameStore.lastGameLetters,
     gameStore.lastGameLang
   )
+}
+
+async function handleChallengeBack() {
+  // Создаём ответную игру с теми же настройками и переходим на /multiplayer
+  router.push({
+    path: '/multiplayer',
+    query: {
+      create: 'true',
+      language: gameStore.lastGameLang,
+      letterCount: gameStore.lastGameLetters.toString(),
+      timeLimit: gameStore.lastGameTime.toString()
+    }
+  })
 }
 
 const sortedWords = computed(() => {
@@ -311,14 +365,31 @@ const longestWord = computed(() => {
           </svg>
           {{ $t('game.gameOver.playAgain') }}
         </button>
-        <button class="btn btn--primary btn--lg" @click="router.push('/multiplayer')">
+        <button
+          v-if="gameStore.lastGameWasMultiplayer"
+          class="btn btn--primary btn--lg"
+          @click="handleChallengeBack"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M3 21v-5h5"/>
+          </svg>
+          {{ $t('game.gameOver.challengeBack') }}
+        </button>
+        <button
+          v-else
+          class="btn btn--primary btn--lg"
+          @click="router.push('/multiplayer')"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="18" cy="5" r="3"/>
             <circle cx="6" cy="12" r="3"/>
             <circle cx="18" cy="19" r="3"/>
             <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
           </svg>
-          Challenge a friend
+          {{ $t('game.gameOver.challengeFriend') }}
         </button>
       </div>
 

@@ -28,6 +28,7 @@ export const useGameStore = defineStore('game', () => {
   const lastGameTime = ref(60)
   const lastGameLetters = ref(7)
   const lastGameLang = ref('ru')
+  const lastGameWasMultiplayer = ref(false)
 
   async function loadDictionary(lang) {
     if (dictionaries.value[lang]) {
@@ -92,45 +93,85 @@ export const useGameStore = defineStore('game', () => {
     return letters
   }
 
-  async function startGame(time, letters, lang) {
+  async function startGame(timeOrLetters, lettersOrLang, langOrTime, existingSessionId = null) {
+    let time, letters, lang
+
+    // Если передан existingSessionId, значит вызов из мультиплеера
+    // В этом случае: timeOrLetters = letters (string), lettersOrLang = lang, langOrTime = time
+    if (existingSessionId) {
+      letters = timeOrLetters
+      lang = lettersOrLang
+      time = langOrTime
+      sessionId.value = existingSessionId
+    } else {
+      // Стандартный вызов из соло-игры: time, letters (count), lang
+      time = timeOrLetters
+      letters = lettersOrLang
+      lang = langOrTime
+    }
+
     // Save last game parameters
     lastGameTime.value = time
-    lastGameLetters.value = letters
+    lastGameLetters.value = typeof letters === 'string' ? letters.length : letters
     lastGameLang.value = lang
+    lastGameWasMultiplayer.value = !!existingSessionId
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-      const response = await fetch(`${apiUrl}/api/v1/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          language: lang,
-          letter_count: letters,
-          time_limit: time
+      if (existingSessionId) {
+        // Мультиплеер: загружаем существующую сессию
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+        const response = await fetch(`${apiUrl}/api/v1/sessions/${existingSessionId}`)
+
+        if (!response.ok) {
+          throw new Error('Failed to load session')
+        }
+
+        const session = await response.json()
+
+        gameLetters.value = session.letters.toUpperCase().split('')
+        validWords.value = session.valid_words.map(w => w.toUpperCase())
+        inputWord.value = ''
+        foundWords.value = []
+        score.value = 0
+        timeLeft.value = session.time_limit
+        initialTime.value = session.time_limit
+        gameActive.value = true
+        usedLetterIndices.value = []
+      } else {
+        // Соло: создаём новую сессию
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+        const response = await fetch(`${apiUrl}/api/v1/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            language: lang,
+            letter_count: letters,
+            time_limit: time
+          })
         })
-      })
 
-      if (!response.ok) {
-        throw new Error('Failed to create session')
+        if (!response.ok) {
+          throw new Error('Failed to create session')
+        }
+
+        const session = await response.json()
+
+        sessionId.value = session.id
+        gameLetters.value = session.letters.toUpperCase().split('')
+        validWords.value = session.valid_words.map(w => w.toUpperCase())
+        inputWord.value = ''
+        foundWords.value = []
+        score.value = 0
+        timeLeft.value = time
+        initialTime.value = time
+        gameActive.value = true
+        usedLetterIndices.value = []
       }
-
-      const session = await response.json()
-
-      sessionId.value = session.id
-      gameLetters.value = session.letters.toUpperCase().split('')
-      validWords.value = session.valid_words.map(w => w.toUpperCase())
-      inputWord.value = ''
-      foundWords.value = []
-      score.value = 0
-      timeLeft.value = time
-      initialTime.value = time
-      gameActive.value = true
-      usedLetterIndices.value = []
     } catch (error) {
       console.error('Failed to start game:', error)
-      const gl = await generateLettersFromDict(letters, lang)
+      const gl = await generateLettersFromDict(typeof letters === 'string' ? letters.length : letters, lang)
       gameLetters.value = gl
       validWords.value = []
       inputWord.value = ''
@@ -356,6 +397,7 @@ export const useGameStore = defineStore('game', () => {
     lastGameTime,
     lastGameLetters,
     lastGameLang,
+    lastGameWasMultiplayer,
 
     availableLetters,
     timerPercentage,

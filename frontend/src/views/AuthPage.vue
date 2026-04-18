@@ -71,12 +71,29 @@ async function login() {
   }
 
   userStore.setUser(data)
-  router.push('/')
+
+  // Проверяем, есть ли сохранённый путь для редиректа
+  const redirectPath = sessionStorage.getItem('redirectAfterAuth')
+  if (redirectPath) {
+    sessionStorage.removeItem('redirectAfterAuth')
+    router.push(redirectPath)
+  } else {
+    router.push('/')
+  }
 }
 
 function handleGoogleLogin() {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-  window.location.href = `${apiUrl}/api/v1/auth/google`
+
+  // Сохраняем текущий редирект для Google OAuth
+  const redirectPath = sessionStorage.getItem('redirectAfterAuth')
+  if (redirectPath) {
+    // Передаём через query param для Google OAuth callback
+    const encodedRedirect = encodeURIComponent(redirectPath)
+    window.location.href = `${apiUrl}/api/v1/auth/google?redirect=${encodedRedirect}`
+  } else {
+    window.location.href = `${apiUrl}/api/v1/auth/google`
+  }
 }
 
 const eyebrowText = computed(() =>

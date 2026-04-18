@@ -11,6 +11,7 @@ import (
 type SessionRepository interface {
 	Create(ctx context.Context, session *domain.Session) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error)
+	GetByCreatorID(ctx context.Context, creatorID uuid.UUID, limit int) ([]*domain.Session, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	DeleteExpired(ctx context.Context, before time.Time) (int64, error)
 }

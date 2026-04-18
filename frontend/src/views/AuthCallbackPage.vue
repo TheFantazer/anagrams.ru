@@ -10,6 +10,7 @@ onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const accessToken = params.get('access_token')
   const refreshToken = params.get('refresh_token')
+  const redirect = params.get('redirect')
 
   if (accessToken && refreshToken) {
     localStorage.setItem('access_token', accessToken)
@@ -17,7 +18,14 @@ onMounted(async () => {
 
     await userStore.loadUserFromToken()
 
-    router.push('/')
+    // Проверяем, есть ли redirect параметр или сохранённый путь
+    const redirectPath = redirect || sessionStorage.getItem('redirectAfterAuth')
+    if (redirectPath) {
+      sessionStorage.removeItem('redirectAfterAuth')
+      router.push(redirectPath)
+    } else {
+      router.push('/')
+    }
   } else {
     router.push('/auth')
   }

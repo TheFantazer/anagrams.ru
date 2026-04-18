@@ -68,6 +68,8 @@
       "longestWord": "longest word",
       "percentFound": "found",
       "playAgain": "Play again",
+      "challengeBack": "Challenge back",
+      "challengeFriend": "Challenge a friend",
       "viewAllWords": "View all words",
       "hideWords": "Hide words",
       "foundLabel": "Found",
@@ -171,6 +173,10 @@
     "subtitle": "Pick letters, share link, compare scores. No waiting.",
     "comingSoon": "Coming soon",
     "description": "Right now we're fine-tuning the word list. Multiplayer mode is weeks away. Follow us for updates.",
+    "createChallenge": "Create Challenge",
+    "letters": "letters",
+    "hideLetters": "Hide letters",
+    "showLetters": "Show letters",
     "card01": {
       "title": "Start a challenge",
       "playBtn": "Play it now",
@@ -240,6 +246,19 @@
       "clear": "Clear word"
     }
   },
+  "challenge": {
+    "title": "Challenge Received",
+    "subtitle": "Ready to accept the challenge?",
+    "description": "Someone shared a letter set with you. Find as many words as you can within the time limit and compare your score with theirs.",
+    "letters": "letters",
+    "accept": "Accept Challenge",
+    "signInToPlay": "Sign In to Play",
+    "backToHome": "Back to Home",
+    "errors": {
+      "notFound": "This challenge was not found or has expired",
+      "loadFailed": "Failed to load challenge"
+    }
+  },
   "common": {
     "close": "Close",
     "loading": "Loading...",
@@ -247,6 +266,8 @@
     "retry": "Retry",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "save": "Save"
+    "save": "Save",
+    "creating": "Creating...",
+    "newChallenge": "New Challenge"
   }
 }
