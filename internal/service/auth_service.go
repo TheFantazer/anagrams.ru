@@ -56,9 +56,16 @@ func (s *authService) Login(ctx context.Context, username, password string) (*do
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		if err == repository.ErrNotFound {
-			return nil, domain.ErrInvalidCredentials
+			user, err = s.userRepo.GetByEmail(ctx, username)
+			if err != nil {
+				if err == repository.ErrNotFound {
+					return nil, domain.ErrInvalidCredentials
+				}
+				return nil, fmt.Errorf("failed to get user: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to get user: %w", err)
 		}
-		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {

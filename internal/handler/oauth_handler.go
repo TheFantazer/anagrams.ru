@@ -100,6 +100,6 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", h.frontendBaseURL, accessToken, refreshToken)
-	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	redirectURI := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", h.frontendBaseURL, accessToken, refreshToken)
+	http.Redirect(w, r, redirectURI, http.StatusTemporaryRedirect)
 }

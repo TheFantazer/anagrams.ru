@@ -146,17 +146,17 @@ function handleGoogleLogin() {
           </button>
 
           <div class="auth-or">
-            <span>or use your username</span>
+            <span>or use your {{ userStore.loginTab === 'login' ? 'username or email' : 'username' }}</span>
           </div>
 
           <!-- Form fields -->
           <div class="field">
-            <label class="field-label">Username</label>
+            <label class="field-label">{{ userStore.loginTab === 'login' ? 'Username or Email' : 'Username' }}</label>
             <input
               v-model="username"
               class="input"
               type="text"
-              :placeholder="userStore.loginTab === 'login' ? 'Enter your username' : 'vera.m'"
+              :placeholder="userStore.loginTab === 'login' ? 'Enter username or email' : 'vera.m'"
               autofocus
             />
           </div>
