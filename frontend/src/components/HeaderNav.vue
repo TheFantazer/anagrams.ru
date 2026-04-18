@@ -3,11 +3,13 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
+import { useLangStore } from "@/stores/lang";
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const gameStore = useGameStore()
+const lang = useLangStore();
 
 const drawer = ref(false)
 
@@ -26,6 +28,10 @@ function goHome() {
 function navigateTo(path) {
   router.push(path)
   drawer.value = false
+}
+
+function toggleLang(){
+  lang.toggle()
 }
 
 const userInitial = computed(() => {
@@ -77,6 +83,11 @@ const userInitial = computed(() => {
             <circle cx="12" cy="12" r="10"/>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
           </svg>
+        </button>
+
+        <!-- Language change-->
+        <button class="nav-icon" title="Language" @click="toggleLang">
+          {{ lang.lang === "ru" ? "EN" : "RU" }}
         </button>
 
         <!-- Sign In / Avatar -->

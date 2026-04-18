@@ -88,7 +88,7 @@ onUnmounted(() => {
             <span class="dot-blink" /> A word puzzle for two
           </div>
           <h1 class="home-title">
-            Find every word.<br/>
+            {{ $t("views.homePage.homeTitle")}}<br/>
             <span class="home-title-accent">Beat your friends.</span>
           </h1>
           <p class="home-sub">
