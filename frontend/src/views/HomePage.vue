@@ -256,6 +256,7 @@ onUnmounted(() => {
   font-weight: 800;
   color: var(--navy);
   opacity: 0.04;
+  --rot: 0deg;
   transform: rotate(var(--rot));
   animation: float-up 12s ease-in-out infinite alternate;
   user-select: none;
