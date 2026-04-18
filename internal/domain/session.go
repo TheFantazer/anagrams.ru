@@ -8,14 +8,15 @@ import (
 )
 
 type Session struct {
-	ID          uuid.UUID `json:"id"`
-	Letters     string    `json:"letters"`
-	Language    string    `json:"language"`
-	TimeLimit   int       `json:"time_limit"`
-	LetterCount int       `json:"letter_count"`
-	ValidWords  []string  `json:"valid_words"`
-	MaxScore    int       `json:"max_score"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          uuid.UUID  `json:"id"`
+	Letters     string     `json:"letters"`
+	Language    string     `json:"language"`
+	TimeLimit   int        `json:"time_limit"`
+	LetterCount int        `json:"letter_count"`
+	ValidWords  []string   `json:"valid_words"`
+	MaxScore    int        `json:"max_score"`
+	CreatorID   *uuid.UUID `json:"creator_id,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 func NewSession(letters, language string, timeLimit, letterCount int, validWords []string) (*Session, error) {
@@ -48,8 +49,9 @@ func NewSession(letters, language string, timeLimit, letterCount int, validWords
 }
 
 func (s *Session) IsExpired() bool {
-	gracePeriod := 5 * time.Minute
-	expiresAt := s.CreatedAt.Add(time.Duration(s.TimeLimit)*time.Second + gracePeriod)
+	// Multiplayer sessions are valid for 7 days
+	expiryDuration := 7 * 24 * time.Hour
+	expiresAt := s.CreatedAt.Add(expiryDuration)
 	return time.Now().UTC().After(expiresAt)
 }
 func (s *Session) IsValid(word string) bool {

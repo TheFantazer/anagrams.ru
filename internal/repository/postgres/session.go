@@ -30,6 +30,7 @@ type sessionDB struct {
 	LetterCount int             `db:"letter_count"`
 	ValidWords  json.RawMessage `db:"valid_words"`
 	MaxScore    int             `db:"max_score"`
+	CreatorID   *uuid.UUID      `db:"creator_id"`
 	CreatedAt   time.Time       `db:"created_at"`
 }
 
@@ -47,6 +48,7 @@ func (s *sessionDB) toDomain() (*domain.Session, error) {
 		LetterCount: s.LetterCount,
 		ValidWords:  validWords,
 		MaxScore:    s.MaxScore,
+		CreatorID:   s.CreatorID,
 		CreatedAt:   s.CreatedAt,
 	}, nil
 }
@@ -63,6 +65,7 @@ func fromDomainSession(s *domain.Session) (*sessionDB, error) {
 		LetterCount: s.LetterCount,
 		ValidWords:  validWordsJSON,
 		MaxScore:    s.MaxScore,
+		CreatorID:   s.CreatorID,
 		CreatedAt:   s.CreatedAt,
 	}, nil
 }
@@ -72,8 +75,8 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		return fmt.Errorf("failed to convert session: %w", err)
 	}
 	query := `
-				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 	_, err = r.db.ExecContext(
 		ctx,
@@ -85,6 +88,7 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		dbSession.LetterCount,
 		dbSession.ValidWords,
 		dbSession.MaxScore,
+		dbSession.CreatorID,
 		dbSession.CreatedAt,
 	)
 
@@ -97,7 +101,7 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 
 func (r *postgresSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
 	query := `
-  		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, created_at
+  		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at
   		FROM game_sessions
   		WHERE id = $1
   	`
@@ -112,6 +116,33 @@ func (r *postgresSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domai
 	}
 
 	return dbSession.toDomain()
+}
+
+func (r *postgresSessionRepo) GetByCreatorID(ctx context.Context, creatorID uuid.UUID, limit int) ([]*domain.Session, error) {
+	query := `
+		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at
+		FROM game_sessions
+		WHERE creator_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`
+
+	var dbSessions []sessionDB
+	err := r.db.SelectContext(ctx, &dbSessions, query, creatorID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sessions by creator: %w", err)
+	}
+
+	sessions := make([]*domain.Session, 0, len(dbSessions))
+	for _, dbSession := range dbSessions {
+		session, err := dbSession.toDomain()
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
 }
 
 func (r *postgresSessionRepo) Delete(ctx context.Context, id uuid.UUID) error {
