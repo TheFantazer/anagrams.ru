@@ -1,7 +1,220 @@
 {
-  "views": {
-    "homePage": {
-      "homeTitle": "Find every word."
+  "nav": {
+    "play": "Play",
+    "multiplayer": "Multiplayer",
+    "leaderboard": "Leaderboard",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "settings": "Settings",
+    "help": "How to play"
+  },
+  "home": {
+    "title": "Find every word.",
+    "subtitle": "Beat your friends.",
+    "description": "A word puzzle for two",
+    "soloTitle": "Solo",
+    "soloDescription": "Seven letters, one minute. Find all the words.",
+    "soloAction": "Start",
+    "multiplayerTitle": "Multiplayer",
+    "multiplayerDescription": "Pick letters, share link, compare scores.",
+    "multiplayerAction": "Challenge",
+    "statsGamesPlayed": "games played",
+    "statsBestScore": "best score",
+    "statsLongestWord": "longest word",
+    "keyboardHints": {
+      "fast": "Fast game",
+      "custom": "Custom",
+      "help": "Help"
     }
+  },
+  "game": {
+    "score": "Score",
+    "found": "Found",
+    "endGame": "End game",
+    "exit": "Exit",
+    "submit": "Submit",
+    "delete": "Delete",
+    "clear": "Clear",
+    "placeholder": "•••",
+    "errors": {
+      "tooShort": "too short — 3+ letters",
+      "alreadyFound": "already found",
+      "notInDictionary": "not in dictionary"
+    },
+    "foundWords": {
+      "title": "Words you've found",
+      "empty": "Submit your first word to start the streak. Longer words score more."
+    },
+    "gameOver": {
+      "title": "Time's up!",
+      "subtitle": "Nice work",
+      "yourScore": "Your score",
+      "wordsFound": "words found",
+      "longestWord": "longest word",
+      "percentFound": "found",
+      "playAgain": "Play again",
+      "viewAllWords": "View all words",
+      "hideWords": "Hide words",
+      "foundLabel": "Found",
+      "missedLabel": "Missed"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account, your defaults.",
+    "account": {
+      "title": "Account",
+      "username": "Username",
+      "email": "Email",
+      "joined": "Joined"
+    },
+    "gameDefaults": {
+      "title": "Game defaults",
+      "language": "Language",
+      "letters": "Letters",
+      "timeLimit": "Time limit",
+      "languages": {
+        "en": "English",
+        "ru": "Русский"
+      }
+    },
+    "stats": {
+      "title": "Your stats",
+      "loading": "Loading stats...",
+      "gamesPlayed": "Games played",
+      "bestScore": "Best score",
+      "longestWord": "Longest word",
+      "wordsFound": "Words found",
+      "avgScore": "Avg score",
+      "currentStreak": "Current streak",
+      "days": "days"
+    },
+    "saved": "Settings saved!",
+    "failed": "Failed to save settings",
+    "startNewGame": "Start a new game"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "joinTheBoard": "Join the board",
+    "signInTitle": "Sign in to keep your streak.",
+    "signUpTitle": "Create an account in 30 seconds.",
+    "description": "Save your best words, track daily stats, and show up on the leaderboard. No ads, no emails.",
+    "features": {
+      "puzzles": "daily puzzles & streaks",
+      "history": "history across devices",
+      "multiplayer": "async multiplayer"
+    },
+    "tabs": {
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+    "continueWithGoogle": "Continue with Google",
+    "orUseUsername": "or use your username or email",
+    "orUseUsernameSignUp": "or use your username",
+    "fields": {
+      "username": "Username",
+      "usernameOrEmail": "Username or Email",
+      "email": "Email",
+      "password": "Password"
+    },
+    "placeholders": {
+      "username": "vera.m",
+      "usernameOrEmail": "Enter username or email",
+      "email": "you@example.com",
+      "password": "••••••••"
+    },
+    "actions": {
+      "signIn": "Sign in",
+      "createAccount": "Create account",
+      "loading": "Loading..."
+    },
+    "toggles": {
+      "noAccount": "Don't have an account? Sign up",
+      "hasAccount": "Already have one? Sign in"
+    }
+  },
+  "leaderboard": {
+    "title": "Who's hunting words best",
+    "subtitle": "Daily rankings, forever etched in pixels.",
+    "periods": {
+      "today": "Today",
+      "week": "This week",
+      "month": "Month",
+      "allTime": "All time"
+    },
+    "columns": {
+      "rank": "Rank",
+      "player": "Player",
+      "score": "Best score",
+      "words": "Total words"
+    },
+    "you": "You",
+    "loading": "Loading..."
+  },
+  "multiplayer": {
+    "title": "Async Multiplayer",
+    "subtitle": "Pick letters, share link, compare scores. No waiting.",
+    "comingSoon": "Coming soon",
+    "description": "Right now we're fine-tuning the word list. Multiplayer mode is weeks away. Follow us for updates.",
+    "howItWorks": {
+      "title": "How it works",
+      "step1": {
+        "title": "Pick your letters",
+        "description": "Choose a language and letter count."
+      },
+      "step2": {
+        "title": "Share the link",
+        "description": "Send it to a friend. They play the same puzzle."
+      },
+      "step3": {
+        "title": "Compare scores",
+        "description": "See who found more words."
+      }
+    }
+  },
+  "soloSettings": {
+    "title": "Start a solo game",
+    "language": "Language",
+    "letters": "Letters",
+    "time": "Time",
+    "start": "Start game",
+    "fastGame": "Fast game"
+  },
+  "help": {
+    "title": "How to play",
+    "objective": {
+      "title": "Objective",
+      "description": "Find as many words as you can from the given letters before time runs out."
+    },
+    "rules": {
+      "title": "Rules",
+      "minLength": "Words must be at least 3 letters long",
+      "useLetters": "Use only the letters shown on screen",
+      "noRepeats": "Each word can only be submitted once"
+    },
+    "scoring": {
+      "title": "Scoring",
+      "3letters": "3 letters",
+      "4letters": "4 letters",
+      "5letters": "5 letters",
+      "6letters": "6 letters",
+      "7letters": "7+ letters"
+    },
+    "controls": {
+      "title": "Controls",
+      "click": "Click letters or type on keyboard",
+      "submit": "Submit word",
+      "delete": "Delete last letter",
+      "clear": "Clear word"
+    }
+  },
+  "common": {
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save"
   }
 }
