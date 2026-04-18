@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/gameStore'
 import TimerRing from '../components/TimerRing.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const gameStore = useGameStore()
 
@@ -100,14 +102,14 @@ function submitWord() {
 
   if (word.length < 3) {
     shake.value = true
-    errHint.value = 'too short — 3+ letters'
+    errHint.value = t('game.errors.tooShort')
     setTimeout(() => { shake.value = false }, 420)
     return
   }
 
   if (gameStore.foundWords.includes(word)) {
     shake.value = true
-    errHint.value = 'already found'
+    errHint.value = t('game.errors.alreadyFound')
     setTimeout(() => { shake.value = false }, 420)
     clearAll()
     return
@@ -120,7 +122,7 @@ function submitWord() {
     errHint.value = ''
   } else {
     shake.value = true
-    errHint.value = 'not in dictionary'
+    errHint.value = t('game.errors.notInDictionary')
     setTimeout(() => { shake.value = false }, 420)
   }
 }
@@ -183,13 +185,13 @@ const longestWord = computed(() => {
         <div class="hud-left">
           <div class="hud-stat">
             <div>
-              <div class="hud-stat-label">Score</div>
+              <div class="hud-stat-label">{{ $t('game.score') }}</div>
               <div class="hud-stat-value accent">{{ gameStore.score.toLocaleString() }}</div>
             </div>
           </div>
           <div class="hud-stat">
             <div>
-              <div class="hud-stat-label">Found</div>
+              <div class="hud-stat-label">{{ $t('game.found') }}</div>
               <div class="hud-stat-value">
                 {{ gameStore.foundWords.length }}<span style="color:var(--fg-faint);font-size:13px">/{{ gameStore.validWords?.length || 0 }}</span>
               </div>
@@ -200,8 +202,8 @@ const longestWord = computed(() => {
         <TimerRing />
 
         <div class="hud-right">
-          <button class="btn btn--soft btn--sm" @click="endGame">End game</button>
-          <button class="btn btn--ghost btn--sm" @click="exitGame">Exit</button>
+          <button class="btn btn--soft btn--sm" @click="endGame">{{ $t('game.endGame') }}</button>
+          <button class="btn btn--ghost btn--sm" @click="exitGame">{{ $t('game.exit') }}</button>
         </div>
       </div>
 
@@ -215,7 +217,7 @@ const longestWord = computed(() => {
             'win': winFx
           }]"
         >
-          {{ gameStore.inputWord || '•••' }}
+          {{ gameStore.inputWord || $t('game.placeholder') }}
         </div>
 
         <div class="game-input-hint" :data-visible="!!errHint">
@@ -244,13 +246,13 @@ const longestWord = computed(() => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/>
             </svg>
-            Delete <span class="kbd">⌫</span>
+            {{ $t('game.delete') }} <span class="kbd">⌫</span>
           </button>
           <button class="btn btn--ghost" @click="clearAll">
-            Clear <span class="kbd">Esc</span>
+            {{ $t('game.clear') }} <span class="kbd">Esc</span>
           </button>
           <button class="btn btn--accent" @click="submitWord">
-            Submit <span class="kbd" style="background:rgba(255,255,255,0.18);color:var(--milk);border-color:transparent">↵</span>
+            {{ $t('game.submit') }} <span class="kbd" style="background:rgba(255,255,255,0.18);color:var(--milk);border-color:transparent">↵</span>
           </button>
         </div>
 
@@ -263,11 +265,11 @@ const longestWord = computed(() => {
       <!-- Found Words Rail -->
       <div class="found-rail">
         <div class="found-rail-head">
-          <span class="title">Words you've found</span>
+          <span class="title">{{ $t('game.foundWords.title') }}</span>
           <span class="count">{{ gameStore.foundWords.length }} / {{ gameStore.validWords?.length || 0 }}</span>
         </div>
         <p v-if="gameStore.foundWords.length === 0" class="muted found-rail-empty">
-          Submit your first word to start the streak. Longer words score more.
+          {{ $t('game.foundWords.empty') }}
         </p>
         <div v-else class="found-chips">
           <span v-for="(word, i) in gameStore.foundWords" :key="i" class="found-chip">
@@ -279,22 +281,22 @@ const longestWord = computed(() => {
 
     <!-- Game Over View -->
     <div v-else class="shell over-wrap">
-      <div class="over-eyebrow">Time's up</div>
-      <h1 class="over-title">{{ gameStore.score > 0 ? 'Nice game.' : 'No words this round.' }}</h1>
+      <div class="over-eyebrow">{{ $t('game.gameOver.title') }}</div>
+      <h1 class="over-title">{{ gameStore.score > 0 ? $t('game.gameOver.subtitle') : 'No words this round.' }}</h1>
       <div class="over-score">{{ gameStore.score.toLocaleString() }}</div>
 
       <div class="over-meta">
         <div class="cell">
           <div class="cell-num">{{ gameStore.foundWords.length }}/{{ gameStore.validWords?.length || 0 }}</div>
-          <div class="cell-lbl">words</div>
+          <div class="cell-lbl">{{ $t('game.gameOver.wordsFound') }}</div>
         </div>
         <div class="cell">
           <div class="cell-num">{{ percentFound }}%</div>
-          <div class="cell-lbl">found</div>
+          <div class="cell-lbl">{{ $t('game.gameOver.percentFound') }}</div>
         </div>
         <div class="cell">
           <div class="cell-num">{{ longestWord.length || 0 }}</div>
-          <div class="cell-lbl">longest</div>
+          <div class="cell-lbl">{{ $t('game.gameOver.longestWord') }}</div>
         </div>
         <div class="cell">
           <div class="cell-num mono" style="font-size:14px">{{ gameStore.gameLetters?.join('').toLowerCase() || '' }}</div>
@@ -307,7 +309,7 @@ const longestWord = computed(() => {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
           </svg>
-          Play again
+          {{ $t('game.gameOver.playAgain') }}
         </button>
         <button class="btn btn--primary btn--lg" @click="router.push('/multiplayer')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -322,7 +324,7 @@ const longestWord = computed(() => {
 
       <div class="found-rail-head" style="margin-top:32px;border-top:1px solid var(--border-hairline);padding-top:24px">
         <span class="title">All words — {{ gameStore.validWords?.length || 0 }}</span>
-        <button v-if="!showAllWords" class="btn btn--sm btn--ghost" @click="showAllWords = true">Show missed</button>
+        <button v-if="!showAllWords" class="btn btn--sm btn--ghost" @click="showAllWords = true">{{ $t('game.gameOver.viewAllWords') }}</button>
       </div>
 
       <div class="result-grid">

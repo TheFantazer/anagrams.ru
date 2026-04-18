@@ -1,9 +1,11 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
@@ -56,7 +58,7 @@ async function saveSettings() {
     userStore.setUser(data)
 
     if (!saveMessage.value) {
-      saveMessage.value = 'Settings saved!'
+      saveMessage.value = t('settings.saved')
     }
 
     if (saveMessageTimeout) {
@@ -69,7 +71,7 @@ async function saveSettings() {
     }, 2000)
   } catch (error) {
     console.error('Failed to save settings:', error)
-    saveMessage.value = 'Failed to save settings'
+    saveMessage.value = t('settings.failed')
   } finally {
     saving.value = false
   }
@@ -110,6 +112,11 @@ function handleSignOut() {
   userStore.signOut()
   router.push('/auth')
 }
+
+const languageOptions = computed(() => [
+  { id: 'en', label: t('settings.gameDefaults.languages.en') },
+  { id: 'ru', label: t('settings.gameDefaults.languages.ru') }
+])
 </script>
 
 <template>
@@ -117,43 +124,43 @@ function handleSignOut() {
     <div class="shell settings-wrap">
       <header class="page-head">
         <div>
-          <div class="page-eyebrow">Settings</div>
-          <h1 class="page-title-display">Your account, your defaults.</h1>
+          <div class="page-eyebrow">{{ $t('settings.title') }}</div>
+          <h1 class="page-title-display">{{ $t('settings.subtitle') }}</h1>
         </div>
         <button class="btn btn--ghost" @click="handleSignOut">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
           </svg>
-          Sign out
+          {{ $t('nav.signOut') }}
         </button>
       </header>
 
       <div class="settings-grid">
         <!-- Account card -->
         <section class="card">
-          <h3 style="margin:0 0 16px">Account</h3>
+          <h3 style="margin:0 0 16px">{{ $t('settings.account.title') }}</h3>
           <div class="kv">
-            <span class="kv-k">Username</span>
+            <span class="kv-k">{{ $t('settings.account.username') }}</span>
             <span class="kv-v">{{ userStore.username }}</span>
           </div>
           <div class="kv">
-            <span class="kv-k">Email</span>
+            <span class="kv-k">{{ $t('settings.account.email') }}</span>
             <span class="kv-v">{{ userStore.email }}</span>
           </div>
           <div class="kv" style="border-bottom:0">
-            <span class="kv-k">Joined</span>
+            <span class="kv-k">{{ $t('settings.account.joined') }}</span>
             <span class="kv-v mono">{{ userStore.joinedDate }}</span>
           </div>
         </section>
 
         <!-- Game defaults card -->
         <section class="card">
-          <h3 style="margin:0 0 16px">Game defaults</h3>
+          <h3 style="margin:0 0 16px">{{ $t('settings.gameDefaults.title') }}</h3>
           <div class="field">
-            <label class="field-label">Language</label>
+            <label class="field-label">{{ $t('settings.gameDefaults.language') }}</label>
             <div class="checkbox-row">
               <button
-                v-for="lang in [{ id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }]"
+                v-for="lang in languageOptions"
                 :key="lang.id"
                 class="chip-toggle"
                 :data-active="userStore.soloLang === lang.id"
@@ -165,7 +172,7 @@ function handleSignOut() {
           </div>
 
           <div class="field">
-            <label class="field-label">Letters</label>
+            <label class="field-label">{{ $t('settings.gameDefaults.letters') }}</label>
             <div class="checkbox-row">
               <button
                 v-for="n in [6, 7, 8, 9, 10]"
@@ -180,7 +187,7 @@ function handleSignOut() {
           </div>
 
           <div class="field" style="margin-bottom:0">
-            <label class="field-label">Time limit</label>
+            <label class="field-label">{{ $t('settings.gameDefaults.timeLimit') }}</label>
             <div class="checkbox-row">
               <button
                 v-for="time in [{ val: 30, label: '30s' }, { val: 60, label: '1:00' }, { val: 90, label: '1:30' }, { val: 120, label: '2:00' }]"
@@ -201,34 +208,34 @@ function handleSignOut() {
 
         <!-- Stats card -->
         <section class="card" style="grid-column:1 / -1">
-          <h3 style="margin:0 0 16px">Your stats</h3>
+          <h3 style="margin:0 0 16px">{{ $t('settings.stats.title') }}</h3>
           <div v-if="loadingStats" style="text-align:center; padding:40px; color:var(--fg-muted)">
-            Loading stats...
+            {{ $t('settings.stats.loading') }}
           </div>
           <div v-else class="stats-grid">
             <div class="stat-cell">
-              <div class="stat-k">Games played</div>
+              <div class="stat-k">{{ $t('settings.stats.gamesPlayed') }}</div>
               <div class="stat-v">{{ userStore.gamesPlayed }}</div>
             </div>
             <div class="stat-cell">
-              <div class="stat-k">Best score</div>
+              <div class="stat-k">{{ $t('settings.stats.bestScore') }}</div>
               <div class="stat-v accent-text">{{ userStore.bestScore.toLocaleString() }}</div>
             </div>
             <div class="stat-cell">
-              <div class="stat-k">Longest word</div>
+              <div class="stat-k">{{ $t('settings.stats.longestWord') }}</div>
               <div class="stat-v mono" style="font-size:22px">{{ userStore.longestWord || '—' }}</div>
             </div>
             <div class="stat-cell">
-              <div class="stat-k">Words found</div>
+              <div class="stat-k">{{ $t('settings.stats.wordsFound') }}</div>
               <div class="stat-v">{{ stats.total_words?.toLocaleString() || '—' }}</div>
             </div>
             <div class="stat-cell">
-              <div class="stat-k">Avg score</div>
+              <div class="stat-k">{{ $t('settings.stats.avgScore') }}</div>
               <div class="stat-v">{{ Math.round(stats.average_score) || '—' }}</div>
             </div>
             <div class="stat-cell">
-              <div class="stat-k">Current streak</div>
-              <div class="stat-v">— <span class="muted" style="font-size:14px">days</span></div>
+              <div class="stat-k">{{ $t('settings.stats.currentStreak') }}</div>
+              <div class="stat-v">— <span class="muted" style="font-size:14px">{{ $t('settings.stats.days') }}</span></div>
             </div>
           </div>
         </section>
@@ -236,7 +243,7 @@ function handleSignOut() {
 
       <div style="margin-top:24px">
         <button class="btn btn--accent btn--lg" @click="$router.push('/')">
-          Start a new game
+          {{ $t('settings.startNewGame') }}
         </button>
       </div>
     </div>

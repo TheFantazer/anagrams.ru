@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
@@ -85,33 +87,32 @@ onUnmounted(() => {
 
         <div class="home-hero-text">
           <div class="home-eyebrow">
-            <span class="dot-blink" /> A word puzzle for two
+            <span class="dot-blink" /> {{ $t('home.description') }}
           </div>
           <h1 class="home-title">
-            {{ $t("views.homePage.homeTitle")}}<br/>
-            <span class="home-title-accent">Beat your friends.</span>
+            {{ $t('home.titleHigh') }}<br/>
+            <span class="home-title-accent">{{ $t('home.titleLow') }}</span>
           </h1>
           <p class="home-sub">
-            Seven letters, one minute, every anagram hiding inside. Share the link — they play
-            the same set. The longer word wins.
+            {{ $t('home.subtitle')}}
           </p>
           <div class="home-cta-row">
             <button class="btn btn--accent btn--lg" @click="startFastGame">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
               </svg>
-              Fast game
+              {{ $t('home.keyboardHints.fast') }}
             </button>
             <button class="btn btn--ghost btn--lg" @click="openCustomSetup">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              Custom setup
+              {{ $t('home.keyboardHints.custom') }}
             </button>
           </div>
           <div class="home-kbd-hint">
-            <span class="kbd">F</span> fast &nbsp;·&nbsp; <span class="kbd">C</span> custom &nbsp;·&nbsp; <span class="kbd">?</span> how to play
+            <span class="kbd">F</span> {{ $t('home.keyboardHints.fast').toLowerCase() }} &nbsp;·&nbsp; <span class="kbd">C</span> {{ $t('home.keyboardHints.custom').toLowerCase() }} &nbsp;·&nbsp; <span class="kbd">?</span> {{ $t('home.keyboardHints.help').toLowerCase() }}
           </div>
         </div>
       </section>
@@ -120,8 +121,8 @@ onUnmounted(() => {
       <section class="home-modes">
         <div class="home-modes-head">
           <div>
-            <h2 class="home-modes-title">Pick a mode</h2>
-            <p class="muted" style="margin:0;font-size:13px">Solo for practice, multiplayer for bragging rights.</p>
+            <h2 class="home-modes-title">{{ $t('home.modesTitle')}}</h2>
+            <p class="muted" style="margin:0;font-size:13px">{{$t('home.modesSubtitle')}}</p>
           </div>
         </div>
         <div class="home-modes-grid">
@@ -129,14 +130,14 @@ onUnmounted(() => {
           <div class="mode-card" @click="openCustomSetup">
             <div class="mode-card-top">
               <span class="mode-num">01</span>
-              <span class="mode-tag">Warm up</span>
+              <span class="mode-tag">{{$t('home.modesTags.solo')}}</span>
             </div>
             <div class="mode-card-body">
-              <h3 class="mode-name">Solo</h3>
-              <p class="mode-desc">Custom letters, language, and timer. Perfect for warming up.</p>
+              <h3 class="mode-name">{{ $t('home.soloTitle') }}</h3>
+              <p class="mode-desc">{{ $t('home.soloDescription') }}</p>
             </div>
             <div class="mode-card-foot">
-              <span>Start</span>
+              <span>{{ $t('home.soloAction') }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -147,14 +148,14 @@ onUnmounted(() => {
           <div class="mode-card mode-card--accent" @click="startFastGame">
             <div class="mode-card-top">
               <span class="mode-num">02</span>
-              <span class="mode-tag">Recommended</span>
+              <span class="mode-tag">{{$t('home.modesTags.fast')}}</span>
             </div>
             <div class="mode-card-body">
-              <h3 class="mode-name">Fast</h3>
-              <p class="mode-desc">7 letters · 60 seconds · pure reflex. Jump straight in.</p>
+              <h3 class="mode-name">{{ $t('home.keyboardHints.fast') }}</h3>
+              <p class="mode-desc">{{ $t('home.fastDescription')}}</p>
             </div>
             <div class="mode-card-foot">
-              <span>Start</span>
+              <span>{{ $t('home.soloAction') }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -165,14 +166,14 @@ onUnmounted(() => {
           <div class="mode-card" @click="router.push('/multiplayer')">
             <div class="mode-card-top">
               <span class="mode-num">03</span>
-              <span class="mode-tag">New</span>
+              <span class="mode-tag">{{ $t('home.modesTags.multiplayer') }}</span>
             </div>
             <div class="mode-card-body">
-              <h3 class="mode-name">Multiplayer</h3>
-              <p class="mode-desc">Challenge a friend with a link. You both play the same set — highest score wins.</p>
+              <h3 class="mode-name">{{ $t('home.multiplayerTitle') }}</h3>
+              <p class="mode-desc">{{ $t('home.multiplayerDescription') }}</p>
             </div>
             <div class="mode-card-foot">
-              <span>Start</span>
+              <span>{{ $t('home.multiplayerAction') }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -185,22 +186,22 @@ onUnmounted(() => {
       <section class="home-strip">
         <div class="strip-item">
           <div class="strip-num">3+</div>
-          <div class="strip-lbl">letter min.</div>
+          <div class="strip-lbl">{{$t('home.statsStrip.minLetters')}}</div>
         </div>
         <div class="strip-sep" />
         <div class="strip-item">
           <div class="strip-num mono">100 → 2.8k</div>
-          <div class="strip-lbl">points scale</div>
+          <div class="strip-lbl">{{$t('home.statsStrip.pointsScale')}}</div>
         </div>
         <div class="strip-sep" />
         <div class="strip-item">
           <div class="strip-num"><span class="flag-dot" />EN · RU</div>
-          <div class="strip-lbl">two dictionaries</div>
+          <div class="strip-lbl">{{$t('home.statsStrip.dictionaries')}}</div>
         </div>
         <div class="strip-sep" />
         <div class="strip-item">
-          <div class="strip-num">0</div>
-          <div class="strip-lbl">apps to install</div>
+          <div class="strip-num">{{ userStore.soloLang === "ru" ? "Старт без скачивания" : "0"}}</div>
+          <div class="strip-lbl">{{$t('home.statsStrip.apps')}}</div>
         </div>
       </section>
 
@@ -215,16 +216,16 @@ onUnmounted(() => {
           </p>
         </div>
         <div class="row gap-2">
-          <button class="btn btn--ghost" @click="router.push('/auth')">Sign in</button>
-          <button class="btn btn--primary" @click="router.push('/auth')">Create account</button>
+          <button class="btn btn--ghost" @click="router.push('/auth')">{{ $t('nav.signIn') }}</button>
+          <button class="btn btn--primary" @click="router.push('/auth')">{{ $t('auth.actions.createAccount') }}</button>
         </div>
       </section>
 
       <!-- Keyboard Shortcuts Hint -->
       <div style="display:flex;justify-content:center;gap:20px;margin-top:32px;font-size:12px;color:var(--fg-muted)">
-        <span><kbd class="kbd">F</kbd> Fast game</span>
-        <span><kbd class="kbd">C</kbd> Custom</span>
-        <span><kbd class="kbd">?</kbd> Help</span>
+        <span><kbd class="kbd">F</kbd> {{ $t('home.keyboardHints.fast') }}</span>
+        <span><kbd class="kbd">C</kbd> {{ $t('home.keyboardHints.custom') }}</span>
+        <span><kbd class="kbd">?</kbd> {{ $t('home.keyboardHints.help') }}</span>
       </div>
     </div>
   </div>

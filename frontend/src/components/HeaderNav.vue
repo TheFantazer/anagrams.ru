@@ -3,21 +3,21 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
-import { useLangStore } from "@/stores/lang";
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const gameStore = useGameStore()
-const lang = useLangStore();
 
 const drawer = ref(false)
 
-const links = [
-  { id: '/', label: 'Play', icon: 'play' },
-  { id: '/multiplayer', label: 'Multiplayer', icon: 'users' },
-  { id: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
-]
+const links = computed(() => [
+  { id: '/', label: t('nav.play'), icon: 'play' },
+  { id: '/multiplayer', label: t('nav.multiplayer'), icon: 'users' },
+  { id: '/leaderboard', label: t('nav.leaderboard'), icon: 'trophy' },
+])
 
 function goHome() {
   gameStore.endGame()
@@ -30,8 +30,8 @@ function navigateTo(path) {
   drawer.value = false
 }
 
-function toggleLang(){
-  lang.toggle()
+function toggleLang() {
+  userStore.soloLang = userStore.soloLang === 'ru' ? 'en' : 'ru'
 }
 
 const userInitial = computed(() => {
@@ -78,7 +78,7 @@ const userInitial = computed(() => {
       <!-- Right Side -->
       <div class="nav-right">
         <!-- Help Button -->
-        <button class="nav-icon" title="How to play" @click="userStore.setShowHelp(true)">
+        <button class="nav-icon" :title="$t('nav.help')" @click="userStore.setShowHelp(true)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
@@ -87,7 +87,7 @@ const userInitial = computed(() => {
 
         <!-- Language change-->
         <button class="nav-icon" title="Language" @click="toggleLang">
-          {{ lang.lang === "ru" ? "EN" : "RU" }}
+          {{ userStore.soloLang === "ru" ? "EN" : "RU" }}
         </button>
 
         <!-- Sign In / Avatar -->
@@ -100,12 +100,12 @@ const userInitial = computed(() => {
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
-          Sign in
+          {{ $t('nav.signIn') }}
         </button>
         <button
           v-else
           class="nav-avatar"
-          title="Settings"
+          :title="$t('nav.settings')"
           @click="navigateTo('/settings')"
         >
           {{ userInitial }}

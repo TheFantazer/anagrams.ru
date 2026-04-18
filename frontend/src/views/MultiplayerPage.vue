@@ -1,7 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const router = useRouter()
 const linkCopied = ref(false)
 
@@ -21,8 +23,8 @@ const sampleLetters = ['S','T','R','E','A','M','I']
     <div class="shell multi-wrap">
       <header class="page-head">
         <div>
-          <div class="page-eyebrow">Multiplayer</div>
-          <h1 class="page-title-display">Send a set. Compare scores.</h1>
+          <div class="page-eyebrow">{{ $t('multiplayer.title') }}</div>
+          <h1 class="page-title-display">{{ $t('multiplayer.subtitle') }}</h1>
         </div>
       </header>
 
@@ -33,8 +35,8 @@ const sampleLetters = ['S','T','R','E','A','M','I']
           <path d="M12 6v6l4 2"/>
         </svg>
         <div>
-          <strong>Multiplayer mode coming soon!</strong>
-          <span class="muted">This feature is under development. Play solo mode for now.</span>
+          <strong>{{ $t('multiplayer.comingSoon') }}</strong>
+          <span class="muted">{{ $t('multiplayer.description') }}</span>
         </div>
       </div>
 
@@ -43,13 +45,13 @@ const sampleLetters = ['S','T','R','E','A','M','I']
         <section class="card card--paper multi-new">
           <div class="multi-eye">
             <span class="multi-num">01</span>
-            Start a challenge
+            {{$t('multiplayer.card01.title')}}
           </div>
           <h3 style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.5px;margin:6px 0 10px;color:var(--fg-primary);text-transform:none">
-            Pick letters, share link.
+            {{ $t('multiplayer.card02.title') }}
           </h3>
           <p class="muted" style="margin:0 0 20px;font-size:13px;max-width:360px">
-            We generate a fresh 7-letter set. Your friend plays the exact same puzzle — the highest score wins.
+            {{ $t('multiplayer.card03.title') }}
           </p>
 
           <div class="multi-set">
@@ -72,7 +74,7 @@ const sampleLetters = ['S','T','R','E','A','M','I']
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </template>
               </svg>
-              {{ linkCopied ? 'Copied' : 'Copy link' }}
+              {{ linkCopied ? $t('multiplayer.card01.copied') : $t('multiplayer.card01.copyLink') }}
             </button>
           </div>
 
@@ -81,7 +83,7 @@ const sampleLetters = ['S','T','R','E','A','M','I']
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 4l14 8-14 8z"/>
               </svg>
-              Play it now
+              {{ $t('multiplayer.card01.playBtn')}}
             </button>
             <button class="btn btn--ghost" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -90,26 +92,26 @@ const sampleLetters = ['S','T','R','E','A','M','I']
                 <circle cx="18" cy="19" r="3"/>
                 <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
               </svg>
-              More options
+              {{$t('multiplayer.card01.gameSettings')}}
             </button>
           </div>
         </section>
 
         <!-- How It Works Section -->
         <section class="multi-how">
-          <div class="multi-eye"><span class="multi-num">02</span>How it works</div>
+          <div class="multi-eye"><span class="multi-num">02</span>{{ $t('multiplayer.card02.title') }}</div>
           <ol class="multi-steps">
-            <li><b>Generate</b> a 7-letter set (or reuse one you liked).</li>
-            <li><b>Share</b> the link — messenger, DM, anywhere.</li>
-            <li><b>Play</b> the set yourself. Same letters, same timer.</li>
-            <li><b>Compare</b> scores when your friend finishes.</li>
+            <li><b>{{ $t('multiplayer.card02.step1.title') }}.</b> {{ $t('multiplayer.card02.step1.description') }}</li>
+            <li><b>{{ $t('multiplayer.card02.step2.title') }}.</b> {{ $t('multiplayer.card02.step2.description') }}</li>
+            <li><b>{{ $t('multiplayer.card02.step3.title') }}.</b> {{ $t('multiplayer.card02.step3.description') }}</li>
+            <li><b>{{ $t('multiplayer.card02.step4.title') }}</b> {{ $t('multiplayer.card02.step4.description') }}</li>
           </ol>
           <div class="multi-tip">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 6v6l4 2"/>
             </svg>
-            <span>Challenges stay open for 48 hours. Async — nobody waits.</span>
+            <span>{{$t('multiplayer.card02.challengesOpenFor')}}</span>
           </div>
         </section>
       </div>
@@ -117,10 +119,10 @@ const sampleLetters = ['S','T','R','E','A','M','I']
       <!-- Placeholder for challenges -->
       <section style="margin-top:32px">
         <div class="multi-eye" style="margin-bottom:16px">
-          <span class="multi-num">03</span>Active challenges
+          <span class="multi-num">03</span>{{$t('multiplayer.card03.title')}}
         </div>
         <div class="empty-state">
-          <p class="muted">No active challenges yet. Create one above to get started!</p>
+          <p class="muted">{{$t('multiplayer.card03.description')}}</p>
         </div>
       </section>
 
@@ -130,7 +132,7 @@ const sampleLetters = ['S','T','R','E','A','M','I']
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
-          Back to solo mode
+          {{$t('multiplayer.backBtn')}}
         </button>
       </div>
     </div>

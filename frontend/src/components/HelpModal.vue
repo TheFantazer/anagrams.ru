@@ -1,6 +1,8 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 </script>
 
@@ -14,43 +16,42 @@ const userStore = useUserStore()
           </svg>
         </button>
 
-        <h2 class="modal-title">How to play</h2>
+        <h2 class="modal-title">{{ $t('help.title') }}</h2>
 
         <ol class="help-list">
-          <li>You get a <b>set of letters</b> and a timer.</li>
-          <li>Make as many words as you can (<b>3+ letters</b>).</li>
-          <li><b>Longer words</b> = more points.</li>
-          <li>Share the link — your friend plays the <b>same letters</b>.</li>
-          <li>Compare results. <b>Best score wins</b>.</li>
+          <li>{{ $t('help.objective.description') }}</li>
+          <li>{{ $t('help.rules.minLength') }}</li>
+          <li>{{ $t('help.rules.useLetters') }}</li>
+          <li>{{ $t('help.rules.noRepeats') }}</li>
         </ol>
 
         <div class="help-scoring">
           <div class="help-score-cell">
             <span class="mono">100</span>
-            <span class="lbl">3 let</span>
+            <span class="lbl">{{ $t('help.scoring.3letters') }}</span>
           </div>
           <div class="help-score-cell">
             <span class="mono">400</span>
-            <span class="lbl">4 let</span>
+            <span class="lbl">{{ $t('help.scoring.4letters') }}</span>
           </div>
           <div class="help-score-cell">
             <span class="mono">1.2k</span>
-            <span class="lbl">5 let</span>
+            <span class="lbl">{{ $t('help.scoring.5letters') }}</span>
           </div>
           <div class="help-score-cell">
             <span class="mono">2k</span>
-            <span class="lbl">6 let</span>
+            <span class="lbl">{{ $t('help.scoring.6letters') }}</span>
           </div>
           <div class="help-score-cell">
             <span class="mono">2.8k</span>
-            <span class="lbl">7 let</span>
+            <span class="lbl">{{ $t('help.scoring.7letters') }}</span>
           </div>
         </div>
 
         <div class="help-keys">
-          <span><kbd class="kbd">Enter</kbd> submit</span>
-          <span><kbd class="kbd">Esc</kbd> clear</span>
-          <span><kbd class="kbd">⌫</kbd> delete</span>
+          <span><kbd class="kbd">↵</kbd> {{ $t('help.controls.submit').toLowerCase() }}</span>
+          <span><kbd class="kbd">Esc</kbd> {{ $t('help.controls.clear').toLowerCase() }}</span>
+          <span><kbd class="kbd">⌫</kbd> {{ $t('help.controls.delete').toLowerCase() }}</span>
         </div>
       </div>
     </div>

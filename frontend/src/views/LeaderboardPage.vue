@@ -1,18 +1,20 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 
 const leaderboard = ref([])
 const loading = ref(false)
 
-const periods = ['day', 'week', 'month', 'all']
-
-function getPeriodLabel(period) {
-  if (period === 'all') return 'All time'
-  return period.charAt(0).toUpperCase() + period.slice(1)
-}
+const periodOptions = computed(() => [
+  { id: 'day', label: t('leaderboard.periods.today') },
+  { id: 'week', label: t('leaderboard.periods.week') },
+  { id: 'month', label: t('leaderboard.periods.month') },
+  { id: 'all', label: t('leaderboard.periods.allTime') }
+])
 
 async function loadLeaderboard() {
   loading.value = true
@@ -48,12 +50,12 @@ onMounted(() => {
     <div class="shell lb-wrap">
       <header class="page-head">
         <div>
-          <div class="page-eyebrow">Leaderboard</div>
-          <h1 class="page-title-display">Who's hunting words best.</h1>
+          <div class="page-eyebrow">{{ $t('leaderboard.title') }}</div>
+          <h1 class="page-title-display">{{ $t('leaderboard.subtitle') }}</h1>
         </div>
         <div class="lb-tabs">
           <button
-            v-for="period in [{ id: 'day', label: 'Today' }, { id: 'week', label: 'This week' }, { id: 'month', label: 'Month' }, { id: 'all', label: 'All time' }]"
+            v-for="period in periodOptions"
             :key="period.id"
             class="chip-toggle"
             :data-active="userStore.lbPeriod === period.id"
@@ -66,7 +68,7 @@ onMounted(() => {
 
       <!-- Loading/Empty state -->
       <div v-if="loading" style="text-align:center; padding:60px; color:var(--fg-muted)">
-        Loading leaderboard...
+        {{ $t('leaderboard.loading') }}
       </div>
       <div v-else-if="leaderboard.length === 0" style="text-align:center; padding:60px; color:var(--fg-muted)">
         No results yet for this period
@@ -83,17 +85,17 @@ onMounted(() => {
           <div class="podium-rank">{{ i === 0 ? '👑' : `0${i + 1}` }}</div>
           <div class="podium-name">{{ user.name }}</div>
           <div class="podium-score">{{ user.score.toLocaleString() }}</div>
-          <div class="podium-words">{{ user.words }} words</div>
+          <div class="podium-words">{{ user.words }} {{ $t('leaderboard.columns.words').toLowerCase() }}</div>
         </div>
       </div>
 
       <!-- Table (rest of leaderboard) -->
       <div v-if="!loading && leaderboard.length > 0" class="lb-table">
         <div class="lb-row lb-row--head">
-          <span style="width:40px">#</span>
-          <span style="flex:1">Player</span>
-          <span style="width:80px; text-align:right">Words</span>
-          <span style="width:100px; text-align:right">Score</span>
+          <span style="width:40px">{{ $t('leaderboard.columns.rank') }}</span>
+          <span style="flex:1">{{ $t('leaderboard.columns.player') }}</span>
+          <span style="width:80px; text-align:right">{{ $t('leaderboard.columns.words') }}</span>
+          <span style="width:100px; text-align:right">{{ $t('leaderboard.columns.score') }}</span>
         </div>
         <div
           v-for="(user, i) in leaderboard"
@@ -111,7 +113,7 @@ onMounted(() => {
               {{ user.name[0].toUpperCase() }}
             </span>
             {{ user.name }}
-            <span v-if="user.name === userStore.username" class="lb-youtag">you</span>
+            <span v-if="user.name === userStore.username" class="lb-youtag">{{ $t('leaderboard.you') }}</span>
           </span>
           <span class="lb-words">{{ user.words }}</span>
           <span class="lb-score mono">{{ user.score.toLocaleString() }}</span>

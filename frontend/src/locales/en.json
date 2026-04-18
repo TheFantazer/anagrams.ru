@@ -9,12 +9,21 @@
     "help": "How to play"
   },
   "home": {
-    "title": "Find every word.",
-    "subtitle": "Beat your friends.",
+    "titleHigh": "Find every word.",
+    "titleLow": "Beat your friends.",
+    "subtitle" : "Seven letters, one minute, every anagram hiding inside. Share the link — they play the same set. The player with the most points wins.",
     "description": "A word puzzle for two",
+    "modesTitle": "Pick a mode",
+    "modesSubtitle": "Solo for practice, multiplayer for bragging rights.",
+    "modesTags": {
+      "solo": "Warm up",
+      "fast": "Recommended",
+      "multiplayer": "New"
+    },
     "soloTitle": "Solo",
     "soloDescription": "Seven letters, one minute. Find all the words.",
     "soloAction": "Start",
+    "fastDescription": "With your default settings. Jump straight in.",
     "multiplayerTitle": "Multiplayer",
     "multiplayerDescription": "Pick letters, share link, compare scores.",
     "multiplayerAction": "Challenge",
@@ -25,6 +34,12 @@
       "fast": "Fast game",
       "custom": "Custom",
       "help": "Help"
+    },
+    "statsStrip": {
+      "minLetters": "letter min.",
+      "pointsScale": "points scale",
+      "dictionaries": "two dictionaries",
+      "apps": "apps to install"
     }
   },
   "game": {
@@ -156,7 +171,14 @@
     "subtitle": "Pick letters, share link, compare scores. No waiting.",
     "comingSoon": "Coming soon",
     "description": "Right now we're fine-tuning the word list. Multiplayer mode is weeks away. Follow us for updates.",
-    "howItWorks": {
+    "card01": {
+      "title": "Start a challenge",
+      "playBtn": "Play it now",
+      "gameSettings": "More options",
+      "copied": "Copied",
+      "copyLink": "Copy link"
+    },
+    "card02": {
       "title": "How it works",
       "step1": {
         "title": "Pick your letters",
@@ -169,8 +191,18 @@
       "step3": {
         "title": "Compare scores",
         "description": "See who found more words."
-      }
-    }
+      },
+      "step4": {
+        "title": "Compare",
+        "description": "scores when your friend finishes"
+      },
+      "challengesOpenFor": "Challenges stay open for 7 days. Async — nobody waits."
+    },
+    "card03": {
+      "title": "Active challenges",
+      "description": "No active challenges yet. Create one above to get started!"
+    },
+    "backBtn": "Back to solo mode"
   },
   "soloSettings": {
     "title": "Start a solo game",

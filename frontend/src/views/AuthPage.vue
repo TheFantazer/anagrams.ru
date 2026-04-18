@@ -1,8 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -76,6 +78,34 @@ function handleGoogleLogin() {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
   window.location.href = `${apiUrl}/api/v1/auth/google`
 }
+
+const eyebrowText = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.welcomeBack') : t('auth.joinTheBoard')
+)
+
+const titleText = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.signInTitle') : t('auth.signUpTitle')
+)
+
+const usernamePlaceholder = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.placeholders.usernameOrEmail') : t('auth.placeholders.username')
+)
+
+const usernameLabel = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.fields.usernameOrEmail') : t('auth.fields.username')
+)
+
+const submitButtonText = computed(() =>
+  loading.value ? t('auth.actions.loading') : (userStore.loginTab === 'login' ? t('auth.actions.signIn') : t('auth.actions.createAccount'))
+)
+
+const toggleText = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.toggles.noAccount') : t('auth.toggles.hasAccount')
+)
+
+const orText = computed(() =>
+  userStore.loginTab === 'login' ? t('auth.orUseUsername') : t('auth.orUseUsernameSignUp')
+)
 </script>
 
 <template>
@@ -86,24 +116,24 @@ function handleGoogleLogin() {
         <div class="auth-card-left">
           <div>
             <div class="auth-eyebrow">
-              {{ userStore.loginTab === 'login' ? 'Welcome back' : 'Join the board' }}
+              {{ eyebrowText }}
             </div>
             <h1 class="auth-title">
-              {{ userStore.loginTab === 'login' ? 'Sign in to keep your streak.' : 'Create an account in 30 seconds.' }}
+              {{ titleText }}
             </h1>
             <p class="muted" style="font-size:14px; max-width:320px">
-              Save your best words, track daily stats, and show up on the leaderboard. No ads, no emails.
+              {{ $t('auth.description') }}
             </p>
           </div>
           <div class="auth-highlights">
             <div class="auth-hl">
-              <span class="auth-hl-num">01</span> daily puzzles & streaks
+              <span class="auth-hl-num">01</span> {{ $t('auth.features.puzzles') }}
             </div>
             <div class="auth-hl">
-              <span class="auth-hl-num">02</span> history across devices
+              <span class="auth-hl-num">02</span> {{ $t('auth.features.history') }}
             </div>
             <div class="auth-hl">
-              <span class="auth-hl-num">03</span> async multiplayer
+              <span class="auth-hl-num">03</span> {{ $t('auth.features.multiplayer') }}
             </div>
           </div>
         </div>
@@ -118,7 +148,7 @@ function handleGoogleLogin() {
               :data-active="userStore.loginTab === 'login'"
               @click="userStore.setLoginTab('login')"
             >
-              Sign in
+              {{ $t('auth.tabs.signIn') }}
             </button>
             <button
               type="button"
@@ -126,7 +156,7 @@ function handleGoogleLogin() {
               :data-active="userStore.loginTab === 'register'"
               @click="userStore.setLoginTab('register')"
             >
-              Sign up
+              {{ $t('auth.tabs.signUp') }}
             </button>
             <div
               class="auth-tabs-slide"
@@ -142,33 +172,33 @@ function handleGoogleLogin() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Continue with Google
+            {{ $t('auth.continueWithGoogle') }}
           </button>
 
           <div class="auth-or">
-            <span>or use your {{ userStore.loginTab === 'login' ? 'username or email' : 'username' }}</span>
+            <span>{{ orText }}</span>
           </div>
 
           <!-- Form fields -->
           <div class="field">
-            <label class="field-label">{{ userStore.loginTab === 'login' ? 'Username or Email' : 'Username' }}</label>
+            <label class="field-label">{{ usernameLabel }}</label>
             <input
               v-model="username"
               class="input"
               type="text"
-              :placeholder="userStore.loginTab === 'login' ? 'Enter username or email' : 'vera.m'"
+              :placeholder="usernamePlaceholder"
               autofocus
             />
           </div>
 
           <div v-if="userStore.loginTab === 'register'" class="field">
-            <label class="field-label">Email</label>
-            <input v-model="email" class="input" type="email" placeholder="you@example.com" />
+            <label class="field-label">{{ $t('auth.fields.email') }}</label>
+            <input v-model="email" class="input" type="email" :placeholder="$t('auth.placeholders.email')" />
           </div>
 
           <div class="field">
-            <label class="field-label">Password</label>
-            <input v-model="password" class="input" type="password" placeholder="••••••••" />
+            <label class="field-label">{{ $t('auth.fields.password') }}</label>
+            <input v-model="password" class="input" type="password" :placeholder="$t('auth.placeholders.password')" />
           </div>
 
           <!-- Error message -->
@@ -176,7 +206,7 @@ function handleGoogleLogin() {
 
           <!-- Submit button -->
           <button type="submit" class="btn btn--accent btn--block btn--lg" :disabled="loading">
-            {{ loading ? 'Loading...' : (userStore.loginTab === 'login' ? 'Sign in' : 'Create account') }}
+            {{ submitButtonText }}
           </button>
 
           <!-- Toggle text -->
@@ -185,7 +215,7 @@ function handleGoogleLogin() {
             style="font-size:12px; text-align:center; margin-top:16px; cursor:pointer"
             @click="userStore.setLoginTab(userStore.loginTab === 'login' ? 'register' : 'login')"
           >
-            {{ userStore.loginTab === 'login' ? "Don't have an account? Sign up" : 'Already have one? Sign in' }}
+            {{ toggleText }}
           </p>
         </form>
       </div>

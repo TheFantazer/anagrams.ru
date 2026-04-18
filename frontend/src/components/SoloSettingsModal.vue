@@ -1,11 +1,19 @@
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
+
+const languageOptions = computed(() => [
+  { id: 'en', label: t('settings.gameDefaults.languages.en') },
+  { id: 'ru', label: t('settings.gameDefaults.languages.ru') }
+])
 
 async function startSoloGame() {
   userStore.setShowSoloSettings(false)
@@ -24,13 +32,13 @@ async function startSoloGame() {
           </svg>
         </button>
 
-        <h2 class="modal-title">Game settings</h2>
+        <h2 class="modal-title">{{ $t('soloSettings.title') }}</h2>
 
         <div class="field">
-          <label class="field-label">Language</label>
+          <label class="field-label">{{ $t('soloSettings.language') }}</label>
           <div class="checkbox-row">
             <button
-              v-for="lang in [{ id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }]"
+              v-for="lang in languageOptions"
               :key="lang.id"
               class="chip-toggle"
               :data-active="userStore.soloLang === lang.id"
@@ -42,7 +50,7 @@ async function startSoloGame() {
         </div>
 
         <div class="field">
-          <label class="field-label">Letters</label>
+          <label class="field-label">{{ $t('soloSettings.letters') }}</label>
           <div class="checkbox-row">
             <button
               v-for="n in [6, 7, 8, 9, 10]"
@@ -57,7 +65,7 @@ async function startSoloGame() {
         </div>
 
         <div class="field" style="margin-bottom:24px">
-          <label class="field-label">Time limit</label>
+          <label class="field-label">{{ $t('soloSettings.time') }}</label>
           <div class="checkbox-row">
             <button
               v-for="time in [{ val: 30, label: '30s' }, { val: 60, label: '1:00' }, { val: 90, label: '1:30' }, { val: 120, label: '2:00' }]"
@@ -72,7 +80,7 @@ async function startSoloGame() {
         </div>
 
         <button class="btn btn--accent btn--block btn--lg" @click="startSoloGame">
-          Start game
+          {{ $t('soloSettings.start') }}
         </button>
       </div>
     </div>
