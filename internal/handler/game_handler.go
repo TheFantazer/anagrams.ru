@@ -302,6 +302,7 @@ func (h *GameHandler) GetSessionResults(w http.ResponseWriter, r *http.Request) 
 		response[i] = ResultResponse{
 			ID:         r.ID,
 			SessionID:  r.SessionID,
+			UserID:     r.UserID,
 			PlayerName: r.PlayerName,
 			WordCount:  r.WordCount,
 			Score:      r.Score,

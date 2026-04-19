@@ -177,6 +177,24 @@
     "letters": "letters",
     "hideLetters": "Hide letters",
     "showLetters": "Show letters",
+    "inviteFriends": "Invite Friends",
+    "noFriends": "You don't have any friends yet",
+    "goToFriends": "Go to Friends page",
+    "sendInvites": "Send Invites",
+    "invitesSent": "Invites sent successfully!",
+    "invitesFailed": "Failed to send invites. Please try again.",
+    "createdByYou": "Created by you",
+    "invited": "Invited",
+    "vs": "vs",
+    "view": "View",
+    "play": "Play",
+    "ago": "ago",
+    "yesterday": "yesterday",
+    "waitingForPlayers": "Waiting",
+    "yourTurn": "Your turn",
+    "notPlayed": "Not played",
+    "youWon": "You won",
+    "youLost": "You lost",
     "card01": {
       "title": "Start a challenge",
       "header": "How it works",
@@ -270,6 +288,39 @@
     "confirm": "Confirm",
     "save": "Save",
     "creating": "Creating...",
-    "newChallenge": "New Challenge"
+    "newChallenge": "New Challenge",
+    "searching": "Searching..."
+  },
+  "friends": {
+    "title": "Friends",
+    "tabs": {
+      "friends": "Friends",
+      "pending": "Pending",
+      "sent": "Sent",
+      "search": "Search"
+    },
+    "noFriends": "You don't have any friends yet. Find them through search!",
+    "noPending": "No pending requests",
+    "noSent": "No sent requests",
+    "noResults": "No users found",
+    "searchPlaceholder": "Enter username or email",
+    "addFriend": "Add friend",
+    "remove": "Remove",
+    "accept": "Accept",
+    "reject": "Reject",
+    "requestFrom": "Request from",
+    "requestTo": "Request to",
+    "requestSent": "Friend request sent",
+    "requestAccepted": "Friend request accepted",
+    "requestRejected": "Friend request rejected",
+    "requestFailed": "Failed to perform operation",
+    "friendRemoved": "Friend removed",
+    "removeFailed": "Failed to remove friend",
+    "confirmRemove": "Are you sure you want to remove this friend?",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    }
   }
 }

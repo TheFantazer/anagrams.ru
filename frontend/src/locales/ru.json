@@ -177,6 +177,24 @@
     "letters": "букв",
     "hideLetters": "Скрыть буквы",
     "showLetters": "Показать буквы",
+    "inviteFriends": "Пригласить друзей",
+    "noFriends": "У вас пока нет друзей",
+    "goToFriends": "Перейти к друзьям",
+    "sendInvites": "Отправить приглашения",
+    "invitesSent": "Приглашения успешно отправлены!",
+    "invitesFailed": "Не удалось отправить приглашения. Попробуйте еще раз.",
+    "createdByYou": "Создан вами",
+    "invited": "Приглашён",
+    "vs": "vs",
+    "view": "Просмотр",
+    "play": "Играть",
+    "ago": "назад",
+    "yesterday": "вчера",
+    "waitingForPlayers": "Ожидание",
+    "yourTurn": "Ваш ход",
+    "notPlayed": "Не сыграно",
+    "youWon": "Вы победили",
+    "youLost": "Вы проиграли",
     "card01": {
       "title":"Брось себе вызов",
       "header": "Как это работает",
@@ -270,6 +288,39 @@
     "confirm": "Подтвердить",
     "save": "Сохранить",
     "creating": "Создание...",
-    "newChallenge": "Новый челлендж"
+    "newChallenge": "Новый челлендж",
+    "searching": "Поиск..."
+  },
+  "friends": {
+    "title": "Друзья",
+    "tabs": {
+      "friends": "Друзья",
+      "pending": "Входящие",
+      "sent": "Исходящие",
+      "search": "Поиск"
+    },
+    "noFriends": "У тебя пока нет друзей. Найди их через поиск!",
+    "noPending": "Нет входящих запросов",
+    "noSent": "Нет исходящих запросов",
+    "noResults": "Пользователи не найдены",
+    "searchPlaceholder": "Введи имя пользователя или email",
+    "addFriend": "Добавить в друзья",
+    "remove": "Удалить",
+    "accept": "Принять",
+    "reject": "Отклонить",
+    "requestFrom": "Запрос от",
+    "requestTo": "Запрос к",
+    "requestSent": "Запрос отправлен",
+    "requestAccepted": "Запрос принят",
+    "requestRejected": "Запрос отклонён",
+    "requestFailed": "Не удалось выполнить операцию",
+    "friendRemoved": "Друг удалён",
+    "removeFailed": "Не удалось удалить друга",
+    "confirmRemove": "Вы уверены, что хотите удалить этого друга?",
+    "status": {
+      "pending": "Ожидает",
+      "accepted": "Принято",
+      "rejected": "Отклонено"
+    }
   }
 }

@@ -32,13 +32,14 @@ type SubmitResultRequest struct {
 }
 
 type ResultResponse struct {
-	ID         uuid.UUID `json:"id"`
-	SessionID  uuid.UUID `json:"session_id"`
-	PlayerName string    `json:"player_name"`
-	WordCount  int       `json:"word_count"`
-	Score      int       `json:"score"`
-	DurationMs int       `json:"duration_ms"`
-	PlayedAt   time.Time `json:"played_at"`
+	ID         uuid.UUID  `json:"id"`
+	SessionID  uuid.UUID  `json:"session_id"`
+	UserID     *uuid.UUID `json:"user_id,omitempty"`
+	PlayerName string     `json:"player_name"`
+	WordCount  int        `json:"word_count"`
+	Score      int        `json:"score"`
+	DurationMs int        `json:"duration_ms"`
+	PlayedAt   time.Time  `json:"played_at"`
 }
 
 type ErrorResponse struct {

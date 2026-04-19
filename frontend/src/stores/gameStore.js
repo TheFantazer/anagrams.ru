@@ -323,7 +323,12 @@ export const useGameStore = defineStore('game', () => {
 
         if (!response.ok) {
           const errorData = await response.json()
-          console.error('Failed to submit results:', errorData)
+          // 409 Conflict означает что результат уже был отправлен - это нормально
+          if (response.status === 409) {
+            console.log('Result already submitted for this session')
+          } else {
+            console.error('Failed to submit results:', errorData)
+          }
         }
       } catch (error) {
         console.error('Failed to submit results:', error)

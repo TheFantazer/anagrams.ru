@@ -77,6 +77,7 @@ const userInitial = computed(() => {
 
       <!-- Right Side -->
       <div class="nav-right">
+
         <!-- Help Button -->
         <button class="nav-icon" :title="$t('nav.help')" @click="userStore.setShowHelp(true)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -85,9 +86,19 @@ const userInitial = computed(() => {
           </svg>
         </button>
 
-        <!-- Language change-->
-        <button class="nav-icon" title="Language" @click="toggleLang">
-          {{ userStore.soloLang === "ru" ? "EN" : "RU" }}
+        <!-- Friends Button (only for authenticated users) -->
+        <button
+          v-if="userStore.isAuthenticated"
+          class="nav-icon"
+          title="Friends"
+          @click="navigateTo('/friends')"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
         </button>
 
         <!-- Sign In / Avatar -->
@@ -109,6 +120,11 @@ const userInitial = computed(() => {
           @click="navigateTo('/settings')"
         >
           {{ userInitial }}
+        </button>
+
+        <!-- Language change-->
+        <button class="nav-icon" title="Language" @click="toggleLang">
+          {{ userStore.soloLang === "ru" ? "EN" : "RU" }}
         </button>
 
         <!-- Mobile Menu Button -->

@@ -15,6 +15,10 @@ const createdSessionId = ref(null)
 const sessionLetters = ref([])
 const activeChallenges = ref([])
 const loadingChallenges = ref(false)
+const showFriendsModal = ref(false)
+const friends = ref([])
+const selectedFriends = ref([])
+const loadingFriends = ref(false)
 
 // Form settings
 const language = ref('ru')
@@ -41,6 +45,63 @@ const timeLimits = [
   { value: 90, label: '1:30' },
   { value: 120, label: '2:00' }
 ]
+
+async function loadFriends() {
+  if (!userStore.userId) return
+
+  loadingFriends.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/friends?user_id=${userStore.userId}`)
+    if (response.ok) {
+      friends.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Failed to load friends:', error)
+  } finally {
+    loadingFriends.value = false
+  }
+}
+
+async function sendInvites() {
+  if (selectedFriends.value.length === 0 || !createdSessionId.value) return
+
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+    // Send invite for each selected friend
+    const invitePromises = selectedFriends.value.map(friendId =>
+      fetch(`${apiUrl}/api/v1/sessions/${createdSessionId.value}/invites?user_id=${userStore.userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invited_user_id: friendId })
+      })
+    )
+
+    await Promise.all(invitePromises)
+
+    showFriendsModal.value = false
+    selectedFriends.value = []
+    alert(t('multiplayer.invitesSent'))
+  } catch (error) {
+    console.error('Failed to send invites:', error)
+    alert(t('multiplayer.invitesFailed'))
+  }
+}
+
+function openFriendsModal() {
+  loadFriends()
+  showFriendsModal.value = true
+}
+
+function toggleFriendSelection(friendId) {
+  const index = selectedFriends.value.indexOf(friendId)
+  if (index > -1) {
+    selectedFriends.value.splice(index, 1)
+  } else {
+    selectedFriends.value.push(friendId)
+  }
+}
 
 async function createChallenge() {
   creating.value = true
@@ -163,6 +224,81 @@ function resetForm() {
   createdSessionId.value = null
   sessionLetters.value = []
   linkCopied.value = false
+}
+
+function formatDate(dateStr) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 60) {
+    return `${diffMins}m ${t('multiplayer.ago')}`
+  } else if (diffHours < 24) {
+    return `${diffHours}h ${t('multiplayer.ago')}`
+  } else if (diffDays === 1) {
+    return t('multiplayer.yesterday')
+  } else if (diffDays < 7) {
+    return `${diffDays}d ${t('multiplayer.ago')}`
+  } else {
+    return date.toLocaleDateString()
+  }
+}
+
+function getStatusClass(challenge) {
+  // Проверяем, сыграл ли текущий пользователь
+  const userResult = challenge.results?.find(r => r.user_id === userStore.userId)
+
+  if (challenge.type === 'created') {
+    // Для созданных челленджей
+    if (!challenge.results || challenge.results.length === 0) {
+      return 'st-wait' // Никто еще не играл
+    }
+    // Если кто-то играл, показываем статус создателя
+    if (userResult) {
+      const topScore = Math.max(...challenge.results.map(r => r.score))
+      return userResult.score === topScore ? 'st-won' : 'st-lost'
+    }
+    return 'st-wait' // Создатель еще не сыграл
+  } else {
+    // Для челленджей, в которых пригласили
+    if (userResult) {
+      // Пользователь уже сыграл
+      const topScore = Math.max(...challenge.results.map(r => r.score))
+      return userResult.score === topScore ? 'st-won' : 'st-lost'
+    }
+    return 'st-play' // Еще не сыграл
+  }
+}
+
+function getStatusLabel(challenge) {
+  // Проверяем, сыграл ли текущий пользователь
+  const userResult = challenge.results?.find(r => r.user_id === userStore.userId)
+
+  if (challenge.type === 'created') {
+    // Для созданных челленджей
+    if (!challenge.results || challenge.results.length === 0) {
+      return t('multiplayer.waitingForPlayers')
+    }
+    if (userResult) {
+      const topScore = Math.max(...challenge.results.map(r => r.score))
+      return userResult.score === topScore
+        ? t('multiplayer.youWon')
+        : t('multiplayer.youLost')
+    }
+    return t('multiplayer.waitingForPlayers')
+  } else {
+    // Для челленджей, в которых пригласили
+    if (userResult) {
+      const topScore = Math.max(...challenge.results.map(r => r.score))
+      return userResult.score === topScore
+        ? t('multiplayer.youWon')
+        : t('multiplayer.youLost')
+    }
+    return t('multiplayer.yourTurn')
+  }
 }
 
 onMounted(() => {
@@ -306,6 +442,15 @@ onMounted(() => {
                 </svg>
                 {{ $t('multiplayer.card01.playBtn')}}
               </button>
+              <button class="btn btn--primary" @click="openFriendsModal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                {{ $t('multiplayer.inviteFriends') }}
+              </button>
               <button class="btn btn--ghost" @click="resetForm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -356,71 +501,53 @@ onMounted(() => {
           <p class="muted">{{$t('multiplayer.card03.description')}}</p>
         </div>
 
-        <div v-else class="challenges-grid">
+        <div v-else class="multi-challenges">
           <div
             v-for="challenge in activeChallenges"
             :key="challenge.id"
-            class="challenge-card"
+            class="ch-row"
+            :class="{ 'ch-play-now': getStatusClass(challenge) === 'st-play' }"
             @click="router.push(`/play/${challenge.id}`)"
           >
-            <div class="challenge-header">
-              <span v-if="challenge.type === 'created'" class="challenge-type-badge badge-created">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 6v6l4 2"/>
-                </svg>
-                Created by you
-              </span>
-              <span v-else class="challenge-type-badge badge-participated">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                Played
-              </span>
+            <!-- Creator/Type -->
+            <div class="ch-who">
+              <div class="ch-avatar">
+                {{ challenge.type === 'created' ? userStore.username?.charAt(0).toUpperCase() : '?' }}
+              </div>
+              <div>
+                <div class="ch-name">
+                  {{ challenge.type === 'created' ? $t('multiplayer.createdByYou') : $t('multiplayer.invited') }}
+                </div>
+                <div class="ch-meta">{{ formatDate(challenge.created_at) }}</div>
+              </div>
             </div>
 
-            <div class="challenge-letters">
-              <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="challenge-tile">
+            <!-- Letters -->
+            <div class="ch-letters">
+              <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="ch-tile">
                 {{ letter.toLowerCase() }}
               </span>
             </div>
-            <div class="challenge-meta">
-              <span class="challenge-badge">{{ challenge.language.toUpperCase() }}</span>
-              <span class="challenge-badge">{{ challenge.letter_count }} letters</span>
-              <span class="challenge-badge">{{ Math.floor(challenge.time_limit / 60) }}:{{ String(challenge.time_limit % 60).padStart(2, '0') }}</span>
+
+            <!-- Scores -->
+            <div class="ch-scores">
+              <template v-if="challenge.results && challenge.results.length > 0">
+                <span class="mono">{{ challenge.results[0]?.score.toLocaleString() || '—' }}</span>
+                <span class="muted"> {{ $t('multiplayer.vs') }} </span>
+                <span class="mono">{{ challenge.results[1]?.score.toLocaleString() || '—' }}</span>
+              </template>
+              <span v-else class="muted">—</span>
             </div>
 
-            <!-- Results -->
-            <div v-if="challenge.results && challenge.results.length > 0" class="challenge-results">
-              <div class="challenge-results-header">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="18" cy="5" r="3"/>
-                  <circle cx="6" cy="12" r="3"/>
-                  <circle cx="18" cy="19" r="3"/>
-                  <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
-                </svg>
-                {{ challenge.results.length }} {{ challenge.results.length === 1 ? 'player' : 'players' }}
-              </div>
-              <div class="challenge-results-list">
-                <div
-                  v-for="(result, idx) in challenge.results.slice(0, 3)"
-                  :key="result.id"
-                  class="challenge-result-item"
-                >
-                  <span class="result-rank">#{{ idx + 1 }}</span>
-                  <span class="result-name">{{ result.player_name || 'Anonymous' }}</span>
-                  <span class="result-score">{{ result.score }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-else class="challenge-no-results">
-              No one played yet
-            </div>
+            <!-- Status -->
+            <span class="ch-status" :class="getStatusClass(challenge)">
+              {{ getStatusLabel(challenge) }}
+            </span>
 
-            <div class="challenge-date">
-              {{ new Date(challenge.created_at).toLocaleDateString() }}
-            </div>
+            <!-- Action Button -->
+            <button class="btn btn--sm btn--primary" @click.stop="router.push(`/play/${challenge.id}`)">
+              {{ challenge.type === 'created' ? $t('multiplayer.view') : $t('multiplayer.play') }}
+            </button>
           </div>
         </div>
       </section>
@@ -433,6 +560,67 @@ onMounted(() => {
           </svg>
           {{$t('multiplayer.backBtn')}}
         </button>
+      </div>
+    </div>
+
+    <!-- Friends Modal -->
+    <div v-if="showFriendsModal" class="modal-overlay" @click="showFriendsModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>{{ $t('multiplayer.inviteFriends') }}</h2>
+          <button class="modal-close" @click="showFriendsModal = false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div v-if="loadingFriends" class="modal-loading">
+            {{ $t('common.loading') }}
+          </div>
+
+          <div v-else-if="friends.length === 0" class="modal-empty">
+            <p class="muted">{{ $t('multiplayer.noFriends') }}</p>
+            <button class="btn btn--primary btn--sm" @click="router.push('/friends'); showFriendsModal = false">
+              {{ $t('multiplayer.goToFriends') }}
+            </button>
+          </div>
+
+          <div v-else class="friends-list">
+            <div
+              v-for="friend in friends"
+              :key="friend.id"
+              class="friend-item"
+              :class="{ selected: selectedFriends.includes(friend.id) }"
+              @click="toggleFriendSelection(friend.id)"
+            >
+              <div class="friend-info">
+                <div class="friend-name">{{ friend.username }}</div>
+                <div class="friend-email">{{ friend.email }}</div>
+              </div>
+              <div class="friend-checkbox">
+                <svg v-if="selectedFriends.includes(friend.id)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn--ghost" @click="showFriendsModal = false">
+            {{ $t('common.cancel') }}
+          </button>
+          <button
+            class="btn btn--accent"
+            @click="sendInvites"
+            :disabled="selectedFriends.length === 0"
+          >
+            {{ $t('multiplayer.sendInvites') }} ({{ selectedFriends.length }})
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -615,167 +803,288 @@ onMounted(() => {
   border-color: var(--navy);
 }
 
-.challenges-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+/* Challenges Table */
+.multi-challenges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.challenge-card {
-  padding: 20px;
+.ch-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 140px 140px auto;
+  gap: 16px;
+  align-items: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
+  padding: 14px 18px;
+  transition: all var(--dur-base);
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.challenge-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+.ch-row:hover {
+  border-color: var(--border-default);
 }
 
-.challenge-header {
-  margin-bottom: 12px;
+.ch-play-now {
+  border-left: 3px solid var(--accent);
 }
 
-.challenge-type-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.badge-created {
-  background: rgba(74, 144, 226, 0.1);
-  color: var(--accent);
-  border: 1px solid rgba(74, 144, 226, 0.2);
-}
-
-.badge-participated {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.2);
-}
-
-.challenge-letters {
+.ch-who {
   display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
-.challenge-tile {
+.ch-avatar {
   width: 32px;
-  height: 38px;
-  border-radius: 8px;
-  background: var(--navy);
+  height: 32px;
+  border-radius: 999px;
+  background: var(--grad-accent);
   color: var(--milk);
   display: grid;
   place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
-  box-shadow: 0 2px 0 var(--navy-2);
-}
-
-.challenge-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.challenge-badge {
-  padding: 4px 10px;
-  background: var(--bg-card);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.challenge-date {
-  font-size: 12px;
-  color: var(--fg-muted);
-  margin-top: 8px;
-}
-
-.challenge-results {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-hairline);
-}
-
-.challenge-results-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.challenge-results-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.challenge-result-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 13px;
-  padding: 6px 8px;
-  background: var(--bg-card);
-  border-radius: 6px;
 }
 
-.result-rank {
+.ch-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-primary);
+}
+
+.ch-meta {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.ch-letters {
+  display: flex;
+  gap: 4px;
+}
+
+.ch-tile {
+  width: 22px;
+  height: 26px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
-  color: var(--accent);
-  min-width: 24px;
-}
-
-.result-name {
-  flex: 1;
-  color: var(--fg-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.result-score {
   font-weight: 700;
   color: var(--fg-primary);
 }
 
-.challenge-no-results {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-hairline);
-  font-size: 12px;
+.ch-scores {
+  font-size: 13px;
+  color: var(--fg-primary);
+}
+
+.ch-status {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
   color: var(--fg-muted);
-  font-style: italic;
+  white-space: nowrap;
+}
+
+.st-wait {
+  background: var(--bg-card);
+  color: var(--fg-muted);
+}
+
+.st-play {
+  background: var(--accent);
+  color: var(--milk);
+}
+
+.st-won {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.st-lost {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Friends Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 42, 70, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--bg-surface);
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-subtle);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fg-primary);
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: all var(--dur-base) var(--ease-std);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+
+.modal-body {
+  padding: 20px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-loading,
+.modal-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--fg-muted);
+}
+
+.modal-empty p {
+  margin-bottom: 16px;
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-std);
+}
+
+.friend-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+.friend-item.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.friend-info {
+  flex: 1;
+}
+
+.friend-name {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin-bottom: 2px;
+}
+
+.friend-email {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--fg-secondary);
+}
+
+.friend-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  transition: all var(--dur-base) var(--ease-std);
+}
+
+.friend-item.selected .friend-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--milk);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid var(--border-hairline);
+  justify-content: flex-end;
 }
 
 @media (max-width: 820px) {
   .multi-grid { grid-template-columns: 1fr; }
   .page-title-display { font-size: 30px; letter-spacing: -0.8px; }
-  .challenges-grid { grid-template-columns: 1fr; }
+
+  .ch-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .ch-letters,
+  .ch-scores,
+  .ch-status {
+    grid-column: 1 / -1;
+  }
+
+  .modal-content {
+    max-height: 90vh;
+  }
 }
 </style>
