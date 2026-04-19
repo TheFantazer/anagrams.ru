@@ -145,6 +145,35 @@ func (r *postgresSessionRepo) GetByCreatorID(ctx context.Context, creatorID uuid
 	return sessions, nil
 }
 
+func (r *postgresSessionRepo) GetByParticipant(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
+	query := `
+		SELECT DISTINCT gs.id, gs.letters, gs.language, gs.time_limit, gs.letter_count,
+		       gs.valid_words, gs.max_score, gs.creator_id, gs.created_at
+		FROM game_sessions gs
+		INNER JOIN game_results gr ON gs.id = gr.session_id
+		WHERE gr.user_id = $1
+		ORDER BY gs.created_at DESC
+		LIMIT $2
+	`
+
+	var dbSessions []sessionDB
+	err := r.db.SelectContext(ctx, &dbSessions, query, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sessions by participant: %w", err)
+	}
+
+	sessions := make([]*domain.Session, 0, len(dbSessions))
+	for _, dbSession := range dbSessions {
+		session, err := dbSession.toDomain()
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
+}
+
 func (r *postgresSessionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM game_sessions WHERE id = $1`
 	result, err := r.db.ExecContext(ctx, query, id)

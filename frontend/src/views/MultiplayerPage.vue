@@ -49,8 +49,8 @@ async function createChallenge() {
 
     // Build URL with optional user_id query param
     let url = `${apiUrl}/api/v1/sessions`
-    if (userStore.isAuthenticated && userStore.user?.id) {
-      url += `?user_id=${userStore.user.id}`
+    if (userStore.isAuthenticated && userStore.userId) {
+      url += `?user_id=${userStore.userId}`
     }
 
     const response = await fetch(url, {
@@ -86,24 +86,39 @@ async function createChallenge() {
 }
 
 async function loadActiveChallenges() {
-  if (!userStore.isAuthenticated || !userStore.user?.id) {
+  if (!userStore.isAuthenticated || !userStore.userId) {
     return
   }
 
   loadingChallenges.value = true
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-    const response = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.user.id}`)
 
-    if (!response.ok) {
-      throw new Error('Failed to load challenges')
-    }
+    // Загружаем созданные пользователем челленджи
+    const createdResponse = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.userId}`)
+    const createdSessions = createdResponse.ok ? await createdResponse.json() : []
 
-    const sessions = await response.json()
+    // Загружаем челленджи, в которых пользователь участвовал
+    const participatedResponse = await fetch(`${apiUrl}/api/v1/sessions/participated?user_id=${userStore.userId}`)
+    const participatedSessions = participatedResponse.ok ? await participatedResponse.json() : []
+
+    // Объединяем и помечаем челленджи
+    const allSessions = [
+      ...createdSessions.map(s => ({ ...s, type: 'created' })),
+      ...participatedSessions.map(s => ({ ...s, type: 'participated' }))
+    ]
+
+    // Удаляем дубликаты (если пользователь создал и сам сыграл)
+    const uniqueSessions = allSessions.filter((session, index, self) =>
+      index === self.findIndex(s => s.id === session.id)
+    )
+
+    // Сортируем по дате создания
+    uniqueSessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
     // Загружаем результаты для каждой сессии
     const sessionsWithResults = await Promise.all(
-      sessions.map(async (session) => {
+      uniqueSessions.map(async (session) => {
         try {
           const resultsResponse = await fetch(`${apiUrl}/api/v1/sessions/${session.id}/results?top=5`)
           if (resultsResponse.ok) {
@@ -348,6 +363,23 @@ onMounted(() => {
             class="challenge-card"
             @click="router.push(`/play/${challenge.id}`)"
           >
+            <div class="challenge-header">
+              <span v-if="challenge.type === 'created'" class="challenge-type-badge badge-created">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                Created by you
+              </span>
+              <span v-else class="challenge-type-badge badge-participated">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                Played
+              </span>
+            </div>
+
             <div class="challenge-letters">
               <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="challenge-tile">
                 {{ letter.toLowerCase() }}
@@ -602,6 +634,34 @@ onMounted(() => {
   border-color: var(--accent);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+
+.challenge-header {
+  margin-bottom: 12px;
+}
+
+.challenge-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-created {
+  background: rgba(74, 144, 226, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(74, 144, 226, 0.2);
+}
+
+.badge-participated {
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.2);
 }
 
 .challenge-letters {

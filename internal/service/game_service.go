@@ -11,8 +11,10 @@ import (
 )
 
 type GameService interface {
-	CreateSession(ctx context.Context, language string, letterCount, timeLimit int) (*domain.Session, error)
+	CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID) (*domain.Session, error)
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*domain.Session, error)
+	GetUserSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
+	GetParticipatedSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
 	SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error)
 	GetSessionResults(ctx context.Context, sessionID uuid.UUID, topN int) ([]*domain.Result, error)
 }
@@ -37,7 +39,7 @@ func NewGameService(
 	}
 }
 
-func (s *gameService) CreateSession(ctx context.Context, language string, letterCount, timeLimit int) (*domain.Session, error) {
+func (s *gameService) CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID) (*domain.Session, error) {
 	dict, ok := s.dictionaries[language]
 	if !ok {
 		return nil, domain.ErrUnsupportedLanguage
@@ -51,13 +53,15 @@ func (s *gameService) CreateSession(ctx context.Context, language string, letter
 
 	validWords := dict.FindAllWords(letters)
 	if len(validWords) == 0 {
-		return s.CreateSession(ctx, language, letterCount, timeLimit)
+		return s.CreateSession(ctx, language, letterCount, timeLimit, creatorID)
 	}
 
 	session, err := domain.NewSession(letters, language, timeLimit, letterCount, validWords)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
+
+	session.CreatorID = creatorID
 
 	if err := s.sessionRepo.Create(ctx, session); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
@@ -72,6 +76,14 @@ func (s *gameService) GetSession(ctx context.Context, sessionID uuid.UUID) (*dom
 		return nil, err
 	}
 	return session, nil
+}
+
+func (s *gameService) GetUserSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
+	return s.sessionRepo.GetByCreatorID(ctx, userID, limit)
+}
+
+func (s *gameService) GetParticipatedSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
+	return s.sessionRepo.GetByParticipant(ctx, userID, limit)
 }
 
 func (s *gameService) SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error) {

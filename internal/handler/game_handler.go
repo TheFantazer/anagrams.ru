@@ -44,7 +44,17 @@ func (h *GameHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit)
+	var creatorID *uuid.UUID
+	if userIDStr := r.URL.Query().Get("user_id"); userIDStr != "" {
+		parsedID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+			return
+		}
+		creatorID = &parsedID
+	}
+
+	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit, creatorID)
 	if err != nil {
 		status, errCode, message := mapDomainError(err)
 		h.logger.Error("Failed to create session", slog.String("error", err.Error()))
@@ -95,6 +105,102 @@ func (h *GameHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 		MaxScore:    session.MaxScore,
 		ValidWords:  session.ValidWords,
 		CreatedAt:   session.CreatedAt,
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+func (h *GameHandler) GetUserSessions(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	limit := 20 // default limit
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		parsedLimit, err := strconv.Atoi(limitStr)
+		if err != nil || parsedLimit <= 0 || parsedLimit > 100 {
+			respondError(w, http.StatusBadRequest, "invalid_limit", "Limit must be between 1 and 100")
+			return
+		}
+		limit = parsedLimit
+	}
+
+	sessions, err := h.service.GetUserSessions(r.Context(), userID, limit)
+	if err != nil {
+		status, errCode, message := mapDomainError(err)
+		h.logger.Error("Failed to get user sessions", slog.String("error", err.Error()))
+		respondError(w, status, errCode, message)
+		return
+	}
+
+	response := make([]SessionResponse, len(sessions))
+	for i, session := range sessions {
+		response[i] = SessionResponse{
+			ID:          session.ID,
+			Letters:     session.Letters,
+			Language:    session.Language,
+			TimeLimit:   session.TimeLimit,
+			LetterCount: session.LetterCount,
+			MaxScore:    session.MaxScore,
+			ValidWords:  session.ValidWords,
+			CreatedAt:   session.CreatedAt,
+		}
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+func (h *GameHandler) GetParticipatedSessions(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	limit := 20
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		parsedLimit, err := strconv.Atoi(limitStr)
+		if err != nil || parsedLimit <= 0 || parsedLimit > 100 {
+			respondError(w, http.StatusBadRequest, "invalid_limit", "Limit must be between 1 and 100")
+			return
+		}
+		limit = parsedLimit
+	}
+
+	sessions, err := h.service.GetParticipatedSessions(r.Context(), userID, limit)
+	if err != nil {
+		status, errCode, message := mapDomainError(err)
+		h.logger.Error("Failed to get participated sessions", slog.String("error", err.Error()))
+		respondError(w, status, errCode, message)
+		return
+	}
+
+	response := make([]SessionResponse, len(sessions))
+	for i, session := range sessions {
+		response[i] = SessionResponse{
+			ID:          session.ID,
+			Letters:     session.Letters,
+			Language:    session.Language,
+			TimeLimit:   session.TimeLimit,
+			LetterCount: session.LetterCount,
+			MaxScore:    session.MaxScore,
+			ValidWords:  session.ValidWords,
+			CreatedAt:   session.CreatedAt,
+		}
 	}
 
 	respondJSON(w, http.StatusOK, response)

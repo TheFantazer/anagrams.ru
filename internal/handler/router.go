@@ -25,6 +25,8 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 
 	// Game endpoints
 	mux.HandleFunc("POST /api/v1/sessions", gameHandler.CreateSession)
+	mux.HandleFunc("GET /api/v1/sessions/my", gameHandler.GetUserSessions)
+	mux.HandleFunc("GET /api/v1/sessions/participated", gameHandler.GetParticipatedSessions)
 	mux.HandleFunc("GET /api/v1/sessions/{id}", gameHandler.GetSession)
 	mux.HandleFunc("POST /api/v1/sessions/{id}/results", gameHandler.SubmitResult)
 	mux.HandleFunc("GET /api/v1/sessions/{id}/results", gameHandler.GetSessionResults)
