@@ -73,7 +73,10 @@
       "viewAllWords": "View all words",
       "hideWords": "Hide words",
       "foundLabel": "Found",
-      "missedLabel": "Missed"
+      "missedLabel": "Missed",
+      "youWon": "You won!",
+      "youLost": "You lost",
+      "tie": "It's a tie!"
     }
   },
   "settings": {
@@ -185,6 +188,7 @@
     "invitesFailed": "Failed to send invites. Please try again.",
     "createdByYou": "Created by you",
     "invited": "Invited",
+    "from": "From",
     "vs": "vs",
     "view": "View",
     "play": "Play",

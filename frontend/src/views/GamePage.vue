@@ -17,6 +17,8 @@ const winFx = ref(false)
 const errHint = ref('')
 const sessionId = ref(null)
 const isMultiplayer = ref(false)
+const sessionResults = ref([])
+const loadingResults = ref(false)
 
 let timerInterval = null
 
@@ -27,6 +29,10 @@ watch(() => gameStore.gameActive, async (isActive) => {
     startTimer()
   } else {
     stopTimer()
+    // Загружаем результаты после завершения игры, если это мультиплеер
+    if (isMultiplayer.value && sessionId.value) {
+      await loadSessionResults()
+    }
   }
 })
 
@@ -74,6 +80,22 @@ async function loadMultiplayerSession() {
     console.error('Failed to load multiplayer session:', error)
     alert('Failed to load challenge. Please try again.')
     router.push('/')
+  }
+}
+
+async function loadSessionResults() {
+  loadingResults.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`)
+
+    if (response.ok) {
+      sessionResults.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Failed to load session results:', error)
+  } finally {
+    loadingResults.value = false
   }
 }
 
@@ -221,6 +243,23 @@ const longestWord = computed(() => {
   if (!gameStore.foundWords || gameStore.foundWords.length === 0) return ''
   return gameStore.foundWords.reduce((a, b) => a.length >= b.length ? a : b)
 })
+
+const gameOutcome = computed(() => {
+  if (!isMultiplayer.value || sessionResults.value.length === 0) {
+    return null
+  }
+
+  const myScore = gameStore.score
+  const topScore = Math.max(...sessionResults.value.map(r => r.score))
+
+  if (myScore > topScore) {
+    return 'won'
+  } else if (myScore < topScore) {
+    return 'lost'
+  } else {
+    return 'tie'
+  }
+})
 </script>
 
 <template>
@@ -337,6 +376,23 @@ const longestWord = computed(() => {
     <div v-else class="shell over-wrap">
       <div class="over-eyebrow">{{ $t('game.gameOver.title') }}</div>
       <h1 class="over-title">{{ gameStore.score > 0 ? $t('game.gameOver.subtitle') : 'No words this round.' }}</h1>
+
+      <!-- Victory/Defeat Banner -->
+      <div v-if="gameOutcome" class="outcome-banner" :class="`outcome-${gameOutcome}`">
+        <svg v-if="gameOutcome === 'won'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <svg v-else-if="gameOutcome === 'lost'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 15l4-4m0 4l-4-4m13 1a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        <span>
+          {{ gameOutcome === 'won' ? $t('game.gameOver.youWon') : (gameOutcome === 'lost' ? $t('game.gameOver.youLost') : $t('game.gameOver.tie')) }}
+        </span>
+      </div>
+
       <div class="over-score">{{ gameStore.score.toLocaleString() }}</div>
 
       <div class="over-meta">

@@ -13,14 +13,16 @@ type CreateSessionRequest struct {
 }
 
 type SessionResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Letters     string    `json:"letters"`
-	Language    string    `json:"language"`
-	TimeLimit   int       `json:"time_limit"`
-	LetterCount int       `json:"letter_count"`
-	MaxScore    int       `json:"max_score"`
-	ValidWords  []string  `json:"valid_words"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID              uuid.UUID  `json:"id"`
+	Letters         string     `json:"letters"`
+	Language        string     `json:"language"`
+	TimeLimit       int        `json:"time_limit"`
+	LetterCount     int        `json:"letter_count"`
+	MaxScore        int        `json:"max_score"`
+	ValidWords      []string   `json:"valid_words"`
+	CreatedAt       time.Time  `json:"created_at"`
+	CreatorID       *uuid.UUID `json:"creator_id,omitempty"`
+	CreatorUsername *string    `json:"creator_username,omitempty"`
 }
 
 type SubmitResultRequest struct {

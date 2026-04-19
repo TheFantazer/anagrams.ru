@@ -11,7 +11,7 @@ import (
 func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, cfg *config.Config, logger *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	gameHandler := NewGameHandler(gameService, logger)
+	gameHandler := NewGameHandler(gameService, authService, logger)
 	authHandler := NewAuthHandler(authService, logger)
 	friendHandler := NewFriendHandler(friendService, logger)
 	oauthHandler := NewOAuthHandler(

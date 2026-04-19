@@ -301,6 +301,10 @@ function getStatusLabel(challenge) {
   }
 }
 
+function hasUserPlayed(challenge) {
+  return challenge.results?.some(r => r.user_id === userStore.userId) || false
+}
+
 onMounted(() => {
   // Загружаем активные челленджи
   loadActiveChallenges()
@@ -512,11 +516,15 @@ onMounted(() => {
             <!-- Creator/Type -->
             <div class="ch-who">
               <div class="ch-avatar">
-                {{ challenge.type === 'created' ? userStore.username?.charAt(0).toUpperCase() : '?' }}
+                {{ challenge.type === 'created'
+                  ? userStore.username?.charAt(0).toUpperCase()
+                  : (challenge.creator_username?.charAt(0).toUpperCase() || '?') }}
               </div>
               <div>
                 <div class="ch-name">
-                  {{ challenge.type === 'created' ? $t('multiplayer.createdByYou') : $t('multiplayer.invited') }}
+                  {{ challenge.type === 'created'
+                    ? $t('multiplayer.createdByYou')
+                    : (challenge.creator_username ? `${$t('multiplayer.from')} ${challenge.creator_username}` : $t('multiplayer.invited')) }}
                 </div>
                 <div class="ch-meta">{{ formatDate(challenge.created_at) }}</div>
               </div>
@@ -546,7 +554,7 @@ onMounted(() => {
 
             <!-- Action Button -->
             <button class="btn btn--sm btn--primary" @click.stop="router.push(`/play/${challenge.id}`)">
-              {{ challenge.type === 'created' ? $t('multiplayer.view') : $t('multiplayer.play') }}
+              {{ hasUserPlayed(challenge) ? $t('multiplayer.view') : $t('multiplayer.play') }}
             </button>
           </div>
         </div>

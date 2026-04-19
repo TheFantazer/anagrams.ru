@@ -385,3 +385,49 @@
   .over-title { font-size: 32px; }
   .over-score { font-size: 64px; }
 }
+
+/* Victory/Defeat Banner */
+.outcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  margin: 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.outcome-won {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border: 1.5px solid rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+}
+
+.outcome-won svg {
+  fill: #22c55e;
+  stroke: #22c55e;
+}
+
+.outcome-lost {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.outcome-lost svg {
+  stroke: #ef4444;
+}
+
+.outcome-tie {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.05));
+  border: 1.5px solid rgba(148, 163, 184, 0.4);
+  color: var(--text);
+}
+
+.outcome-tie svg {
+  stroke: var(--text);
+}
+

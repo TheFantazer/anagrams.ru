@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -14,14 +15,16 @@ import (
 )
 
 type GameHandler struct {
-	service service.GameService
-	logger  *slog.Logger
+	service     service.GameService
+	authService service.AuthService
+	logger      *slog.Logger
 }
 
-func NewGameHandler(service service.GameService, logger *slog.Logger) *GameHandler {
+func NewGameHandler(service service.GameService, authService service.AuthService, logger *slog.Logger) *GameHandler {
 	return &GameHandler{
-		service: service,
-		logger:  logger,
+		service:     service,
+		authService: authService,
+		logger:      logger,
 	}
 }
 
@@ -62,17 +65,7 @@ func (h *GameHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := SessionResponse{
-		ID:          session.ID,
-		Letters:     session.Letters,
-		Language:    session.Language,
-		TimeLimit:   session.TimeLimit,
-		LetterCount: session.LetterCount,
-		MaxScore:    session.MaxScore,
-		ValidWords:  session.ValidWords,
-		CreatedAt:   session.CreatedAt,
-	}
-
+	response := h.sessionToResponse(r.Context(), session)
 	respondJSON(w, http.StatusCreated, response)
 }
 
@@ -96,17 +89,7 @@ func (h *GameHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := SessionResponse{
-		ID:          session.ID,
-		Letters:     session.Letters,
-		Language:    session.Language,
-		TimeLimit:   session.TimeLimit,
-		LetterCount: session.LetterCount,
-		MaxScore:    session.MaxScore,
-		ValidWords:  session.ValidWords,
-		CreatedAt:   session.CreatedAt,
-	}
-
+	response := h.sessionToResponse(r.Context(), session)
 	respondJSON(w, http.StatusOK, response)
 }
 
@@ -143,16 +126,7 @@ func (h *GameHandler) GetUserSessions(w http.ResponseWriter, r *http.Request) {
 
 	response := make([]SessionResponse, len(sessions))
 	for i, session := range sessions {
-		response[i] = SessionResponse{
-			ID:          session.ID,
-			Letters:     session.Letters,
-			Language:    session.Language,
-			TimeLimit:   session.TimeLimit,
-			LetterCount: session.LetterCount,
-			MaxScore:    session.MaxScore,
-			ValidWords:  session.ValidWords,
-			CreatedAt:   session.CreatedAt,
-		}
+		response[i] = h.sessionToResponse(r.Context(), session)
 	}
 
 	respondJSON(w, http.StatusOK, response)
@@ -191,16 +165,7 @@ func (h *GameHandler) GetParticipatedSessions(w http.ResponseWriter, r *http.Req
 
 	response := make([]SessionResponse, len(sessions))
 	for i, session := range sessions {
-		response[i] = SessionResponse{
-			ID:          session.ID,
-			Letters:     session.Letters,
-			Language:    session.Language,
-			TimeLimit:   session.TimeLimit,
-			LetterCount: session.LetterCount,
-			MaxScore:    session.MaxScore,
-			ValidWords:  session.ValidWords,
-			CreatedAt:   session.CreatedAt,
-		}
+		response[i] = h.sessionToResponse(r.Context(), session)
 	}
 
 	respondJSON(w, http.StatusOK, response)
@@ -312,6 +277,29 @@ func (h *GameHandler) GetSessionResults(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondJSON(w, http.StatusOK, response)
+}
+
+func (h *GameHandler) sessionToResponse(ctx context.Context, session *domain.Session) SessionResponse {
+	response := SessionResponse{
+		ID:          session.ID,
+		Letters:     session.Letters,
+		Language:    session.Language,
+		TimeLimit:   session.TimeLimit,
+		LetterCount: session.LetterCount,
+		MaxScore:    session.MaxScore,
+		ValidWords:  session.ValidWords,
+		CreatedAt:   session.CreatedAt,
+		CreatorID:   session.CreatorID,
+	}
+
+	if session.CreatorID != nil {
+		user, err := h.authService.GetUserByID(ctx, *session.CreatorID)
+		if err == nil && user != nil {
+			response.CreatorUsername = &user.Username
+		}
+	}
+
+	return response
 }
 
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
