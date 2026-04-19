@@ -42,6 +42,11 @@ const router = createRouter({
             path: '/play/:sessionId',
             name: 'challenge',
             component: () => import('../views/ChallengeInfoPage.vue')
+        },
+        {
+            path: '/friends',
+            name: 'friends',
+            component: () => import('../views/FriendsPage.vue')
         }
     ]
 })

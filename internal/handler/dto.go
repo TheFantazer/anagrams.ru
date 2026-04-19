@@ -80,3 +80,16 @@ type UserStatsResponse struct {
 	TotalWords   int     `json:"total_words"`
 	AverageScore float64 `json:"average_score"`
 }
+
+type SendFriendRequestRequest struct {
+	ToUserID uuid.UUID `json:"to_user_id"`
+}
+
+type FriendRequestResponse struct {
+	ID         uuid.UUID `json:"id"`
+	FromUserID uuid.UUID `json:"from_user_id"`
+	ToUserID   uuid.UUID `json:"to_user_id"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}

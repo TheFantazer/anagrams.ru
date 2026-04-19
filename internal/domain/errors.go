@@ -36,3 +36,11 @@ var (
 	ErrInvalidCredentials = errors.New("invalid username or password")
 	ErrUserNotFound       = errors.New("user not found")
 )
+
+// Friend errors
+var (
+	ErrFriendRequestAlreadyExists = errors.New("friend request already exists")
+	ErrFriendRequestNotPending    = errors.New("friend request is not pending")
+	ErrAlreadyFriends             = errors.New("users are already friends")
+	ErrNotFriends                 = errors.New("users are not friends")
+)

@@ -19,12 +19,12 @@ const (
 )
 
 type FriendRequest struct {
-	ID         uuid.UUID `json:"id"`
-	FromUserID uuid.UUID `json:"from_user_id"`
-	ToUserID   uuid.UUID `json:"to_user_id"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uuid.UUID `db:"id" json:"id"`
+	FromUserID uuid.UUID `db:"from_user_id" json:"from_user_id"`
+	ToUserID   uuid.UUID `db:"to_user_id" json:"to_user_id"`
+	Status     string    `db:"status" json:"status"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func NewFriendRequest(fromUserId, toUserID uuid.UUID) (*FriendRequest, error) {

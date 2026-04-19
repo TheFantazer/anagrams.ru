@@ -8,11 +8,12 @@ import (
 	"github.com/TheFantazer/anagrams.ru/internal/service"
 )
 
-func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, cfg *config.Config, logger *slog.Logger) http.Handler {
+func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, cfg *config.Config, logger *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	gameHandler := NewGameHandler(gameService, logger)
 	authHandler := NewAuthHandler(authService, logger)
+	friendHandler := NewFriendHandler(friendService, logger)
 	oauthHandler := NewOAuthHandler(
 		authService,
 		jwtService,
@@ -42,6 +43,18 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	// OAuth endpoints
 	mux.HandleFunc("GET /api/v1/auth/google", oauthHandler.GoogleLogin)
 	mux.HandleFunc("GET /api/v1/auth/google/callback", oauthHandler.GoogleCallback)
+
+	// Friend endpoints
+	mux.HandleFunc("POST /api/v1/friends/requests", friendHandler.SendFriendRequest)
+	mux.HandleFunc("GET /api/v1/friends/requests/pending", friendHandler.GetPendingRequests)
+	mux.HandleFunc("GET /api/v1/friends/requests/sent", friendHandler.GetSentRequests)
+	mux.HandleFunc("POST /api/v1/friends/requests/{id}/accept", friendHandler.AcceptFriendRequest)
+	mux.HandleFunc("POST /api/v1/friends/requests/{id}/reject", friendHandler.RejectFriendRequest)
+	mux.HandleFunc("GET /api/v1/friends", friendHandler.GetFriends)
+	mux.HandleFunc("DELETE /api/v1/friends/{id}", friendHandler.RemoveFriend)
+
+	// User search endpoint
+	mux.HandleFunc("GET /api/v1/users/search", friendHandler.SearchUsers)
 
 	handler := RecoveryMiddleware(logger)(
 		RequestIDMiddleware(

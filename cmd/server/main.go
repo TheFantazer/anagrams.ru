@@ -58,13 +58,16 @@ func main() {
 	resultRepo := postgres.NewResultRepository(db)
 	userRepo := postgres.NewUserRepository(db.DB)
 	statsRepo := postgres.NewStatsRepository(db)
+	friendRepo := postgres.NewFriendRepository(db)
+	// sessionInviteRepo := postgres.NewSessionInviteRepository(db) // TODO: will be used when implementing session invites
 
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
 	authService := service.NewAuthService(userRepo, statsRepo)
 	jwtService := service.NewJWTService(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
+	friendService := service.NewFriendService(friendRepo, userRepo)
 
-	router := handler.NewRouter(gameService, authService, jwtService, cfg, logger)
+	router := handler.NewRouter(gameService, authService, jwtService, friendService, cfg, logger)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.App.Port,
