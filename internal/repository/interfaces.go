@@ -35,6 +35,24 @@ type UserRepository interface {
 	LinkOAuth(ctx context.Context, userID uuid.UUID, provider, oauthID string) error
 }
 
+type FriendRepository interface {
+	CreateRequest(ctx context.Context, fromUserId uuid.UUID, toUserId uuid.UUID) error
+	GetPendingRequests(ctx context.Context, userId uuid.UUID) ([]*domain.FriendRequest, error)
+	GetSendingRequests(ctx context.Context, userId uuid.UUID) ([]*domain.FriendRequest, error)
+	AcceptRequest(ctx context.Context, requestId uuid.UUID) error
+	RejectRequest(ctx context.Context, requestId uuid.UUID) error
+	GetFriends(ctx context.Context, userId uuid.UUID) ([]*domain.User, error)
+	RemoveFriend(ctx context.Context, userId uuid.UUID, friendId uuid.UUID) error
+	SearchUsers(ctx context.Context, query string) ([]*domain.User, error)
+	AreFriends(ctx context.Context, userId1 uuid.UUID, userId2 uuid.UUID) (bool, error)
+}
+
+type SessionInviteRepository interface {
+	CreateInvite(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) (*domain.SessionInvite, error)
+	GetInvites(ctx context.Context, userID uuid.UUID) ([]*domain.SessionInvite, error)
+	GetSessionInvites(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionInvite, error)
+}
+
 type UserStats struct {
 	GamesPlayed  int
 	BestScore    int
