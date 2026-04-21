@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import {ref, computed, onMounted, watch} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -26,6 +26,36 @@ const letterCount = ref(7)
 const timeLimit = ref(60)
 const hideLetters = ref(false)
 
+const perPage = 15
+const currentPage = ref(1)
+
+const paginatedChallenges = computed(() => {
+  const start = (currentPage.value - 1) * perPage
+  return activeChallenges.value.slice(start, start + perPage)
+})
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(activeChallenges.value.length / perPage))
+})
+
+const pages = computed(() => {
+  const maxVisible = 10
+  const half = Math.floor(maxVisible / 2)
+
+  let start = Math.max(1, currentPage.value - half)
+  let end = Math.min(totalPages.value, currentPage.value + half)
+
+  if (end - start < maxVisible - 1) {
+    if (start === 1) {
+      end = Math.min(totalPages.value, start + maxVisible - 1)
+    } else {
+      start = Math.max(1, end - maxVisible + 1)
+    }
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+})
+
 const availableLanguages = computed(() => [
   { id: 'ru', label: t('settings.gameDefaults.languages.ru') },
   { id: 'en', label: t('settings.gameDefaults.languages.en') }
@@ -45,6 +75,10 @@ const timeLimits = [
   { value: 90, label: '1:30' },
   { value: 120, label: '2:00' }
 ]
+
+watch(activeChallenges, () => {
+  currentPage.value = 1
+})
 
 async function loadFriends() {
   if (!userStore.userId) return
@@ -507,7 +541,7 @@ onMounted(() => {
 
         <div v-else class="multi-challenges">
           <div
-            v-for="challenge in activeChallenges"
+            v-for="challenge in paginatedChallenges"
             :key="challenge.id"
             class="ch-row"
             :class="{ 'ch-play-now': getStatusClass(challenge) === 'st-play' }"
@@ -555,6 +589,33 @@ onMounted(() => {
             <!-- Action Button -->
             <button class="btn btn--sm btn--primary" @click.stop="router.push(`/play/${challenge.id}`)">
               {{ hasUserPlayed(challenge) ? $t('multiplayer.view') : $t('multiplayer.play') }}
+            </button>
+          </div>
+          <div class="pagination">
+            <button
+                class="btn btn--ghost btn--sm"
+                @click="currentPage = Math.max(1, currentPage - 1)"
+                :disabled="currentPage === 1"
+            >
+              ←
+            </button>
+
+            <button
+                v-for="page in pages"
+                :key="page"
+                class="btn btn--soft btn--sm"
+                :class="{ 'btn--accent': currentPage === page }"
+                @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+
+            <button
+                class="btn btn--ghost btn--sm"
+                @click="currentPage = Math.min(totalPages, currentPage + 1)"
+                :disabled="currentPage === totalPages"
+            >
+              →
             </button>
           </div>
         </div>
@@ -1094,5 +1155,33 @@ onMounted(() => {
   .modal-content {
     max-height: 90vh;
   }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination .btn {
+  min-width: 32px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+}
+
+.pagination .btn--accent {
+  box-shadow: 0 2px 0 var(--border-accent, rgba(0,0,0,0.15));
+}
+
+.pagination .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination .btn--soft:hover {
+  background: var(--bg-hover);
 }
 </style>
