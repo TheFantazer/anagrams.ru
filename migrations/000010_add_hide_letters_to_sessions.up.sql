@@ -1,0 +1,2 @@
+ALTER TABLE game_sessions
+ADD COLUMN hide_letters BOOLEAN NOT NULL DEFAULT FALSE;

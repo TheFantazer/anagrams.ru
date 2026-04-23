@@ -10,6 +10,7 @@ type CreateSessionRequest struct {
 	Language    string `json:"language"`
 	LetterCount int    `json:"letter_count"`
 	TimeLimit   int    `json:"time_limit"`
+	HideLetters bool   `json:"hide_letters"`
 }
 
 type SessionResponse struct {
@@ -25,6 +26,7 @@ type SessionResponse struct {
 	CreatorUsername *string          `json:"creator_username,omitempty"`
 	Results         []ResultResponse `json:"results,omitempty"`
 	Type            string           `json:"type,omitempty"` // "created" or "participated"
+	HideLetters     bool             `json:"hide_letters"`
 }
 
 type PaginatedSessionsResponse struct {

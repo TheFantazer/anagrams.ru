@@ -11,7 +11,7 @@ import (
 )
 
 type GameService interface {
-	CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID) (*domain.Session, error)
+	CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID, hideLetters bool) (*domain.Session, error)
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*domain.Session, error)
 	GetUserSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
 	GetParticipatedSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
@@ -40,7 +40,7 @@ func NewGameService(
 	}
 }
 
-func (s *gameService) CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID) (*domain.Session, error) {
+func (s *gameService) CreateSession(ctx context.Context, language string, letterCount, timeLimit int, creatorID *uuid.UUID, hideLetters bool) (*domain.Session, error) {
 	dict, ok := s.dictionaries[language]
 	if !ok {
 		return nil, domain.ErrUnsupportedLanguage
@@ -54,10 +54,10 @@ func (s *gameService) CreateSession(ctx context.Context, language string, letter
 
 	validWords := dict.FindAllWords(letters)
 	if len(validWords) == 0 {
-		return s.CreateSession(ctx, language, letterCount, timeLimit, creatorID)
+		return s.CreateSession(ctx, language, letterCount, timeLimit, creatorID, hideLetters)
 	}
 
-	session, err := domain.NewSession(letters, language, timeLimit, letterCount, validWords)
+	session, err := domain.NewSession(letters, language, timeLimit, letterCount, validWords, hideLetters)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}

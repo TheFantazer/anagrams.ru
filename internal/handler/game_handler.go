@@ -57,7 +57,7 @@ func (h *GameHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		creatorID = &parsedID
 	}
 
-	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit, creatorID)
+	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit, creatorID, req.HideLetters)
 	if err != nil {
 		status, errCode, message := mapDomainError(err)
 		h.logger.Error("Failed to create session", slog.String("error", err.Error()))
@@ -364,6 +364,7 @@ func (h *GameHandler) sessionToResponse(ctx context.Context, session *domain.Ses
 		ValidWords:  session.ValidWords,
 		CreatedAt:   session.CreatedAt,
 		CreatorID:   session.CreatorID,
+		HideLetters: session.HideLetters,
 	}
 
 	if session.CreatorID != nil {
