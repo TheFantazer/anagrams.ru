@@ -171,6 +171,80 @@ func (h *GameHandler) GetParticipatedSessions(w http.ResponseWriter, r *http.Req
 	respondJSON(w, http.StatusOK, response)
 }
 
+func (h *GameHandler) GetAllUserSessionsPaginated(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		parsedPage, err := strconv.Atoi(pageStr)
+		if err != nil || parsedPage < 1 {
+			respondError(w, http.StatusBadRequest, "invalid_page", "Page must be a positive integer")
+			return
+		}
+		page = parsedPage
+	}
+
+	perPage := 15
+	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
+		parsedPerPage, err := strconv.Atoi(perPageStr)
+		if err != nil || parsedPerPage < 1 || parsedPerPage > 100 {
+			respondError(w, http.StatusBadRequest, "invalid_per_page", "Per page must be between 1 and 100")
+			return
+		}
+		perPage = parsedPerPage
+	}
+
+	paginatedSessions, err := h.service.GetAllUserSessionsPaginated(r.Context(), userID, page, perPage)
+	if err != nil {
+		status, errCode, message := mapDomainError(err)
+		h.logger.Error("Failed to get paginated sessions", slog.String("error", err.Error()))
+		respondError(w, status, errCode, message)
+		return
+	}
+
+	sessionResponses := make([]SessionResponse, len(paginatedSessions.Sessions))
+	for i, sessionWithResults := range paginatedSessions.Sessions {
+		resp := h.sessionToResponse(r.Context(), sessionWithResults.Session)
+		resp.Type = sessionWithResults.Type
+
+		resp.Results = make([]ResultResponse, len(sessionWithResults.Results))
+		for j, result := range sessionWithResults.Results {
+			resp.Results[j] = ResultResponse{
+				ID:         result.ID,
+				SessionID:  result.SessionID,
+				UserID:     result.UserID,
+				PlayerName: result.PlayerName,
+				WordCount:  result.WordCount,
+				Score:      result.Score,
+				DurationMs: result.DurationMs,
+				PlayedAt:   result.PlayedAt,
+			}
+		}
+
+		sessionResponses[i] = resp
+	}
+
+	response := PaginatedSessionsResponse{
+		Sessions:   sessionResponses,
+		Total:      paginatedSessions.Total,
+		Page:       paginatedSessions.Page,
+		PerPage:    paginatedSessions.PerPage,
+		TotalPages: paginatedSessions.TotalPages,
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
 func (h *GameHandler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if idStr == "" {

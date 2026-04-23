@@ -190,6 +190,122 @@ func (r *postgresSessionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uuid.UUID, page int, perPage int) (*repository.PaginatedSessions, error) {
+	countQuery := `
+		SELECT COUNT(DISTINCT gs.id)
+		FROM game_sessions gs
+		LEFT JOIN game_results gr ON gs.id = gr.session_id AND gr.user_id = $1
+		WHERE gs.creator_id = $1 OR gr.user_id = $1
+	`
+
+	var total int
+	err := r.db.GetContext(ctx, &total, countQuery, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count sessions: %w", err)
+	}
+
+	offset := (page - 1) * perPage
+	totalPages := (total + perPage - 1) / perPage
+
+	query := `
+		WITH user_sessions AS (
+			SELECT DISTINCT gs.id,
+			       CASE WHEN gs.creator_id = $1 THEN 'created' ELSE 'participated' END as session_type
+			FROM game_sessions gs
+			LEFT JOIN game_results gr ON gs.id = gr.session_id AND gr.user_id = $1
+			WHERE gs.creator_id = $1 OR gr.user_id = $1
+			ORDER BY gs.created_at DESC
+			LIMIT $2 OFFSET $3
+		)
+		SELECT
+			gs.id, gs.letters, gs.language, gs.time_limit, gs.letter_count,
+			gs.valid_words, gs.max_score, gs.creator_id, gs.created_at,
+			us.session_type,
+			gr.id as result_id, gr.session_id as result_session_id, gr.user_id as result_user_id,
+			gr.player_name, gr.player_fingerprint, gr.found_words, gr.word_count, gr.score, gr.duration_ms, gr.played_at
+		FROM user_sessions us
+		JOIN game_sessions gs ON us.id = gs.id
+		LEFT JOIN game_results gr ON gs.id = gr.session_id
+		ORDER BY gs.created_at DESC, gr.score DESC
+	`
+
+	type sessionResultRow struct {
+		sessionDB
+		SessionType     string          `db:"session_type"`
+		ResultID        *uuid.UUID      `db:"result_id"`
+		ResultSessionID *uuid.UUID      `db:"result_session_id"`
+		ResultUserID    *uuid.UUID      `db:"result_user_id"`
+		PlayerName      *string         `db:"player_name"`
+		Fingerprint     *string         `db:"player_fingerprint"`
+		FoundWords      json.RawMessage `db:"found_words"`
+		WordCount       *int            `db:"word_count"`
+		Score           *int            `db:"score"`
+		DurationMs      *int            `db:"duration_ms"`
+		PlayedAt        *time.Time      `db:"played_at"`
+	}
+
+	var rows []sessionResultRow
+	err = r.db.SelectContext(ctx, &rows, query, userID, perPage, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user sessions: %w", err)
+	}
+
+	sessionsMap := make(map[uuid.UUID]*repository.SessionWithResults)
+	var orderedSessionIDs []uuid.UUID
+
+	for _, row := range rows {
+		if _, exists := sessionsMap[row.ID]; !exists {
+			session, err := row.sessionDB.toDomain()
+			if err != nil {
+				return nil, err
+			}
+
+			sessionsMap[row.ID] = &repository.SessionWithResults{
+				Session: session,
+				Results: []*domain.Result{},
+				Type:    row.SessionType,
+			}
+			orderedSessionIDs = append(orderedSessionIDs, row.ID)
+		}
+
+		if row.ResultID != nil {
+			var foundWords []string
+			if row.FoundWords != nil {
+				if err := json.Unmarshal(row.FoundWords, &foundWords); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal found_words: %w", err)
+				}
+			}
+
+			result := &domain.Result{
+				ID:                *row.ResultID,
+				SessionID:         *row.ResultSessionID,
+				UserID:            row.ResultUserID,
+				PlayerName:        *row.PlayerName,
+				PlayerFingerprint: *row.Fingerprint,
+				FoundWords:        foundWords,
+				WordCount:         *row.WordCount,
+				Score:             *row.Score,
+				DurationMs:        *row.DurationMs,
+				PlayedAt:          *row.PlayedAt,
+			}
+			sessionsMap[row.ID].Results = append(sessionsMap[row.ID].Results, result)
+		}
+	}
+
+	sessions := make([]*repository.SessionWithResults, 0, len(orderedSessionIDs))
+	for _, id := range orderedSessionIDs {
+		sessions = append(sessions, sessionsMap[id])
+	}
+
+	return &repository.PaginatedSessions{
+		Sessions:   sessions,
+		Total:      total,
+		Page:       page,
+		PerPage:    perPage,
+		TotalPages: totalPages,
+	}, nil
+}
+
 func (r *postgresSessionRepo) DeleteExpired(ctx context.Context, before time.Time) (int64, error) {
 	query := `DELETE FROM game_sessions WHERE created_at < $1`
 	result, err := r.db.ExecContext(ctx, query, before)

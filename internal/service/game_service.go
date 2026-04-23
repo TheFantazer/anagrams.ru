@@ -15,6 +15,7 @@ type GameService interface {
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*domain.Session, error)
 	GetUserSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
 	GetParticipatedSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
+	GetAllUserSessionsPaginated(ctx context.Context, userID uuid.UUID, page int, perPage int) (*repository.PaginatedSessions, error)
 	SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error)
 	GetSessionResults(ctx context.Context, sessionID uuid.UUID, topN int) ([]*domain.Result, error)
 }
@@ -84,6 +85,10 @@ func (s *gameService) GetUserSessions(ctx context.Context, userID uuid.UUID, lim
 
 func (s *gameService) GetParticipatedSessions(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
 	return s.sessionRepo.GetByParticipant(ctx, userID, limit)
+}
+
+func (s *gameService) GetAllUserSessionsPaginated(ctx context.Context, userID uuid.UUID, page int, perPage int) (*repository.PaginatedSessions, error) {
+	return s.sessionRepo.GetAllUserSessions(ctx, userID, page, perPage)
 }
 
 func (s *gameService) SubmitResult(ctx context.Context, sessionID uuid.UUID, userID *uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error) {

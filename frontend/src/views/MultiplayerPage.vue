@@ -28,14 +28,10 @@ const hideLetters = ref(false)
 
 const perPage = 15
 const currentPage = ref(1)
-
-const paginatedChallenges = computed(() => {
-  const start = (currentPage.value - 1) * perPage
-  return activeChallenges.value.slice(start, start + perPage)
-})
+const totalChallenges = ref(0)
 
 const totalPages = computed(() => {
-  return Math.max(1, Math.ceil(activeChallenges.value.length / perPage))
+  return Math.max(1, Math.ceil(totalChallenges.value / perPage))
 })
 
 const pages = computed(() => {
@@ -76,9 +72,10 @@ const timeLimits = [
   { value: 120, label: '2:00' }
 ]
 
-watch(activeChallenges, () => {
-  currentPage.value = 1
-})
+async function changePage(newPage) {
+  if (newPage < 1 || newPage > totalPages.value) return
+  await loadActiveChallenges(newPage)
+}
 
 async function loadFriends() {
   if (!userStore.userId) return
@@ -180,7 +177,7 @@ async function createChallenge() {
   }
 }
 
-async function loadActiveChallenges() {
+async function loadActiveChallenges(page = 1) {
   if (!userStore.isAuthenticated || !userStore.userId) {
     return
   }
@@ -189,47 +186,21 @@ async function loadActiveChallenges() {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-    // Загружаем созданные пользователем челленджи
-    const createdResponse = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.userId}`)
-    const createdSessions = createdResponse.ok ? await createdResponse.json() : []
+    // Используем новый endpoint с пагинацией и JOIN-ами
+    const response = await fetch(`${apiUrl}/api/v1/sessions/all?user_id=${userStore.userId}&page=${page}&per_page=${perPage}`)
 
-    // Загружаем челленджи, в которых пользователь участвовал
-    const participatedResponse = await fetch(`${apiUrl}/api/v1/sessions/participated?user_id=${userStore.userId}`)
-    const participatedSessions = participatedResponse.ok ? await participatedResponse.json() : []
+    if (!response.ok) {
+      throw new Error('Failed to load sessions')
+    }
 
-    // Объединяем и помечаем челленджи
-    const allSessions = [
-      ...createdSessions.map(s => ({ ...s, type: 'created' })),
-      ...participatedSessions.map(s => ({ ...s, type: 'participated' }))
-    ]
+    const data = await response.json()
 
-    // Удаляем дубликаты (если пользователь создал и сам сыграл)
-    const uniqueSessions = allSessions.filter((session, index, self) =>
-      index === self.findIndex(s => s.id === session.id)
-    )
+    // Обновляем challenges данными с сервера (уже с results)
+    activeChallenges.value = data.sessions || []
 
-    // Сортируем по дате создания
-    uniqueSessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-
-    // Загружаем результаты для каждой сессии
-    const sessionsWithResults = await Promise.all(
-      uniqueSessions.map(async (session) => {
-        try {
-          const resultsResponse = await fetch(`${apiUrl}/api/v1/sessions/${session.id}/results?top=5`)
-          if (resultsResponse.ok) {
-            session.results = await resultsResponse.json()
-          } else {
-            session.results = []
-          }
-        } catch (error) {
-          console.error(`Failed to load results for session ${session.id}:`, error)
-          session.results = []
-        }
-        return session
-      })
-    )
-
-    activeChallenges.value = sessionsWithResults
+    // Обновляем пагинацию на основе server response
+    currentPage.value = data.page
+    totalChallenges.value = data.total
   } catch (error) {
     console.error('Failed to load challenges:', error)
   } finally {
@@ -541,7 +512,7 @@ onMounted(() => {
 
         <div v-else class="multi-challenges">
           <div
-            v-for="challenge in paginatedChallenges"
+            v-for="challenge in activeChallenges"
             :key="challenge.id"
             class="ch-row"
             :class="{ 'ch-play-now': getStatusClass(challenge) === 'st-play' }"
@@ -594,7 +565,7 @@ onMounted(() => {
           <div class="pagination">
             <button
                 class="btn btn--ghost btn--sm"
-                @click="currentPage = Math.max(1, currentPage - 1)"
+                @click="changePage(currentPage - 1)"
                 :disabled="currentPage === 1"
             >
               ←
@@ -605,14 +576,14 @@ onMounted(() => {
                 :key="page"
                 class="btn btn--soft btn--sm"
                 :class="{ 'btn--accent': currentPage === page }"
-                @click="currentPage = page"
+                @click="changePage(page)"
             >
               {{ page }}
             </button>
 
             <button
                 class="btn btn--ghost btn--sm"
-                @click="currentPage = Math.min(totalPages, currentPage + 1)"
+                @click="changePage(currentPage + 1)"
                 :disabled="currentPage === totalPages"
             >
               →

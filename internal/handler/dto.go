@@ -13,16 +13,26 @@ type CreateSessionRequest struct {
 }
 
 type SessionResponse struct {
-	ID              uuid.UUID  `json:"id"`
-	Letters         string     `json:"letters"`
-	Language        string     `json:"language"`
-	TimeLimit       int        `json:"time_limit"`
-	LetterCount     int        `json:"letter_count"`
-	MaxScore        int        `json:"max_score"`
-	ValidWords      []string   `json:"valid_words"`
-	CreatedAt       time.Time  `json:"created_at"`
-	CreatorID       *uuid.UUID `json:"creator_id,omitempty"`
-	CreatorUsername *string    `json:"creator_username,omitempty"`
+	ID              uuid.UUID        `json:"id"`
+	Letters         string           `json:"letters"`
+	Language        string           `json:"language"`
+	TimeLimit       int              `json:"time_limit"`
+	LetterCount     int              `json:"letter_count"`
+	MaxScore        int              `json:"max_score"`
+	ValidWords      []string         `json:"valid_words"`
+	CreatedAt       time.Time        `json:"created_at"`
+	CreatorID       *uuid.UUID       `json:"creator_id,omitempty"`
+	CreatorUsername *string          `json:"creator_username,omitempty"`
+	Results         []ResultResponse `json:"results,omitempty"`
+	Type            string           `json:"type,omitempty"` // "created" or "participated"
+}
+
+type PaginatedSessionsResponse struct {
+	Sessions   []SessionResponse `json:"sessions"`
+	Total      int               `json:"total"`
+	Page       int               `json:"page"`
+	PerPage    int               `json:"per_page"`
+	TotalPages int               `json:"total_pages"`
 }
 
 type SubmitResultRequest struct {
