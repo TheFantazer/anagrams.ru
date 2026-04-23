@@ -76,7 +76,10 @@
       "missedLabel": "Missed",
       "youWon": "You won!",
       "youLost": "You lost",
-      "tie": "It's a tie!"
+      "tie": "It's a tie!",
+      "myWords": "My words",
+      "opponentWords": "Opponent's",
+      "allWords": "All"
     }
   },
   "settings": {

@@ -76,7 +76,10 @@
       "missedLabel": "Пропущено",
       "youWon": "Вы победили!",
       "youLost": "Вы проиграли",
-      "tie": "Ничья!"
+      "tie": "Ничья!",
+      "myWords": "Мои слова",
+      "opponentWords": "Соперника",
+      "allWords": "Все"
     }
   },
   "settings": {

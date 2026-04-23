@@ -19,6 +19,7 @@ const sessionId = ref(null)
 const isMultiplayer = ref(false)
 const sessionResults = ref([])
 const loadingResults = ref(false)
+const wordViewMode = ref('my') // 'my', 'opponent', 'common'
 
 let timerInterval = null
 
@@ -260,6 +261,65 @@ const gameOutcome = computed(() => {
     return 'tie'
   }
 })
+
+const opponentWords = computed(() => {
+  if (!isMultiplayer.value || sessionResults.value.length === 0) {
+    return []
+  }
+
+  // Находим результат соперника (первый результат который не мой)
+  const myWords = gameStore.foundWords.map(w => w.toUpperCase())
+  const opponentResult = sessionResults.value.find(r => {
+    // Проверяем что это не мои слова
+    const resultWords = (r.found_words || []).map(w => w.toUpperCase())
+    return JSON.stringify(resultWords.sort()) !== JSON.stringify(myWords.sort())
+  })
+
+  return opponentResult?.found_words?.map(w => w.toUpperCase()) || []
+})
+
+const displayWords = computed(() => {
+  const myWords = gameStore.foundWords.map(w => w.toUpperCase())
+  const opWords = opponentWords.value
+  const allValidWords = gameStore.validWords?.map(w => w.toUpperCase()) || []
+
+  if (wordViewMode.value === 'my') {
+    // Показываем только мои слова + пропущенные (если showAllWords)
+    return allValidWords.map(word => ({
+      word,
+      found: myWords.includes(word),
+      foundByOpponent: false,
+      common: false
+    }))
+  } else if (wordViewMode.value === 'opponent') {
+    // Показываем слова соперника
+    return allValidWords.map(word => ({
+      word,
+      found: opWords.includes(word),
+      foundByOpponent: opWords.includes(word),
+      common: false
+    }))
+  } else {
+    // common - показываем общие и уникальные
+    return allValidWords.map(word => {
+      const foundByMe = myWords.includes(word)
+      const foundByOpp = opWords.includes(word)
+      return {
+        word,
+        found: foundByMe || foundByOpp,
+        foundByOpponent: foundByOpp && !foundByMe,
+        common: foundByMe && foundByOpp
+      }
+    })
+  }
+})
+
+const sortedDisplayWords = computed(() => {
+  return [...displayWords.value].sort((a, b) => {
+    if (a.word.length !== b.word.length) return b.word.length - a.word.length
+    return a.word.localeCompare(b.word)
+  })
+})
 </script>
 
 <template>
@@ -454,16 +514,42 @@ const gameOutcome = computed(() => {
         <button v-if="!showAllWords" class="btn btn--sm btn--ghost" @click="showAllWords = true">{{ $t('game.gameOver.viewAllWords') }}</button>
       </div>
 
+      <!-- Word View Mode Switcher (only for multiplayer) -->
+      <div v-if="isMultiplayer && opponentWords.length > 0" class="word-view-switcher">
+        <button
+          :class="['btn', 'btn--sm', wordViewMode === 'my' ? 'btn--primary' : 'btn--ghost']"
+          @click="wordViewMode = 'my'"
+        >
+          {{ $t('game.gameOver.myWords') }}
+        </button>
+        <button
+          :class="['btn', 'btn--sm', wordViewMode === 'opponent' ? 'btn--primary' : 'btn--ghost']"
+          @click="wordViewMode = 'opponent'"
+        >
+          {{ $t('game.gameOver.opponentWords') }}
+        </button>
+        <button
+          :class="['btn', 'btn--sm', wordViewMode === 'common' ? 'btn--primary' : 'btn--ghost']"
+          @click="wordViewMode = 'common'"
+        >
+          {{ $t('game.gameOver.allWords') }}
+        </button>
+      </div>
+
       <div class="result-grid">
         <span
-          v-for="(word, i) in sortedWords"
+          v-for="(wordObj, i) in (isMultiplayer && opponentWords.length > 0 ? sortedDisplayWords : sortedWords.map(w => ({ word: w, found: gameStore.foundWords.includes(w), foundByOpponent: false, common: false })))"
           :key="i"
           :class="['word-chip', {
-            'found': gameStore.foundWords.includes(word),
-            'revealed': !gameStore.foundWords.includes(word) && showAllWords
+            'found': wordObj.found || (typeof wordObj === 'string' && gameStore.foundWords.includes(wordObj)),
+            'revealed': (typeof wordObj === 'object' ? !wordObj.found : !gameStore.foundWords.includes(wordObj)) && showAllWords,
+            'opponent-only': wordObj.foundByOpponent && !wordObj.common,
+            'common': wordObj.common
           }]"
         >
-          {{ gameStore.foundWords.includes(word) || showAllWords ? word.toLowerCase() : '•'.repeat(word.length) }}
+          {{ (wordObj.found || (typeof wordObj === 'string' && gameStore.foundWords.includes(wordObj)) || showAllWords)
+              ? (typeof wordObj === 'object' ? wordObj.word : wordObj).toLowerCase()
+              : '•'.repeat(typeof wordObj === 'object' ? wordObj.word.length : wordObj.length) }}
         </span>
       </div>
 
