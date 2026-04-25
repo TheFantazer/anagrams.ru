@@ -44,6 +44,11 @@ const router = createRouter({
             component: () => import('../views/ChallengeInfoPage.vue')
         },
         {
+            path: '/results/:sessionId',
+            name: 'results',
+            component: () => import('../views/ResultsPage.vue')
+        },
+        {
             path: '/friends',
             name: 'friends',
             component: () => import('../views/FriendsPage.vue')

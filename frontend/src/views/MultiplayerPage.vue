@@ -335,7 +335,8 @@ function getStatusLabel(challenge) {
         ? t('multiplayer.youWon')
         : t('multiplayer.youLost')
     }
-    return t('multiplayer.waitingForPlayers')
+    // Если создатель не играл, но есть результаты (друг сыграл)
+    return t('multiplayer.yourTurn')
   } else {
     // Для челленджей, в которых пригласили
     if (userResult) {
@@ -623,7 +624,7 @@ watch(() => route.path, (newPath) => {
             :key="challenge.id"
             class="ch-row"
             :class="{ 'ch-play-now': getStatusClass(challenge) === 'st-play' }"
-            @click="router.push(`/play/${challenge.id}`)"
+            @click="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/play/${challenge.id}`)"
           >
             <!-- Creator/Type -->
             <div class="ch-who">
@@ -668,7 +669,7 @@ watch(() => route.path, (newPath) => {
             </span>
 
             <!-- Action Button -->
-            <button class="btn btn--sm btn--primary" @click.stop="router.push(`/play/${challenge.id}`)">
+            <button class="btn btn--sm btn--primary" @click.stop="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/play/${challenge.id}`)">
               {{ hasUserPlayed(challenge) ? $t('multiplayer.view') : $t('multiplayer.play') }}
             </button>
           </div>
