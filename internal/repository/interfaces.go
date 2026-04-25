@@ -59,6 +59,7 @@ type FriendRepository interface {
 	GetFriends(ctx context.Context, userId uuid.UUID) ([]*domain.User, error)
 	RemoveFriend(ctx context.Context, userId uuid.UUID, friendId uuid.UUID) error
 	SearchUsers(ctx context.Context, query string) ([]*domain.User, error)
+	GetUserByID(ctx context.Context, userId uuid.UUID) (*domain.User, error)
 	AreFriends(ctx context.Context, userId1 uuid.UUID, userId2 uuid.UUID) (bool, error)
 }
 

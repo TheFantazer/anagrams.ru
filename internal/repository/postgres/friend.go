@@ -18,6 +18,28 @@ type friendRepository struct {
 	db *sqlx.DB
 }
 
+func (r *friendRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	query := `
+		SELECT id, username, email, password, oauth_provider, oauth_id,
+		       default_letter_count, default_language, default_time_limit,
+		       created_at, updated_at
+		FROM users
+		WHERE id = $1
+		LIMIT 1
+	`
+
+	var user domain.User
+	err := r.db.GetContext(ctx, &user, query, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, repository.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by id: %w", err)
+	}
+
+	return &user, nil
+}
+
 func NewFriendRepository(db *sqlx.DB) repository.FriendRepository {
 	return &friendRepository{db: db}
 }

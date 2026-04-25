@@ -287,6 +287,39 @@ func (h *FriendHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, response)
 }
 
+// GetUserByID - GET /api/v1/users/{id}
+func (h *FriendHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	user, err := h.friendService.GetUserByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			respondError(w, http.StatusNotFound, "not_found", "User not found")
+			return
+		}
+
+		h.logger.Error("Failed to get user by id", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to get user")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, UserResponse{
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
+	})
+}
+
 func mapFriendError(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, domain.ErrUserNotFound):

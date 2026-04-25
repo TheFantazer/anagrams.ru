@@ -59,6 +59,7 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 
 	// User search endpoint
 	mux.HandleFunc("GET /api/v1/users/search", friendHandler.SearchUsers)
+	mux.HandleFunc("GET /api/v1/users/{id}", friendHandler.GetUserByID)
 
 	handler := RecoveryMiddleware(logger)(
 		RequestIDMiddleware(

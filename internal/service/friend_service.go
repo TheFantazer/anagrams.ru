@@ -18,12 +18,24 @@ type FriendService interface {
 	GetFriends(ctx context.Context, userID uuid.UUID) ([]*domain.User, error)
 	RemoveFriend(ctx context.Context, userID, friendID uuid.UUID) error
 	SearchUsers(ctx context.Context, query string) ([]*domain.User, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 	AreFriends(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
 }
 
 type friendService struct {
 	friendRepo repository.FriendRepository
 	userRepo   repository.UserRepository
+}
+
+func (s *friendService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Password = ""
+
+	return user, nil
 }
 
 func NewFriendService(friendRepo repository.FriendRepository, userRepo repository.UserRepository) FriendService {

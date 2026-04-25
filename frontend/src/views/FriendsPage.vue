@@ -48,18 +48,17 @@ async function getUserInfo(userId) {
   }
 
   try {
-    const response = await fetch(`${apiUrl}/api/v1/users/search?q=${userId}`)
+    const response = await fetch(`${apiUrl}/api/v1/users/${userId}`)
     if (response.ok) {
-      const users = await response.json()
-      const user = users.find(u => u.id === userId)
-      if (user) {
-        userCache.value[userId] = user
-        return user
-      }
+      const user = await response.json()
+
+      userCache.value[userId] = user
+      return user
     }
   } catch (error) {
     console.error('Failed to load user info:', error)
   }
+
   return null
 }
 
@@ -288,6 +287,8 @@ async function removeFriend(friendId) {
             <div class="request-info">
               <div class="request-label">{{ t('friends.requestTo') }}</div>
               <div class="request-user">{{ request.toUser?.username || request.to_user_id }}</div>
+              {{ console.log(request.toUser)
+              }}
               <div class="request-status" :class="request.status">
                 {{ t(`friends.status.${request.status}`) }}
               </div>
