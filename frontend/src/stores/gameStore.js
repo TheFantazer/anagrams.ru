@@ -22,7 +22,6 @@ export const useGameStore = defineStore('game', () => {
   const validWords = ref([])
   const sessionId = ref(null)
   const usedLetterIndices = ref([])
-  const hideLetters = ref(false)
 
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
@@ -30,7 +29,6 @@ export const useGameStore = defineStore('game', () => {
   const lastGameLetters = ref(7)
   const lastGameLang = ref('ru')
   const lastGameWasMultiplayer = ref(false)
-  const lastGameHideLetters = ref(false)
 
   async function loadDictionary(lang) {
     if (dictionaries.value[lang]) {
@@ -117,7 +115,6 @@ export const useGameStore = defineStore('game', () => {
     lastGameLetters.value = typeof letters === 'string' ? letters.length : letters
     lastGameLang.value = lang
     lastGameWasMultiplayer.value = !!existingSessionId
-    lastGameHideLetters.value = false  // Will be updated after session loads if multiplayer
 
     try {
       if (existingSessionId) {
@@ -133,8 +130,6 @@ export const useGameStore = defineStore('game', () => {
 
         gameLetters.value = session.letters.toUpperCase().split('')
         validWords.value = session.valid_words.map(w => w.toUpperCase())
-        hideLetters.value = session.hide_letters || false
-        lastGameHideLetters.value = session.hide_letters || false
         inputWord.value = ''
         foundWords.value = []
         score.value = 0
@@ -166,7 +161,6 @@ export const useGameStore = defineStore('game', () => {
         sessionId.value = session.id
         gameLetters.value = session.letters.toUpperCase().split('')
         validWords.value = session.valid_words.map(w => w.toUpperCase())
-        hideLetters.value = false
         inputWord.value = ''
         foundWords.value = []
         score.value = 0
@@ -180,7 +174,6 @@ export const useGameStore = defineStore('game', () => {
       const gl = await generateLettersFromDict(typeof letters === 'string' ? letters.length : letters, lang)
       gameLetters.value = gl
       validWords.value = []
-      hideLetters.value = false
       inputWord.value = ''
       foundWords.value = []
       score.value = 0
@@ -368,7 +361,6 @@ export const useGameStore = defineStore('game', () => {
     validWords.value = []
     sessionId.value = null
     usedLetterIndices.value = []
-    hideLetters.value = false
   }
 
   
@@ -407,12 +399,10 @@ export const useGameStore = defineStore('game', () => {
     validWords,
     sessionId,
     usedLetterIndices,
-    hideLetters,
     lastGameTime,
     lastGameLetters,
     lastGameLang,
     lastGameWasMultiplayer,
-    lastGameHideLetters,
 
     availableLetters,
     timerPercentage,

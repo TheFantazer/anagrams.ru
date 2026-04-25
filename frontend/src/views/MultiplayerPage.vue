@@ -24,7 +24,6 @@ const loadingFriends = ref(false)
 const language = ref('ru')
 const letterCount = ref(7)
 const timeLimit = ref(60)
-const hideLetters = ref(false)
 
 const perPage = 15
 const currentPage = ref(1)
@@ -58,11 +57,9 @@ const availableLanguages = computed(() => [
 ])
 
 const letterCounts = [
-  { value: 5, label: '5' },
   { value: 6, label: '6' },
   { value: 7, label: '7' },
-  { value: 8, label: '8' },
-  { value: 9, label: '9' }
+  { value: 8, label: '8' }
 ]
 
 const timeLimits = [
@@ -115,7 +112,7 @@ async function sendInvites() {
           language: language.value,
           letter_count: letterCount.value,
           time_limit: timeLimit.value,
-          hide_letters: hideLetters.value,
+          hide_letters: true,
           invite_mode: 'friend',
           max_opponents: 1
         })
@@ -188,7 +185,7 @@ async function createChallenge() {
         language: language.value,
         letter_count: letterCount.value,
         time_limit: timeLimit.value,
-        hide_letters: hideLetters.value,
+        hide_letters: true,
         invite_mode: 'link',
         max_opponents: 1
       })
@@ -270,7 +267,6 @@ function resetForm() {
   createdSessionId.value = null
   sessionLetters.value = []
   linkCopied.value = false
-  hideLetters.value = false
 }
 
 function formatDate(dateStr) {
@@ -378,9 +374,6 @@ onMounted(() => {
     if (route.query.timeLimit) {
       timeLimit.value = parseInt(route.query.timeLimit)
     }
-    if (route.query.hideLetters) {
-      hideLetters.value = route.query.hideLetters === 'true'
-    }
     // Автоматически создаём челлендж
     createChallenge()
   }
@@ -429,7 +422,7 @@ watch(() => route.path, (newPath) => {
           </div>
           <div v-else class="multi-set">
             <span v-for="(letter, i) in sessionLetters" :key="i" class="multi-tile">
-              {{ hideLetters ? '?' : letter }}
+              ?
             </span>
           </div>
 
@@ -463,45 +456,11 @@ watch(() => route.path, (newPath) => {
               {{ lang.label }}
             </button>
             <div style="width:100%"></div>
-            <button
-              class="btn btn--soft btn--sm"
-              :class="{ 'btn--active': hideLetters }"
-              @click="hideLetters = !hideLetters"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <template v-if="hideLetters">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </template>
-                <template v-else>
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </template>
-              </svg>
-              {{ hideLetters ? $t('multiplayer.showLetters') : $t('multiplayer.hideLetters') }}
-            </button>
           </div>
           <div v-else class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
             <button class="btn btn--soft btn--sm" disabled>{{ letterCount }} {{ $t('multiplayer.letters') }}</button>
             <button class="btn btn--soft btn--sm" disabled>{{ timeLimits.find(t => t.value === timeLimit)?.label }}</button>
             <button class="btn btn--soft btn--sm" disabled>{{ availableLanguages.find(l => l.id === language)?.label }}</button>
-            <button
-              class="btn btn--soft btn--sm"
-              :class="{ 'btn--active': hideLetters }"
-              @click="hideLetters = !hideLetters"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <template v-if="hideLetters">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </template>
-                <template v-else>
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </template>
-              </svg>
-              {{ hideLetters ? $t('multiplayer.showLetters') : $t('multiplayer.hideLetters') }}
-            </button>
           </div>
 
           <div v-if="createdSessionId" class="multi-link">
@@ -646,13 +605,13 @@ watch(() => route.path, (newPath) => {
             <!-- Letters -->
             <div class="ch-letters">
               <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="ch-tile">
-                {{ (challenge.hide_letters && (!challenge.results || challenge.results.length < 2)) ? '?' : letter.toLowerCase() }}
+                    {{ hasUserPlayed(challenge) ? letter.toLowerCase() : '?' }}
               </span>
             </div>
 
             <!-- Scores -->
             <div class="ch-scores">
-              <template v-if="challenge.hide_letters && (!challenge.results || challenge.results.length < 2)">
+              <template v-if="!challenge.results || challenge.results.length < 2">
                 <span class="muted">—</span>
               </template>
               <template v-else-if="challenge.results && challenge.results.length > 0">

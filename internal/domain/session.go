@@ -17,12 +17,11 @@ type Session struct {
 	MaxScore     int        `json:"max_score"`
 	CreatorID    *uuid.UUID `json:"creator_id,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
-	HideLetters  bool       `json:"hide_letters"`
 	MaxOpponents int        `json:"max_opponents"` // How many opponents allowed (1 for current 1v1, N for future NvN)
 	InviteMode   string     `json:"invite_mode"`   // "link" or "friend"
 }
 
-func NewSession(letters, language string, timeLimit, letterCount int, validWords []string, hideLetters bool) (*Session, error) {
+func NewSession(letters, language string, timeLimit, letterCount int, validWords []string) (*Session, error) {
 	if letters == "" {
 		return nil, ErrInvalidLetters
 	}
@@ -48,7 +47,6 @@ func NewSession(letters, language string, timeLimit, letterCount int, validWords
 		ValidWords:   validWords,
 		MaxScore:     maxScore,
 		CreatedAt:    time.Now().UTC(),
-		HideLetters:  hideLetters,
 		MaxOpponents: 1,      // Default to 1v1
 		InviteMode:   "link", // Default to link mode
 	}, nil

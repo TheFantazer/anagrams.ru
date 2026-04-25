@@ -61,7 +61,7 @@ func (h *GameHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		creatorID = &parsedID
 	}
 
-	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit, creatorID, req.HideLetters)
+	session, err := h.service.CreateSession(r.Context(), req.Language, req.LetterCount, req.TimeLimit, creatorID)
 	if err != nil {
 		status, errCode, message := mapDomainError(err)
 		h.logger.Error("Failed to create session", slog.String("error", err.Error()))
@@ -368,7 +368,6 @@ func (h *GameHandler) sessionToResponse(ctx context.Context, session *domain.Ses
 		ValidWords:  session.ValidWords,
 		CreatedAt:   session.CreatedAt,
 		CreatorID:   session.CreatorID,
-		HideLetters: session.HideLetters,
 	}
 
 	if session.CreatorID != nil {
@@ -464,7 +463,7 @@ func (h *GameHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if can join session (for link mode, checks max opponents)
+	// Check if you can join session (for link mode, checks max opponents)
 	canJoin, err := h.service.CanJoinSession(r.Context(), sessionID, userID)
 	if err != nil || !canJoin {
 		respondError(w, http.StatusForbidden, "link_already_used", "This challenge link has already been used")

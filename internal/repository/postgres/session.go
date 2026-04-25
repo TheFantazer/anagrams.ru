@@ -32,7 +32,6 @@ type sessionDB struct {
 	MaxScore    int             `db:"max_score"`
 	CreatorID   *uuid.UUID      `db:"creator_id"`
 	CreatedAt   time.Time       `db:"created_at"`
-	HideLetters bool            `db:"hide_letters"`
 }
 
 func (s *sessionDB) toDomain() (*domain.Session, error) {
@@ -51,7 +50,6 @@ func (s *sessionDB) toDomain() (*domain.Session, error) {
 		MaxScore:    s.MaxScore,
 		CreatorID:   s.CreatorID,
 		CreatedAt:   s.CreatedAt,
-		HideLetters: s.HideLetters,
 	}, nil
 }
 func fromDomainSession(s *domain.Session) (*sessionDB, error) {
@@ -69,7 +67,6 @@ func fromDomainSession(s *domain.Session) (*sessionDB, error) {
 		MaxScore:    s.MaxScore,
 		CreatorID:   s.CreatorID,
 		CreatedAt:   s.CreatedAt,
-		HideLetters: s.HideLetters,
 	}, nil
 }
 func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) error {
@@ -78,8 +75,8 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		return fmt.Errorf("failed to convert session: %w", err)
 	}
 	query := `
-				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at, hide_letters)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 	_, err = r.db.ExecContext(
 		ctx,
@@ -93,7 +90,6 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		dbSession.MaxScore,
 		dbSession.CreatorID,
 		dbSession.CreatedAt,
-		dbSession.HideLetters,
 	)
 
 	if err != nil {
@@ -105,7 +101,7 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 
 func (r *postgresSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
 	query := `
-  		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at, hide_letters
+  		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at
   		FROM game_sessions
   		WHERE id = $1
   	`
@@ -124,7 +120,7 @@ func (r *postgresSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domai
 
 func (r *postgresSessionRepo) GetByCreatorID(ctx context.Context, creatorID uuid.UUID, limit int) ([]*domain.Session, error) {
 	query := `
-		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at, hide_letters
+		SELECT id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at
 		FROM game_sessions
 		WHERE creator_id = $1
 		ORDER BY created_at DESC
@@ -152,7 +148,7 @@ func (r *postgresSessionRepo) GetByCreatorID(ctx context.Context, creatorID uuid
 func (r *postgresSessionRepo) GetByParticipant(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
 	query := `
 		SELECT DISTINCT gs.id, gs.letters, gs.language, gs.time_limit, gs.letter_count,
-		       gs.valid_words, gs.max_score, gs.creator_id, gs.created_at, gs.hide_letters
+		       gs.valid_words, gs.max_score, gs.creator_id, gs.created_at
 		FROM game_sessions gs
 		INNER JOIN game_results gr ON gs.id = gr.session_id
 		WHERE gr.user_id = $1
@@ -230,7 +226,7 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 		)
 		SELECT
 			gs.id, gs.letters, gs.language, gs.time_limit, gs.letter_count,
-			gs.valid_words, gs.max_score, gs.creator_id, gs.created_at, gs.hide_letters,
+			gs.valid_words, gs.max_score, gs.creator_id, gs.created_at,
 			us.session_type,
 			gr.id as result_id, gr.session_id as result_session_id, gr.user_id as result_user_id,
 			gr.player_name, gr.player_fingerprint, gr.found_words, gr.word_count, gr.score, gr.duration_ms, gr.played_at
