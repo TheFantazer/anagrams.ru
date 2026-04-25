@@ -15,16 +15,20 @@ import (
 )
 
 type GameHandler struct {
-	service     service.GameService
-	authService service.AuthService
-	logger      *slog.Logger
+	service           service.GameService
+	authService       service.AuthService
+	sessionInviteRepo repository.SessionInviteRepository
+	participantRepo   repository.SessionParticipantRepository
+	logger            *slog.Logger
 }
 
-func NewGameHandler(service service.GameService, authService service.AuthService, logger *slog.Logger) *GameHandler {
+func NewGameHandler(service service.GameService, authService service.AuthService, sessionInviteRepo repository.SessionInviteRepository, participantRepo repository.SessionParticipantRepository, logger *slog.Logger) *GameHandler {
 	return &GameHandler{
-		service:     service,
-		authService: authService,
-		logger:      logger,
+		service:           service,
+		authService:       authService,
+		sessionInviteRepo: sessionInviteRepo,
+		participantRepo:   participantRepo,
+		logger:            logger,
 	}
 }
 
@@ -395,6 +399,86 @@ func respondError(w http.ResponseWriter, status int, err string, message string)
 		Error:   err,
 		Message: message,
 	})
+}
+
+func (h *GameHandler) CreateSessionInvite(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := r.PathValue("id")
+	if sessionIDStr == "" {
+		respondError(w, http.StatusBadRequest, "missing_id", "Session ID is required")
+		return
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_uuid", "Invalid session ID format")
+		return
+	}
+
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	fromUserID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	var req struct {
+		InvitedUserID uuid.UUID `json:"invited_user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_request", "Invalid JSON format")
+		return
+	}
+
+	invite := domain.NewSessionInvite(sessionID, fromUserID, req.InvitedUserID)
+	if err := h.sessionInviteRepo.Create(r.Context(), invite); err != nil {
+		h.logger.Error("Failed to create session invite", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to create invite")
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, invite)
+}
+
+func (h *GameHandler) StartSession(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := r.PathValue("id")
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_session_id", "Invalid session ID format")
+		return
+	}
+
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	// Check if can join session (for link mode, checks max opponents)
+	canJoin, err := h.service.CanJoinSession(r.Context(), sessionID, userID)
+	if err != nil || !canJoin {
+		respondError(w, http.StatusForbidden, "link_already_used", "This challenge link has already been used")
+		return
+	}
+
+	// Start the game (will join if needed, then mark as started)
+	if err := h.service.StartGame(r.Context(), sessionID, userID); err != nil {
+		h.logger.Error("failed to start game", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to start game")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]bool{"started": true})
 }
 
 func mapDomainError(err error) (int, string, string) {

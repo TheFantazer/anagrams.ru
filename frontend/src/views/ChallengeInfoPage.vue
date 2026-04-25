@@ -110,7 +110,7 @@ onMounted(() => {
               :key="i"
               class="challenge-tile"
             >
-              {{ letter }}
+              {{ session.hide_letters ? '?' : letter }}
             </span>
           </div>
 

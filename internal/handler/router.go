@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/TheFantazer/anagrams.ru/internal/config"
+	"github.com/TheFantazer/anagrams.ru/internal/repository"
 	"github.com/TheFantazer/anagrams.ru/internal/service"
 )
 
-func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, cfg *config.Config, logger *slog.Logger) http.Handler {
+func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, sessionInviteRepo repository.SessionInviteRepository, participantRepo repository.SessionParticipantRepository, cfg *config.Config, logger *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	gameHandler := NewGameHandler(gameService, authService, logger)
+	gameHandler := NewGameHandler(gameService, authService, sessionInviteRepo, participantRepo, logger)
 	authHandler := NewAuthHandler(authService, logger)
 	friendHandler := NewFriendHandler(friendService, logger)
 	oauthHandler := NewOAuthHandler(
@@ -30,8 +31,10 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	mux.HandleFunc("GET /api/v1/sessions/participated", gameHandler.GetParticipatedSessions)
 	mux.HandleFunc("GET /api/v1/sessions/all", gameHandler.GetAllUserSessionsPaginated)
 	mux.HandleFunc("GET /api/v1/sessions/{id}", gameHandler.GetSession)
+	mux.HandleFunc("POST /api/v1/sessions/{id}/start", gameHandler.StartSession)
 	mux.HandleFunc("POST /api/v1/sessions/{id}/results", gameHandler.SubmitResult)
 	mux.HandleFunc("GET /api/v1/sessions/{id}/results", gameHandler.GetSessionResults)
+	mux.HandleFunc("POST /api/v1/sessions/{id}/invites", gameHandler.CreateSessionInvite)
 
 	// Auth endpoints
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)

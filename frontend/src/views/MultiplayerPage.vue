@@ -1,5 +1,5 @@
 <script setup>
-import {ref, computed, onMounted, watch} from 'vue'
+import {ref, computed, onMounted, onActivated, watch} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -95,25 +95,59 @@ async function loadFriends() {
 }
 
 async function sendInvites() {
-  if (selectedFriends.value.length === 0 || !createdSessionId.value) return
+  if (selectedFriends.value.length === 0) return
 
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-    // Send invite for each selected friend
-    const invitePromises = selectedFriends.value.map(friendId =>
-      fetch(`${apiUrl}/api/v1/sessions/${createdSessionId.value}/invites?user_id=${userStore.userId}`, {
+    // Create a separate session for each selected friend (strict 1v1)
+    const sessionPromises = selectedFriends.value.map(async (friendId) => {
+      // Create session with invite_mode = "friend" and max_opponents = 1
+      let url = `${apiUrl}/api/v1/sessions`
+      if (userStore.userId) {
+        url += `?user_id=${userStore.userId}`
+      }
+
+      const sessionResponse = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: language.value,
+          letter_count: letterCount.value,
+          time_limit: timeLimit.value,
+          hide_letters: hideLetters.value,
+          invite_mode: 'friend',
+          max_opponents: 1
+        })
+      })
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to create session')
+      }
+
+      const session = await sessionResponse.json()
+
+      // Send invite for this session to the specific friend
+      await fetch(`${apiUrl}/api/v1/sessions/${session.id}/invites?user_id=${userStore.userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invited_user_id: friendId })
       })
-    )
 
-    await Promise.all(invitePromises)
+      return session
+    })
+
+    await Promise.all(sessionPromises)
 
     showFriendsModal.value = false
     selectedFriends.value = []
+    resetForm()
     alert(t('multiplayer.invitesSent'))
+
+    // Reload challenges to show the newly created ones
+    if (userStore.isAuthenticated) {
+      await loadActiveChallenges()
+    }
   } catch (error) {
     console.error('Failed to send invites:', error)
     alert(t('multiplayer.invitesFailed'))
@@ -153,7 +187,10 @@ async function createChallenge() {
       body: JSON.stringify({
         language: language.value,
         letter_count: letterCount.value,
-        time_limit: timeLimit.value
+        time_limit: timeLimit.value,
+        hide_letters: hideLetters.value,
+        invite_mode: 'link',
+        max_opponents: 1
       })
     })
 
@@ -177,6 +214,12 @@ async function createChallenge() {
   }
 }
 
+async function createChallengeForFriend() {
+  // Don't create a session yet - just open the modal
+  // Sessions will be created in sendInvites (one per friend for strict 1v1)
+  openFriendsModal()
+}
+
 async function loadActiveChallenges(page = 1) {
   if (!userStore.isAuthenticated || !userStore.userId) {
     return
@@ -186,7 +229,6 @@ async function loadActiveChallenges(page = 1) {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-    // Используем новый endpoint с пагинацией и JOIN-ами
     const response = await fetch(`${apiUrl}/api/v1/sessions/all?user_id=${userStore.userId}&page=${page}&per_page=${perPage}`)
 
     if (!response.ok) {
@@ -195,7 +237,6 @@ async function loadActiveChallenges(page = 1) {
 
     const data = await response.json()
 
-    // Обновляем challenges данными с сервера (уже с results)
     activeChallenges.value = data.sessions || []
 
     // Обновляем пагинацию на основе server response
@@ -229,6 +270,7 @@ function resetForm() {
   createdSessionId.value = null
   sessionLetters.value = []
   linkCopied.value = false
+  hideLetters.value = false
 }
 
 function formatDate(dateStr) {
@@ -310,6 +352,16 @@ function hasUserPlayed(challenge) {
   return challenge.results?.some(r => r.user_id === userStore.userId) || false
 }
 
+function getMyScore(challenge) {
+  const myResult = challenge.results?.find(r => r.user_id === userStore.userId)
+  return myResult?.score
+}
+
+function getOpponentScore(challenge) {
+  const opponentResult = challenge.results?.find(r => r.user_id !== userStore.userId)
+  return opponentResult?.score
+}
+
 onMounted(() => {
   // Загружаем активные челленджи
   loadActiveChallenges()
@@ -325,8 +377,23 @@ onMounted(() => {
     if (route.query.timeLimit) {
       timeLimit.value = parseInt(route.query.timeLimit)
     }
+    if (route.query.hideLetters) {
+      hideLetters.value = route.query.hideLetters === 'true'
+    }
     // Автоматически создаём челлендж
     createChallenge()
+  }
+})
+
+// Обновляем список при возвращении на страницу
+onActivated(() => {
+  loadActiveChallenges()
+})
+
+// Обновляем список когда переходим на страницу мультиплеера
+watch(() => route.path, (newPath) => {
+  if (newPath === '/multiplayer') {
+    loadActiveChallenges()
   }
 })
 </script>
@@ -394,11 +461,7 @@ onMounted(() => {
             >
               {{ lang.label }}
             </button>
-          </div>
-          <div v-else class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
-            <button class="btn btn--soft btn--sm" disabled>{{ letterCount }} {{ $t('multiplayer.letters') }}</button>
-            <button class="btn btn--soft btn--sm" disabled>{{ timeLimits.find(t => t.value === timeLimit)?.label }}</button>
-            <button class="btn btn--soft btn--sm" disabled>{{ availableLanguages.find(l => l.id === language)?.label }}</button>
+            <div style="width:100%"></div>
             <button
               class="btn btn--soft btn--sm"
               :class="{ 'btn--active': hideLetters }"
@@ -412,6 +475,28 @@ onMounted(() => {
                 <template v-else>
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
                   <line x1="1" y1="1" x2="23" y2="23"/>
+                </template>
+              </svg>
+              {{ hideLetters ? $t('multiplayer.showLetters') : $t('multiplayer.hideLetters') }}
+            </button>
+          </div>
+          <div v-else class="row gap-2" style="margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn--soft btn--sm" disabled>{{ letterCount }} {{ $t('multiplayer.letters') }}</button>
+            <button class="btn btn--soft btn--sm" disabled>{{ timeLimits.find(t => t.value === timeLimit)?.label }}</button>
+            <button class="btn btn--soft btn--sm" disabled>{{ availableLanguages.find(l => l.id === language)?.label }}</button>
+            <button
+              class="btn btn--soft btn--sm"
+              :class="{ 'btn--active': hideLetters }"
+              @click="hideLetters = !hideLetters"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <template v-if="hideLetters">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </template>
+                <template v-else>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
                 </template>
               </svg>
               {{ hideLetters ? $t('multiplayer.showLetters') : $t('multiplayer.hideLetters') }}
@@ -440,9 +525,24 @@ onMounted(() => {
               :disabled="creating"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 4l14 8-14 8z"/>
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
-              {{ creating ? $t('common.creating') : $t('multiplayer.createChallenge') }}
+              {{ creating ? $t('common.creating') : $t('multiplayer.createWithLink') }}
+            </button>
+            <button
+              v-if="!createdSessionId"
+              class="btn btn--primary"
+              @click="createChallengeForFriend"
+              :disabled="creating"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {{ creating ? $t('common.creating') : $t('multiplayer.createForFriend') }}
             </button>
             <template v-else>
               <button class="btn btn--accent" @click="playChallenge">
@@ -450,15 +550,6 @@ onMounted(() => {
                   <path d="M6 4l14 8-14 8z"/>
                 </svg>
                 {{ $t('multiplayer.card01.playBtn')}}
-              </button>
-              <button class="btn btn--primary" @click="openFriendsModal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                {{ $t('multiplayer.inviteFriends') }}
               </button>
               <button class="btn btn--ghost" @click="resetForm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -494,8 +585,24 @@ onMounted(() => {
 
       <!-- Active Challenges Section -->
       <section style="margin-top:32px">
-        <div class="multi-eye" style="margin-bottom:16px">
-          <span class="multi-num">03</span>{{$t('multiplayer.card03.title')}}
+        <div class="multi-eye" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span class="multi-num">03</span>{{$t('multiplayer.card03.title')}}
+          </div>
+          <button
+            v-if="userStore.isAuthenticated"
+            class="btn btn--ghost btn--sm"
+            @click="loadActiveChallenges()"
+            :disabled="loadingChallenges"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M3 21v-5h5"/>
+            </svg>
+            {{ $t('multiplayer.card03.refresh') }}
+          </button>
         </div>
 
         <div v-if="loadingChallenges" class="empty-state">
@@ -538,16 +645,19 @@ onMounted(() => {
             <!-- Letters -->
             <div class="ch-letters">
               <span v-for="(letter, i) in challenge.letters.split('')" :key="i" class="ch-tile">
-                {{ letter.toLowerCase() }}
+                {{ (challenge.hide_letters && (!challenge.results || challenge.results.length < 2)) ? '?' : letter.toLowerCase() }}
               </span>
             </div>
 
             <!-- Scores -->
             <div class="ch-scores">
-              <template v-if="challenge.results && challenge.results.length > 0">
-                <span class="mono">{{ challenge.results[0]?.score.toLocaleString() || '—' }}</span>
+              <template v-if="challenge.hide_letters && (!challenge.results || challenge.results.length < 2)">
+                <span class="muted">—</span>
+              </template>
+              <template v-else-if="challenge.results && challenge.results.length > 0">
+                <span class="mono">{{ getMyScore(challenge)?.toLocaleString() || '—' }}</span>
                 <span class="muted"> {{ $t('multiplayer.vs') }} </span>
-                <span class="mono">{{ challenge.results[1]?.score.toLocaleString() || '—' }}</span>
+                <span class="mono">{{ getOpponentScore(challenge)?.toLocaleString() || '—' }}</span>
               </template>
               <span v-else class="muted">—</span>
             </div>

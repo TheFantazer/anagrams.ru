@@ -180,6 +180,8 @@
     "comingSoon": "Coming soon",
     "description": "Right now we're fine-tuning the word list. Multiplayer mode is weeks away. Follow us for updates.",
     "createChallenge": "Create Challenge",
+    "createWithLink": "Create with Link",
+    "createForFriend": "Create for Friend",
     "letters": "letters",
     "hideLetters": "Hide letters",
     "showLetters": "Show letters",
@@ -189,6 +191,7 @@
     "sendInvites": "Send Invites",
     "invitesSent": "Invites sent successfully!",
     "invitesFailed": "Failed to send invites. Please try again.",
+    "linkAlreadyUsed": "This link has already been used. The game was started by another player.",
     "createdByYou": "Created by you",
     "invited": "Invited",
     "from": "From",
@@ -233,7 +236,8 @@
     },
     "card03": {
       "title": "Active challenges",
-      "description": "No active challenges yet. Create one above to get started!"
+      "description": "No active challenges yet. Create one above to get started!",
+      "refresh": "Refresh"
     },
     "backBtn": "Back to solo mode"
   },
@@ -283,7 +287,8 @@
     "backToHome": "Back to Home",
     "errors": {
       "notFound": "This challenge was not found or has expired",
-      "loadFailed": "Failed to load challenge"
+      "loadFailed": "Failed to load challenge",
+      "linkAlreadyUsed": "Link already used"
     }
   },
   "common": {

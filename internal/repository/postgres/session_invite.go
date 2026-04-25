@@ -2,7 +2,10 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/TheFantazer/anagrams.ru/internal/domain"
 	"github.com/TheFantazer/anagrams.ru/internal/repository"
@@ -18,57 +21,110 @@ func NewSessionInviteRepository(db *sqlx.DB) repository.SessionInviteRepository 
 	return &sessionInviteRepository{db: db}
 }
 
-func (r *sessionInviteRepository) CreateInvite(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) (*domain.SessionInvite, error) {
-	invite := domain.NewSessionInvite(sessionID, userID)
+type sessionInviteDB struct {
+	ID         uuid.UUID `db:"id"`
+	SessionID  uuid.UUID `db:"session_id"`
+	FromUserID uuid.UUID `db:"from_user_id"`
+	ToUserID   uuid.UUID `db:"to_user_id"`
+	Status     string    `db:"status"`
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
+}
 
+func (s *sessionInviteDB) toDomain() *domain.SessionInvite {
+	return &domain.SessionInvite{
+		ID:         s.ID,
+		SessionID:  s.SessionID,
+		FromUserID: s.FromUserID,
+		ToUserID:   s.ToUserID,
+		Status:     s.Status,
+		CreatedAt:  s.CreatedAt,
+		UpdatedAt:  s.UpdatedAt,
+	}
+}
+
+func fromDomainSessionInvite(s *domain.SessionInvite) *sessionInviteDB {
+	return &sessionInviteDB{
+		ID:         s.ID,
+		SessionID:  s.SessionID,
+		FromUserID: s.FromUserID,
+		ToUserID:   s.ToUserID,
+		Status:     s.Status,
+		CreatedAt:  s.CreatedAt,
+		UpdatedAt:  s.UpdatedAt,
+	}
+}
+
+func (r *sessionInviteRepository) Create(ctx context.Context, invite *domain.SessionInvite) error {
+	dbInvite := fromDomainSessionInvite(invite)
 	query := `
-		INSERT INTO session_invites (id, session_id, user_id, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO session_invites (id, session_id, from_user_id, to_user_id, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-
-	_, err := r.db.ExecContext(ctx, query,
-		invite.ID,
-		invite.SessionID,
-		invite.UserID,
-		invite.CreatedAt,
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		dbInvite.ID,
+		dbInvite.SessionID,
+		dbInvite.FromUserID,
+		dbInvite.ToUserID,
+		dbInvite.Status,
+		dbInvite.CreatedAt,
+		dbInvite.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session invite: %w", err)
+		return fmt.Errorf("failed to insert session invite: %w", err)
 	}
 
-	return invite, nil
+	return nil
 }
 
-func (r *sessionInviteRepository) GetInvites(ctx context.Context, userID uuid.UUID) ([]*domain.SessionInvite, error) {
+func (r *sessionInviteRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.SessionInvite, error) {
 	query := `
-		SELECT id, session_id, user_id, created_at
+		SELECT id, session_id, from_user_id, to_user_id, status, created_at, updated_at
 		FROM session_invites
-		WHERE user_id = $1
+		WHERE to_user_id = $1
 		ORDER BY created_at DESC
 	`
 
-	var invites []*domain.SessionInvite
-	err := r.db.SelectContext(ctx, &invites, query, userID)
+	var dbInvites []sessionInviteDB
+	err := r.db.SelectContext(ctx, &dbInvites, query, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get invites: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return []*domain.SessionInvite{}, nil
+		}
+		return nil, fmt.Errorf("failed to get session invites: %w", err)
+	}
+
+	invites := make([]*domain.SessionInvite, 0, len(dbInvites))
+	for _, dbInvite := range dbInvites {
+		invites = append(invites, dbInvite.toDomain())
 	}
 
 	return invites, nil
 }
 
-func (r *sessionInviteRepository) GetSessionInvites(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionInvite, error) {
+func (r *sessionInviteRepository) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionInvite, error) {
 	query := `
-		SELECT id, session_id, user_id, created_at
+		SELECT id, session_id, from_user_id, to_user_id, status, created_at, updated_at
 		FROM session_invites
 		WHERE session_id = $1
 		ORDER BY created_at DESC
 	`
 
-	var invites []*domain.SessionInvite
-	err := r.db.SelectContext(ctx, &invites, query, sessionID)
+	var dbInvites []sessionInviteDB
+	err := r.db.SelectContext(ctx, &dbInvites, query, sessionID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []*domain.SessionInvite{}, nil
+		}
 		return nil, fmt.Errorf("failed to get session invites: %w", err)
+	}
+
+	invites := make([]*domain.SessionInvite, 0, len(dbInvites))
+	for _, dbInvite := range dbInvites {
+		invites = append(invites, dbInvite.toDomain())
 	}
 
 	return invites, nil

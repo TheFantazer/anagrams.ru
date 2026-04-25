@@ -199,7 +199,8 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 		SELECT COUNT(DISTINCT gs.id)
 		FROM game_sessions gs
 		LEFT JOIN game_results gr ON gs.id = gr.session_id AND gr.user_id = $1
-		WHERE gs.creator_id = $1 OR gr.user_id = $1
+		LEFT JOIN session_invites si ON gs.id = si.session_id AND si.to_user_id = $1
+		WHERE gs.creator_id = $1 OR gr.user_id = $1 OR si.to_user_id = $1
 	`
 
 	var total int
@@ -213,11 +214,17 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 
 	query := `
 		WITH user_sessions AS (
-			SELECT DISTINCT gs.id,
-			       CASE WHEN gs.creator_id = $1 THEN 'created' ELSE 'participated' END as session_type
+			SELECT DISTINCT gs.id, gs.created_at,
+			       CASE
+			           WHEN gs.creator_id = $1 THEN 'created'
+			           WHEN EXISTS(SELECT 1 FROM game_results WHERE session_id = gs.id AND user_id = $1) THEN 'participated'
+			           WHEN EXISTS(SELECT 1 FROM session_invites WHERE session_id = gs.id AND to_user_id = $1) THEN 'invited'
+			           ELSE 'participated'
+			       END as session_type
 			FROM game_sessions gs
 			LEFT JOIN game_results gr ON gs.id = gr.session_id AND gr.user_id = $1
-			WHERE gs.creator_id = $1 OR gr.user_id = $1
+			LEFT JOIN session_invites si ON gs.id = si.session_id AND si.to_user_id = $1
+			WHERE gs.creator_id = $1 OR gr.user_id = $1 OR si.to_user_id = $1
 			ORDER BY gs.created_at DESC
 			LIMIT $2 OFFSET $3
 		)
@@ -235,17 +242,17 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 
 	type sessionResultRow struct {
 		sessionDB
-		SessionType     string          `db:"session_type"`
-		ResultID        *uuid.UUID      `db:"result_id"`
-		ResultSessionID *uuid.UUID      `db:"result_session_id"`
-		ResultUserID    *uuid.UUID      `db:"result_user_id"`
-		PlayerName      *string         `db:"player_name"`
-		Fingerprint     *string         `db:"player_fingerprint"`
-		FoundWords      json.RawMessage `db:"found_words"`
-		WordCount       *int            `db:"word_count"`
-		Score           *int            `db:"score"`
-		DurationMs      *int            `db:"duration_ms"`
-		PlayedAt        *time.Time      `db:"played_at"`
+		SessionType     string           `db:"session_type"`
+		ResultID        *uuid.UUID       `db:"result_id"`
+		ResultSessionID *uuid.UUID       `db:"result_session_id"`
+		ResultUserID    *uuid.UUID       `db:"result_user_id"`
+		PlayerName      *string          `db:"player_name"`
+		Fingerprint     *string          `db:"player_fingerprint"`
+		FoundWords      *json.RawMessage `db:"found_words"`
+		WordCount       *int             `db:"word_count"`
+		Score           *int             `db:"score"`
+		DurationMs      *int             `db:"duration_ms"`
+		PlayedAt        *time.Time       `db:"played_at"`
 	}
 
 	var rows []sessionResultRow
@@ -275,7 +282,7 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 		if row.ResultID != nil {
 			var foundWords []string
 			if row.FoundWords != nil {
-				if err := json.Unmarshal(row.FoundWords, &foundWords); err != nil {
+				if err := json.Unmarshal(*row.FoundWords, &foundWords); err != nil {
 					return nil, fmt.Errorf("failed to unmarshal found_words: %w", err)
 				}
 			}

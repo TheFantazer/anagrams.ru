@@ -63,9 +63,18 @@ type FriendRepository interface {
 }
 
 type SessionInviteRepository interface {
-	CreateInvite(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) (*domain.SessionInvite, error)
-	GetInvites(ctx context.Context, userID uuid.UUID) ([]*domain.SessionInvite, error)
-	GetSessionInvites(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionInvite, error)
+	Create(ctx context.Context, invite *domain.SessionInvite) error
+	GetByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.SessionInvite, error)
+	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionInvite, error)
+}
+
+type SessionParticipantRepository interface {
+	Create(ctx context.Context, participant *domain.SessionParticipant) error
+	GetBySession(ctx context.Context, sessionID uuid.UUID) ([]*domain.SessionParticipant, error)
+	GetBySessionAndUser(ctx context.Context, sessionID, userID uuid.UUID) (*domain.SessionParticipant, error)
+	CountOpponents(ctx context.Context, sessionID uuid.UUID) (int, error)
+	MarkAsStarted(ctx context.Context, sessionID, userID uuid.UUID) error
+	HasStarted(ctx context.Context, sessionID, userID uuid.UUID) (bool, error)
 }
 
 type UserStats struct {

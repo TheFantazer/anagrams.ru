@@ -3,12 +3,14 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/gameStore'
+import { useUserStore } from '../stores/userStore'
 import TimerRing from '../components/TimerRing.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const gameStore = useGameStore()
+const userStore = useUserStore()
 
 const wrapRef = ref(null)
 const showAllWords = ref(false)
@@ -66,6 +68,24 @@ async function loadMultiplayerSession() {
     }
 
     const session = await response.json()
+
+    // Call /start endpoint before starting the game (if user is authenticated)
+    if (userStore.userId) {
+      const startResponse = await fetch(
+        `${apiUrl}/api/v1/sessions/${sessionId.value}/start?user_id=${userStore.userId}`,
+        { method: 'POST' }
+      )
+
+      if (!startResponse.ok) {
+        if (startResponse.status === 403) {
+          // Link already used by another player
+          alert(t('multiplayer.linkAlreadyUsed'))
+          router.push('/multiplayer')
+          return
+        }
+        throw new Error('Failed to start session')
+      }
+    }
 
     // Запускаем игру с параметрами из сессии
     gameStore.startGame(
@@ -222,7 +242,8 @@ async function handleChallengeBack() {
       create: 'true',
       language: gameStore.lastGameLang,
       letterCount: gameStore.lastGameLetters.toString(),
-      timeLimit: gameStore.lastGameTime.toString()
+      timeLimit: gameStore.lastGameTime.toString(),
+      hideLetters: gameStore.lastGameHideLetters.toString()
     }
   })
 }
@@ -346,7 +367,12 @@ const sortedDisplayWords = computed(() => {
             <div>
               <div class="hud-stat-label">{{ $t('game.found') }}</div>
               <div class="hud-stat-value">
-                {{ gameStore.foundWords.length }}<span style="color:var(--fg-faint);font-size:13px">/{{ gameStore.validWords?.length || 0 }}</span>
+                <template v-if="gameStore.hideLetters">
+                  {{ gameStore.foundWords.length }}
+                </template>
+                <template v-else>
+                  {{ gameStore.foundWords.length }}<span style="color:var(--fg-faint);font-size:13px">/{{ gameStore.validWords?.length || 0 }}</span>
+                </template>
               </div>
             </div>
           </div>
@@ -419,7 +445,14 @@ const sortedDisplayWords = computed(() => {
       <div class="found-rail">
         <div class="found-rail-head">
           <span class="title">{{ $t('game.foundWords.title') }}</span>
-          <span class="count">{{ gameStore.foundWords.length }} / {{ gameStore.validWords?.length || 0 }}</span>
+          <span class="count">
+            <template v-if="gameStore.hideLetters">
+              {{ gameStore.foundWords.length }}
+            </template>
+            <template v-else>
+              {{ gameStore.foundWords.length }} / {{ gameStore.validWords?.length || 0 }}
+            </template>
+          </span>
         </div>
         <p v-if="gameStore.foundWords.length === 0" class="muted found-rail-empty">
           {{ $t('game.foundWords.empty') }}
@@ -457,10 +490,17 @@ const sortedDisplayWords = computed(() => {
 
       <div class="over-meta">
         <div class="cell">
-          <div class="cell-num">{{ gameStore.foundWords.length }}/{{ gameStore.validWords?.length || 0 }}</div>
+          <div class="cell-num">
+            <template v-if="gameStore.hideLetters">
+              {{ gameStore.foundWords.length }}
+            </template>
+            <template v-else>
+              {{ gameStore.foundWords.length }}/{{ gameStore.validWords?.length || 0 }}
+            </template>
+          </div>
           <div class="cell-lbl">{{ $t('game.gameOver.wordsFound') }}</div>
         </div>
-        <div class="cell">
+        <div v-if="!gameStore.hideLetters" class="cell">
           <div class="cell-num">{{ percentFound }}%</div>
           <div class="cell-lbl">{{ $t('game.gameOver.percentFound') }}</div>
         </div>
@@ -469,7 +509,7 @@ const sortedDisplayWords = computed(() => {
           <div class="cell-lbl">{{ $t('game.gameOver.longestWord') }}</div>
         </div>
         <div class="cell">
-          <div class="cell-num mono" style="font-size:14px">{{ gameStore.gameLetters?.join('').toLowerCase() || '' }}</div>
+          <div class="cell-num mono" style="font-size:14px">{{ gameStore.hideLetters ? '?'.repeat(gameStore.gameLetters?.length || 0) : (gameStore.gameLetters?.join('').toLowerCase() || '') }}</div>
           <div class="cell-lbl">set</div>
         </div>
       </div>
@@ -510,7 +550,14 @@ const sortedDisplayWords = computed(() => {
       </div>
 
       <div class="found-rail-head" style="margin-top:32px;border-top:1px solid var(--border-hairline);padding-top:24px">
-        <span class="title">All words — {{ gameStore.validWords?.length || 0 }}</span>
+        <span class="title">
+          <template v-if="gameStore.hideLetters">
+            All words
+          </template>
+          <template v-else>
+            All words — {{ gameStore.validWords?.length || 0 }}
+          </template>
+        </span>
         <button v-if="!showAllWords" class="btn btn--sm btn--ghost" @click="showAllWords = true">{{ $t('game.gameOver.viewAllWords') }}</button>
       </div>
 
