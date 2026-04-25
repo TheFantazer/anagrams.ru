@@ -302,6 +302,11 @@ function getStatusClass(challenge) {
     // Если кто-то играл, показываем статус создателя
     if (userResult) {
       const topScore = Math.max(...challenge.results.map(r => r.score))
+      const playersWithTopScore = challenge.results.filter(r => r.score === topScore).length
+
+      if (playersWithTopScore > 1) {
+        return 'st-tie'
+      }
       return userResult.score === topScore ? 'st-won' : 'st-lost'
     }
     return 'st-wait' // Создатель еще не сыграл
@@ -310,6 +315,11 @@ function getStatusClass(challenge) {
     if (userResult) {
       // Пользователь уже сыграл
       const topScore = Math.max(...challenge.results.map(r => r.score))
+      const playersWithTopScore = challenge.results.filter(r => r.score === topScore).length
+
+      if (playersWithTopScore > 1) {
+        return 'st-tie'
+      }
       return userResult.score === topScore ? 'st-won' : 'st-lost'
     }
     return 'st-play' // Еще не сыграл
@@ -327,6 +337,11 @@ function getStatusLabel(challenge) {
     }
     if (userResult) {
       const topScore = Math.max(...challenge.results.map(r => r.score))
+      const playersWithTopScore = challenge.results.filter(r => r.score === topScore).length
+
+      if (playersWithTopScore > 1) {
+        return t('multiplayer.tie')
+      }
       return userResult.score === topScore
         ? t('multiplayer.youWon')
         : t('multiplayer.youLost')
@@ -337,6 +352,11 @@ function getStatusLabel(challenge) {
     // Для челленджей, в которых пригласили
     if (userResult) {
       const topScore = Math.max(...challenge.results.map(r => r.score))
+      const playersWithTopScore = challenge.results.filter(r => r.score === topScore).length
+
+      if (playersWithTopScore > 1) {
+        return t('multiplayer.tie')
+      }
       return userResult.score === topScore
         ? t('multiplayer.youWon')
         : t('multiplayer.youLost')
@@ -1025,6 +1045,11 @@ watch(() => route.path, (newPath) => {
 .st-lost {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.st-tie {
+  background: rgba(201, 138, 31, 0.12);
+  color: var(--warning);
 }
 
 /* Friends Modal */

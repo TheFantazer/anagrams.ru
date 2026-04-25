@@ -5,6 +5,7 @@ import { useUserStore } from './stores/userStore'
 import HeaderNav from './components/HeaderNav.vue'
 import HelpModal from './components/HelpModal.vue'
 import SoloSettingsModal from './components/SoloSettingsModal.vue'
+import ToastStack from './components/ToastStack.vue'
 
 const userStore = useUserStore()
 
@@ -39,6 +40,9 @@ onUnmounted(() => {
     <!-- Modals -->
     <HelpModal />
     <SoloSettingsModal />
+
+    <!-- Toast notifications -->
+    <ToastStack />
 
     <!-- Easter egg banner -->
     <Teleport to="body">
