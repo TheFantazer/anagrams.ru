@@ -21,12 +21,9 @@ const selectedFriend = ref(null)
 const searchFilter = ref('')
 const modalStep = ref('pick') // 'pick' | 'sent'
 
-// Mock data
-const mockRecentMatches = ref([
-  // { id: 1, with: 'Alex', letters: 'ДОРОГА', yourScore: 1200, theirScore: 980, result: 'won', date: '2h ago' },
-  // { id: 2, with: 'Maria', letters: 'STREAM', yourScore: 850, theirScore: 850, result: 'tie', date: '5h ago' },
-  // { id: 3, with: 'John', letters: 'BRIGHT', yourScore: 720, theirScore: 1100, result: 'lost', date: 'yesterday' },
-])
+// Recent completed matches
+const recentMatches = ref([])
+const loadingRecentMatches = ref(false)
 
 // Computed
 const yourTurnCount = computed(() => {
@@ -64,6 +61,51 @@ async function loadActiveChallenges() {
     console.error('Failed to load challenges:', error)
   } finally {
     loadingChallenges.value = false
+  }
+}
+
+async function loadRecentMatches() {
+  if (!userStore.isAuthenticated || !userStore.userId) return
+
+  loadingRecentMatches.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/all?user_id=${userStore.userId}&page=1&per_page=5`)
+
+    if (response.ok) {
+      const data = await response.json()
+      // Filter completed multiplayer sessions
+      const completed = (data.sessions || []).filter(s => {
+        return s.results && s.results.length >= 2
+      })
+
+      // Transform to match format
+      recentMatches.value = completed.slice(0, 5).map(session => {
+        const myResult = session.results.find(r => r.user_id === userStore.userId)
+        const opponentResult = session.results.find(r => r.user_id !== userStore.userId)
+
+        if (!myResult || !opponentResult) return null
+
+        const delta = myResult.score - opponentResult.score
+        let result = 'tie'
+        if (delta > 0) result = 'won'
+        else if (delta < 0) result = 'lost'
+
+        return {
+          id: session.id,
+          with: opponentResult.player_name || 'Opponent',
+          letters: session.letters,
+          yourScore: myResult.score,
+          theirScore: opponentResult.score,
+          result,
+          date: formatDate(myResult.played_at || session.created_at)
+        }
+      }).filter(Boolean)
+    }
+  } catch (error) {
+    console.error('Failed to load recent matches:', error)
+  } finally {
+    loadingRecentMatches.value = false
   }
 }
 
@@ -179,6 +221,7 @@ function formatDate(dateStr) {
 
 onMounted(() => {
   loadActiveChallenges()
+  loadRecentMatches()
 })
 </script>
 
@@ -429,8 +472,8 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- RECENT MATCHES (MOCK) -->
-      <section v-if="mockRecentMatches.length > 0" class="ph-section">
+      <!-- RECENT MATCHES -->
+      <section v-if="recentMatches.length > 0" class="ph-section">
         <div class="ph-section-head">
           <div>
             <div class="page-eyebrow">{{ $t('playHub.recentMatches.title') }}</div>
@@ -445,7 +488,7 @@ onMounted(() => {
         </div>
         <div class="ph-recent">
           <div
-            v-for="m in mockRecentMatches"
+            v-for="m in recentMatches"
             :key="m.id"
             :class="['ph-recent-row', `rm-${m.result}`]"
           >

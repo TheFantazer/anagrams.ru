@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -42,17 +42,23 @@ const suggestedFriends = ref([
   { name: 'maria_fast', reason: 'Top 100 player', id: 998 },
 ])
 
-// Mock match history for profile - TODO: Replace with real API
-const mockMatches = [
-  { id: 1, result: 'won', letters: 'streami', yourScore: 2400, theirScore: 1800, date: '2 days ago' },
-  { id: 2, result: 'lost', letters: 'masters', yourScore: 1600, theirScore: 2200, date: '5 days ago' },
-  { id: 3, result: 'tie', letters: 'anagram', yourScore: 1900, theirScore: 1900, date: '1 week ago' },
-]
+// Match history for friend profile
+const friendMatches = ref([])
+const loadingFriendMatches = ref(false)
 
 onMounted(() => {
   if (userStore.isAuthenticated) {
     loadFriends()
     loadRequests()
+  }
+})
+
+// Load friend matches when profile modal opens
+watch(openProfile, (newProfile) => {
+  if (newProfile && newProfile.id) {
+    loadFriendMatches(newProfile.id)
+  } else {
+    friendMatches.value = []
   }
 })
 
@@ -219,11 +225,78 @@ function challengeFriend(name) {
   router.push('/multiplayer')
 }
 
+// Load matches against a specific friend
+async function loadFriendMatches(friendId) {
+  if (!userStore.userId || !friendId) return
+
+  loadingFriendMatches.value = true
+  friendMatches.value = []
+
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/sessions/all?user_id=${userStore.userId}&page=1&per_page=100`)
+
+    if (response.ok) {
+      const data = await response.json()
+
+      // Filter for completed matches with this specific friend
+      const matchesWithFriend = (data.sessions || []).filter(session => {
+        if (!session.results || session.results.length < 2) return false
+
+        // Check if both user and friend have results in this session
+        const hasUserResult = session.results.some(r => r.user_id === userStore.userId)
+        const hasFriendResult = session.results.some(r => r.user_id === friendId)
+
+        return hasUserResult && hasFriendResult
+      })
+
+      // Transform to match format
+      friendMatches.value = matchesWithFriend.map(session => {
+        const myResult = session.results.find(r => r.user_id === userStore.userId)
+        const friendResult = session.results.find(r => r.user_id === friendId)
+
+        if (!myResult || !friendResult) return null
+
+        const delta = myResult.score - friendResult.score
+        let result = 'tie'
+        if (delta > 0) result = 'won'
+        else if (delta < 0) result = 'lost'
+
+        return {
+          id: session.id,
+          result,
+          letters: session.letters,
+          yourScore: myResult.score,
+          theirScore: friendResult.score,
+          date: formatRelativeTime(myResult.played_at || session.created_at)
+        }
+      }).filter(Boolean)
+    }
+  } catch (error) {
+    console.error('Failed to load friend matches:', error)
+  } finally {
+    loadingFriendMatches.value = false
+  }
+}
+
+// Helper to format relative time
+function formatRelativeTime(dateStr) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now - date
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffDays === 0) return 'today'
+  if (diffDays === 1) return 'yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+  return date.toLocaleDateString()
+}
+
 // Head-to-head stats for profile modal
 function getH2HStats(friendName) {
-  const wins = mockMatches.filter(m => m.result === 'won').length
-  const losses = mockMatches.filter(m => m.result === 'lost').length
-  const ties = mockMatches.filter(m => m.result === 'tie').length
+  const wins = friendMatches.value.filter(m => m.result === 'won').length
+  const losses = friendMatches.value.filter(m => m.result === 'lost').length
+  const ties = friendMatches.value.filter(m => m.result === 'tie').length
   return { wins, losses, ties }
 }
 </script>
@@ -550,13 +623,18 @@ function getH2HStats(friendName) {
             <div class="fr-prof-stat-k">best word</div>
           </div>
           <div class="fr-prof-stat">
-            <div class="fr-prof-stat-v mono">{{ mockMatches.length }}</div>
+            <div class="fr-prof-stat-v mono">
+              {{ loadingFriendMatches ? '...' : friendMatches.length }}
+            </div>
             <div class="fr-prof-stat-k">matches with you</div>
           </div>
         </div>
 
         <!-- Head-to-head Record -->
-        <div v-if="mockMatches.length > 0" class="fr-prof-record">
+        <div v-if="loadingFriendMatches" class="fr-prof-loading">
+          <span class="muted">Loading match history...</span>
+        </div>
+        <div v-else-if="friendMatches.length > 0" class="fr-prof-record">
           <div class="page-eyebrow" style="margin-bottom:8px">Head-to-head</div>
           <div class="fr-prof-bar">
             <div class="fr-prof-bar-w" :style="{ flex: getH2HStats().wins || 0.001 }">
@@ -571,7 +649,7 @@ function getH2HStats(friendName) {
           </div>
           <div class="fr-prof-recent">
             <div class="fr-eyebrow-mini">Recent</div>
-            <div v-for="match in mockMatches.slice(0, 3)" :key="match.id" :class="['fr-prof-recent-row', `rm-${match.result}`]">
+            <div v-for="match in friendMatches.slice(0, 3)" :key="match.id" :class="['fr-prof-recent-row', `rm-${match.result}`]">
               <span :class="['fr-prof-recent-tag', `rm-${match.result}`]">
                 {{ match.result === 'won' ? 'W' : match.result === 'lost' ? 'L' : 'T' }}
               </span>
@@ -580,6 +658,9 @@ function getH2HStats(friendName) {
               <span class="muted" style="margin-left:auto; font-size:12px">{{ match.date }}</span>
             </div>
           </div>
+        </div>
+        <div v-else class="fr-prof-empty muted" style="padding:20px; text-align:center; font-size:13px">
+          No matches played yet
         </div>
 
         <div class="fr-prof-actions">

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -10,18 +10,49 @@ const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
 
-// MOCK DATA - Replace with real API calls later
-// TODO: Remove mock data when real API is connected
-const mockYourTurnChallenges = ref([
-  { id: 1, from: 'Alex', sessionId: 'abc123' },
-  { id: 2, from: 'Maria', sessionId: 'def456' },
-  { id: 3, from: 'John', sessionId: 'ghi789' },
-])
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-const mockIncomingRequests = ref([
-  { id: 1, from: 'Sarah', fromId: 1 },
-  { id: 2, from: 'Mike', fromId: 2 },
-])
+// Real data from API
+const yourTurnChallenges = ref([])
+const incomingRequests = ref([])
+
+// Load challenges and requests
+async function loadAlerts() {
+  if (!userStore.userId) {
+    yourTurnChallenges.value = []
+    incomingRequests.value = []
+    return
+  }
+
+  try {
+    // Load sessions where it's your turn
+    const sessionsRes = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.userId}`)
+    if (sessionsRes.ok) {
+      const sessions = await sessionsRes.json()
+      // Filter sessions where user hasn't played yet
+      yourTurnChallenges.value = sessions
+        .filter(s => !s.played)
+        .map(s => ({
+          id: s.id,
+          from: s.creator_username || 'Unknown',
+          sessionId: s.id
+        }))
+    }
+
+    // Load incoming friend requests
+    const friendsRes = await fetch(`${apiUrl}/api/v1/friends/requests/pending?user_id=${userStore.userId}`)
+    if (friendsRes.ok) {
+      const requests = await friendsRes.json()
+      incomingRequests.value = requests.map(r => ({
+        id: r.id,
+        from: r.from_username || 'Unknown',
+        fromId: r.from_user_id
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to load alerts:', error)
+  }
+}
 
 // Ambient floating letters
 const ambientLetters = [
@@ -35,9 +66,9 @@ const ambientLetters = [
 ]
 
 const yourTurnOpponents = computed(() => {
-  const opponents = mockYourTurnChallenges.value.slice(0, 2).map(c => c.from)
-  if (mockYourTurnChallenges.value.length > 2) {
-    const moreCount = mockYourTurnChallenges.value.length - 2
+  const opponents = yourTurnChallenges.value.slice(0, 2).map(c => c.from)
+  if (yourTurnChallenges.value.length > 2) {
+    const moreCount = yourTurnChallenges.value.length - 2
     opponents.push(t('home.alerts.more', { count: moreCount }))
   }
   return opponents.join(', ')
@@ -79,10 +110,21 @@ function handleKeyPress(e) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyPress)
+  loadAlerts()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyPress)
+})
+
+// Reload alerts when user logs in or out
+watch(() => userStore.userId, (newVal) => {
+  if (newVal) {
+    loadAlerts()
+  } else {
+    yourTurnChallenges.value = []
+    incomingRequests.value = []
+  }
 })
 </script>
 
@@ -90,10 +132,10 @@ onUnmounted(() => {
   <div class="page">
     <div class="shell">
       <!-- Alert Ribbons -->
-      <div v-if="mockYourTurnChallenges.length > 0 || mockIncomingRequests.length > 0" class="home-alerts">
+      <div v-if="yourTurnChallenges.length > 0 || incomingRequests.length > 0" class="home-alerts">
         <!-- Your Turn Alert -->
         <button
-          v-if="mockYourTurnChallenges.length > 0"
+          v-if="yourTurnChallenges.length > 0"
           class="home-alert home-alert--turn"
           @click="router.push('/multiplayer')"
         >
@@ -102,8 +144,8 @@ onUnmounted(() => {
           </span>
           <span class="home-alert-body">
             <strong>{{ t('home.alerts.yourTurn', {
-              count: mockYourTurnChallenges.length,
-              rounds: mockYourTurnChallenges.length === 1 ? t('home.alerts.round') : t('home.alerts.rounds')
+              count: yourTurnChallenges.length,
+              rounds: yourTurnChallenges.length === 1 ? t('home.alerts.round') : t('home.alerts.rounds')
             }) }}</strong>
             <span class="home-alert-meta">
               {{ t('home.alerts.vs', { opponents: yourTurnOpponents }) }}
@@ -119,7 +161,7 @@ onUnmounted(() => {
 
         <!-- Friend Requests Alert -->
         <button
-          v-if="mockIncomingRequests.length > 0"
+          v-if="incomingRequests.length > 0"
           class="home-alert home-alert--req"
           @click="router.push('/friends')"
         >
@@ -133,8 +175,8 @@ onUnmounted(() => {
           </span>
           <span class="home-alert-body">
             <strong>{{ t('home.alerts.friendRequests', {
-              count: mockIncomingRequests.length,
-              requests: mockIncomingRequests.length === 1 ? t('home.alerts.request') : t('home.alerts.requests')
+              count: incomingRequests.length,
+              requests: incomingRequests.length === 1 ? t('home.alerts.request') : t('home.alerts.requests')
             }) }}</strong>
             <span class="home-alert-meta">{{ t('home.alerts.reviewFriends') }}</span>
           </span>
