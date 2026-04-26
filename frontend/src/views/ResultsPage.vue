@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
+import PlayerBlock from '../components/PlayerBlock.vue'
+import WordChips from '../components/WordChips.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -13,6 +15,8 @@ const loading = ref(true)
 const error = ref(null)
 const session = ref(null)
 const results = ref([])
+const tab = ref('you') // mobile tab toggle
+const revealed = ref(false)
 
 const sessionId = computed(() => route.params.sessionId)
 
@@ -26,16 +30,37 @@ const opponentResult = computed(() => {
   return results.value.find(r => r.user_id !== userStore.userId)
 })
 
-const gameOutcome = computed(() => {
-  if (!myResult.value || !opponentResult.value) return null
+const bothPlayed = computed(() => !!myResult.value && !!opponentResult.value)
+const onlyYou = computed(() => !!myResult.value && !opponentResult.value)
+const onlyThey = computed(() => !myResult.value && !!opponentResult.value)
 
-  if (myResult.value.score > opponentResult.value.score) {
-    return 'won'
-  } else if (myResult.value.score < opponentResult.value.score) {
-    return 'lost'
-  } else {
-    return 'tie'
-  }
+const winner = computed(() => {
+  if (!bothPlayed.value) return null
+  if (myResult.value.score > opponentResult.value.score) return 'you'
+  if (myResult.value.score < opponentResult.value.score) return 'them'
+  return 'tie'
+})
+
+const verdictLabel = computed(() => {
+  if (!bothPlayed.value) return t('results.verdict.pending')
+  if (winner.value === 'you') return t('results.verdict.won')
+  if (winner.value === 'them') return t('results.verdict.lost')
+  return t('results.verdict.tie')
+})
+
+const verdictClass = computed(() => {
+  if (!bothPlayed.value) return 'pending'
+  if (winner.value === 'you') return 'won'
+  if (winner.value === 'them') return 'lost'
+  return 'tie'
+})
+
+const opponentName = computed(() => {
+  return opponentResult.value?.player_name || session.value?.creator_username || 'Opponent'
+})
+
+const allWords = computed(() => {
+  return session.value?.valid_words?.map(w => w.toUpperCase()) || []
 })
 
 const myWords = computed(() => {
@@ -46,25 +71,28 @@ const opponentWords = computed(() => {
   return opponentResult.value?.found_words?.map(w => w.toUpperCase()) || []
 })
 
-const allValidWords = computed(() => {
-  return session.value?.valid_words?.map(w => w.toUpperCase()) || []
-})
+const mySet = computed(() => new Set(myWords.value))
+const opponentSet = computed(() => new Set(opponentWords.value))
 
-const sortedWords = computed(() => {
-  return [...allValidWords.value].sort((a, b) => {
+const sortedAll = computed(() => {
+  return [...allWords.value].sort((a, b) => {
     if (a.length !== b.length) return b.length - a.length
     return a.localeCompare(b)
   })
 })
 
-const wordComparison = computed(() => {
-  return sortedWords.value.map(word => ({
-    word,
-    foundByMe: myWords.value.includes(word),
-    foundByOpponent: opponentWords.value.includes(word),
-    foundByBoth: myWords.value.includes(word) && opponentWords.value.includes(word)
-  }))
-})
+// Group words by length
+function groupByLength(words) {
+  const groups = {}
+  words.forEach(w => {
+    (groups[w.length] = groups[w.length] || []).push(w)
+  })
+  const lens = Object.keys(groups).map(Number).sort((a, b) => b - a)
+  return lens.map(l => ({ length: l, words: groups[l] }))
+}
+
+const myGroups = computed(() => groupByLength(myWords.value))
+const opponentGroups = computed(() => groupByLength(opponentWords.value))
 
 async function loadResults() {
   loading.value = true
@@ -75,16 +103,12 @@ async function loadResults() {
 
     // Load session data
     const sessionResponse = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}`)
-    if (!sessionResponse.ok) {
-      throw new Error('Failed to load session')
-    }
+    if (!sessionResponse.ok) throw new Error('Failed to load session')
     session.value = await sessionResponse.json()
 
     // Load results
     const resultsResponse = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`)
-    if (!resultsResponse.ok) {
-      throw new Error('Failed to load results')
-    }
+    if (!resultsResponse.ok) throw new Error('Failed to load results')
     results.value = await resultsResponse.json()
 
   } catch (err) {
@@ -99,8 +123,16 @@ function goBack() {
   router.push('/multiplayer')
 }
 
-function playAgain() {
+function playChallenge() {
   router.push(`/play/${sessionId.value}`)
+}
+
+function share() {
+  const letters = session.value?.letters?.toLowerCase() || ''
+  const text = `anagrams.ru/r/${letters}-${sessionId.value}`
+  navigator.clipboard?.writeText(text).then(() => {
+    userStore.showToast(t('results.resultCopied'), 'success')
+  })
 }
 
 onMounted(() => {
@@ -110,7 +142,7 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <div class="shell results-wrap">
+    <div class="shell res-wrap">
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
@@ -126,105 +158,242 @@ onMounted(() => {
       </div>
 
       <!-- Results -->
-      <div v-else-if="session && results.length > 0">
-        <div class="results-header">
-          <div class="results-eyebrow">{{ $t('challenge.title') }}</div>
-          <h1 class="results-title">{{ $t('game.gameOver.title') }}</h1>
-        </div>
-
-        <!-- Victory/Defeat Banner -->
-        <div v-if="gameOutcome" class="outcome-banner" :class="`outcome-${gameOutcome}`">
-          <svg v-if="gameOutcome === 'won'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-          <svg v-else-if="gameOutcome === 'lost'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 15l4-4m0 4l-4-4m13 1a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-          </svg>
-          <span>
-            {{ gameOutcome === 'won' ? $t('game.gameOver.youWon') : (gameOutcome === 'lost' ? $t('game.gameOver.youLost') : $t('game.gameOver.tie')) }}
-          </span>
-        </div>
-
-        <!-- Scores Comparison -->
-        <div class="scores-comparison">
-          <div class="score-card">
-            <div class="score-label">{{ $t('game.gameOver.yourScore') }}</div>
-            <div class="score-value">{{ myResult?.score.toLocaleString() || 0 }}</div>
-            <div class="score-meta">
-              {{ myResult?.found_words?.length || 0 }} {{ $t('game.gameOver.wordsFound') }}
-            </div>
-          </div>
-
-          <div class="vs-divider">{{ $t('multiplayer.vs') }}</div>
-
-          <div class="score-card">
-            <div class="score-label">{{ opponentResult?.player_name || $t('multiplayer.from') }}</div>
-            <div class="score-value">{{ opponentResult?.score.toLocaleString() || 0 }}</div>
-            <div class="score-meta">
-              {{ opponentResult?.found_words?.length || 0 }} {{ $t('game.gameOver.wordsFound') }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Letters -->
-        <div class="results-letters">
-          <span v-for="(letter, i) in session.letters.split('')" :key="i" class="results-tile">
-            {{ letter.toUpperCase() }}
-          </span>
-        </div>
-
-        <!-- Word Comparison -->
-        <div class="word-comparison-section">
-          <h3 class="section-title">{{ $t('game.gameOver.allWords') }}</h3>
-
-          <div class="word-grid">
-            <div
-              v-for="(wordObj, i) in wordComparison"
-              :key="i"
-              :class="['word-chip-result', {
-                'found-me': wordObj.foundByMe && !wordObj.foundByBoth,
-                'found-opponent': wordObj.foundByOpponent && !wordObj.foundByBoth,
-                'found-both': wordObj.foundByBoth,
-                'missed': !wordObj.foundByMe && !wordObj.foundByOpponent
-              }]"
-            >
-              {{ wordObj.word.toLowerCase() }}
-            </div>
-          </div>
-
-          <div class="legend">
-            <div class="legend-item">
-              <span class="legend-color found-me"></span>
-              <span>{{ $t('game.gameOver.myWords') }}</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color found-opponent"></span>
-              <span>{{ $t('game.gameOver.opponentWords') }}</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color found-both"></span>
-              <span>{{ $t('game.gameOver.allWords') }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="results-actions">
-          <button class="btn btn--accent btn--lg" @click="playAgain">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
-            </svg>
-            {{ $t('game.gameOver.playAgain') }}
-          </button>
-          <button class="btn btn--primary btn--lg" @click="goBack">
+      <div v-else-if="session">
+        <!-- Top bar -->
+        <div class="res-topbar">
+          <button class="btn btn--ghost btn--sm" @click="goBack">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
-            {{ $t('multiplayer.backBtn') }}
+            {{ $t('results.backToMultiplayer') }}
           </button>
+          <span :class="['res-verdict', `v-${verdictClass}`]">
+            <span v-if="!bothPlayed" class="res-pulse" />
+            {{ verdictLabel }}
+          </span>
+        </div>
+
+        <!-- Header — set + meta -->
+        <header class="res-head">
+          <div class="res-head-left">
+            <div class="page-eyebrow">{{ $t('results.challengeBy', { name: opponentName }) }}</div>
+            <div class="res-set">
+              <span v-for="(L, i) in session.letters.split('')" :key="i" class="res-tile">{{ L.toUpperCase() }}</span>
+            </div>
+            <div class="res-meta">
+              <span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                {{ $t('results.finished') }}
+              </span>
+              <span class="dot-sep">·</span>
+              <span>{{ $t('results.possibleWords', { count: allWords.length }) }}</span>
+            </div>
+          </div>
+          <div class="res-head-right">
+            <button class="btn btn--ghost btn--sm" @click="share">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+              {{ $t('results.share') }}
+            </button>
+            <button v-if="onlyThey || !myResult" class="btn btn--accent btn--sm" @click="playChallenge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 4l14 8-14 8z"/>
+              </svg>
+              {{ $t('results.playIt') }}
+            </button>
+          </div>
+        </header>
+
+        <!-- SCORE COMPARISON (both played) -->
+        <section v-if="bothPlayed" class="res-versus">
+          <PlayerBlock
+            who="you"
+            :name="$t('results.tabs.you')"
+            :score="myResult.score"
+            :found="myWords.length"
+            :total="allWords.length"
+            :winner="winner === 'you'"
+          />
+          <div class="res-vs">
+            <div class="res-vs-bar">
+              <div class="res-vs-bar-fill you" :style="{ flex: myResult.score }" />
+              <div class="res-vs-bar-fill them" :style="{ flex: opponentResult.score }" />
+            </div>
+            <div class="res-vs-label">{{ $t('results.vs') }}</div>
+            <div class="res-vs-delta mono">
+              <template v-if="winner === 'you'">+{{ (myResult.score - opponentResult.score).toLocaleString() }}</template>
+              <template v-else-if="winner === 'them'">−{{ (opponentResult.score - myResult.score).toLocaleString() }}</template>
+              <template v-else>EVEN</template>
+            </div>
+          </div>
+          <PlayerBlock
+            who="them"
+            :name="opponentName"
+            :score="opponentResult.score"
+            :found="opponentWords.length"
+            :total="allWords.length"
+            :winner="winner === 'them'"
+          />
+        </section>
+
+        <!-- SOLO STATE (only you played) -->
+        <section v-if="onlyYou" class="res-solo">
+          <div class="res-solo-side res-solo-side--you">
+            <PlayerBlock
+              who="you"
+              :name="$t('results.tabs.you')"
+              :score="myResult.score"
+              :found="myWords.length"
+              :total="allWords.length"
+              :winner="false"
+              solo
+            />
+          </div>
+          <div class="res-solo-side res-solo-side--wait">
+            <div class="res-wait">
+              <div class="res-wait-anim">
+                <span /><span /><span />
+              </div>
+              <h3 class="res-wait-title">{{ $t('results.waiting.title', { name: opponentName }) }}</h3>
+              <p class="muted" style="font-size:13px; margin:4px 0 16px; max-width:280px; text-align:center">
+                {{ $t('results.waiting.description', { name: opponentName }) }}
+              </p>
+              <button class="btn btn--soft btn--sm" @click="share">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                {{ $t('results.waiting.nudge') }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- REDIRECT STATE (only they played) -->
+        <section v-if="onlyThey" class="res-redirect">
+          <div class="res-redirect-card">
+            <h3 class="res-redirect-title">{{ $t('results.playItFirst.title') }}</h3>
+            <p class="muted" style="font-size:13px; margin:4px 0 16px; max-width:320px; text-align:center">
+              {{ $t('results.playItFirst.description', { name: opponentName }) }}
+            </p>
+            <button class="btn btn--accent btn--lg" @click="playChallenge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 4l14 8-14 8z"/>
+              </svg>
+              {{ $t('results.playItFirst.button') }}
+            </button>
+          </div>
+        </section>
+
+        <!-- WORDS (hide when only opponent has played) -->
+        <section v-if="!onlyThey && (myResult || opponentResult)" class="res-words">
+          <div class="res-words-head">
+            <div>
+              <div class="page-eyebrow">{{ $t('results.words.eyebrow') }}</div>
+              <h3 class="res-words-title">
+                {{ bothPlayed ? $t('results.words.bothPlayed') : myResult ? $t('results.words.youPlayed') : $t('results.words.theyPlayed', { name: opponentName }) }}
+              </h3>
+            </div>
+            <button v-if="bothPlayed" class="btn btn--soft btn--sm" @click="revealed = !revealed">
+              {{ revealed ? $t('results.words.hideMissed') : $t('results.words.showMissed') }}
+            </button>
+          </div>
+
+          <!-- Mobile tab toggle (only if both played) -->
+          <div v-if="bothPlayed" class="res-mob-tabs">
+            <button class="chip-toggle" :data-active="tab === 'you'" @click="tab = 'you'">
+              {{ $t('results.tabs.you') }} · {{ myWords.length }}
+            </button>
+            <button class="chip-toggle" :data-active="tab === 'them'" @click="tab = 'them'">
+              {{ opponentName }} · {{ opponentWords.length }}
+            </button>
+            <button class="chip-toggle" :data-active="tab === 'all'" @click="tab = 'all'">
+              {{ $t('results.tabs.all') }} · {{ allWords.length }}
+            </button>
+          </div>
+
+          <div :class="['res-cols', bothPlayed ? '' : 'res-cols--single']" :data-mob-tab="tab">
+            <!-- YOUR column -->
+            <div v-if="myResult" class="res-col res-col--you">
+              <div class="res-col-head">
+                <span class="res-col-name">{{ $t('results.tabs.you') }}</span>
+                <span class="res-col-num mono">{{ myWords.length }}</span>
+              </div>
+              <WordChips :words="myWords" owner="you" />
+            </div>
+
+            <!-- THEIR column -->
+            <div v-if="opponentResult" class="res-col res-col--them">
+              <div class="res-col-head">
+                <span class="res-col-name">{{ opponentName }}</span>
+                <span class="res-col-num mono">{{ opponentWords.length }}</span>
+              </div>
+              <WordChips :words="opponentWords" owner="them" />
+            </div>
+          </div>
+
+          <!-- ALL words (mobile-only via tab, desktop via toggle) -->
+          <div v-if="revealed || tab === 'all'" :class="['res-all', tab === 'all' ? 'mob-only' : '']">
+            <div class="res-col-head">
+              <span class="res-col-name">{{ $t('results.words.allWords') }}</span>
+              <span class="res-col-num mono">{{ sortedAll.length }}</span>
+            </div>
+            <div class="result-grid">
+              <span
+                v-for="(w, i) in sortedAll"
+                :key="i"
+                :class="[
+                  'word-chip',
+                  mySet.has(w) && opponentSet.has(w) ? 'both' :
+                  mySet.has(w) ? 'found' :
+                  opponentSet.has(w) ? 'them-only' : 'revealed'
+                ]"
+                :title="mySet.has(w) && opponentSet.has(w) ? 'both found' : mySet.has(w) ? 'you' : opponentSet.has(w) ? opponentName : 'missed'"
+              >
+                {{ w.toLowerCase() }}
+              </span>
+            </div>
+            <div class="res-legend">
+              <span><span class="lg-sw lg-both" /> {{ $t('results.legend.both') }}</span>
+              <span><span class="lg-sw lg-you" /> {{ $t('results.legend.you') }}</span>
+              <span><span class="lg-sw lg-them" /> {{ $t('results.legend.them', { name: opponentName }) }}</span>
+              <span><span class="lg-sw lg-miss" /> {{ $t('results.legend.missed') }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer actions -->
+        <div class="res-foot">
+          <button class="btn btn--ghost" @click="goBack">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            {{ $t('results.backToChallenges') }}
+          </button>
+          <div class="row gap-2">
+            <button v-if="bothPlayed" class="btn btn--soft" @click="playChallenge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+              </svg>
+              {{ $t('results.rematch') }}
+            </button>
+            <button class="btn btn--primary" @click="share">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+              {{ $t('results.shareResult') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -232,10 +401,19 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.results-wrap {
-  max-width: 800px;
+/* Imports from results.css */
+.res-wrap {
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 0 32px;
+  padding-bottom: 80px;
+}
+
+@media (max-width: 720px) {
+  .res-wrap {
+    padding: 0 20px;
+    padding-bottom: 80px;
+  }
 }
 
 .loading-state,
@@ -258,248 +436,737 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-.results-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.results-eyebrow {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--fg-muted);
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.results-title {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: -1.2px;
-  color: var(--fg-primary);
-  margin: 0;
-}
-
-.outcome-banner {
+.res-topbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  margin-bottom: 32px;
-  font-weight: 700;
-  font-size: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
-.outcome-won {
+.res-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.res-verdict.v-won {
   background: var(--success-soft);
   color: var(--success);
 }
 
-.outcome-lost {
+.res-verdict.v-lost {
   background: var(--danger-soft);
   color: var(--danger);
 }
 
-.outcome-tie {
-  background: var(--bg-surface);
-  color: var(--fg-secondary);
-  border: 2px solid var(--border-default);
-}
-
-.scores-comparison {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 24px;
-  align-items: center;
-  margin-bottom: 32px;
-  padding: 32px;
-  background: var(--bg-surface);
-  border-radius: 20px;
-  border: 1px solid var(--border-subtle);
-}
-
-.score-card {
-  text-align: center;
-}
-
-.score-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.score-value {
-  font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--accent);
-  line-height: 1;
-  margin-bottom: 8px;
-}
-
-.score-meta {
-  font-size: 13px;
+.res-verdict.v-tie {
+  background: var(--bg-card);
   color: var(--fg-secondary);
 }
 
-.vs-divider {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--fg-muted);
+.res-verdict.v-pending {
+  background: var(--warning);
+  color: var(--navy);
 }
 
-.results-letters {
+.res-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Header */
+.res-head {
   display: flex;
-  justify-content: center;
-  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 40px;
+  gap: 20px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-hairline);
 }
 
-.results-tile {
-  width: 56px;
-  height: 64px;
-  border-radius: 12px;
+.res-head-left .page-eyebrow {
+  margin-bottom: 14px;
+}
+
+.res-set {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.res-tile {
+  width: 44px;
+  height: 50px;
+  border-radius: 11px;
   background: var(--navy);
   color: var(--milk);
   display: grid;
   place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 24px;
+  font-size: 20px;
   box-shadow: 0 3px 0 var(--navy-2);
 }
 
-.word-comparison-section {
-  margin-bottom: 40px;
+.res-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--fg-muted);
 }
 
-.section-title {
+.res-meta svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+.dot-sep {
+  color: var(--fg-faint);
+}
+
+.res-head-right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Versus */
+.res-versus {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 20px;
+  align-items: stretch;
+  margin-bottom: 32px;
+}
+
+.res-pb {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all var(--dur-base);
+}
+
+.res-pb.is-winner {
+  background: var(--navy);
+  color: var(--milk);
+  border-color: var(--navy);
+}
+
+.res-pb.is-winner .res-pb-name {
+  color: var(--milk);
+}
+
+.res-pb.is-winner .res-pb-score {
+  color: var(--milk);
+}
+
+.res-pb.is-winner .res-pb-meta .mono {
+  color: var(--milk);
+}
+
+.res-pb.is-winner .res-pb-meta .lbl {
+  color: color-mix(in oklab, var(--milk) 60%, transparent);
+}
+
+.res-pb.is-winner .sep {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.res-pb-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.res-pb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--grad-accent);
+  color: var(--milk);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--milk);
+  box-shadow: 0 0 0 1px var(--border-default);
+}
+
+.res-pb.is-winner .res-pb-avatar {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.res-pb-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--fg-primary);
+  flex: 1;
+}
+
+.res-pb-crown {
+  font-size: 22px;
+}
+
+.res-pb-score {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--accent);
+  margin: 4px 0;
+}
+
+.res-pb.is-winner .res-pb-score {
+  color: var(--milk);
+}
+
+.res-pb-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.res-pb.is-winner .res-pb-meta {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.res-pb-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.res-pb-meta .mono {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fg-primary);
+}
+
+.res-pb-meta .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.res-pb-meta .sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-hairline);
+}
+
+.res-vs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 80px;
+}
+
+.res-vs-bar {
+  width: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-card);
+  min-height: 120px;
+}
+
+.res-vs-bar-fill.you {
+  background: var(--accent);
+}
+
+.res-vs-bar-fill.them {
+  background: var(--navy);
+}
+
+.res-vs-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.res-vs-delta {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  padding: 4px 10px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+/* Solo states */
+.res-solo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.res-solo-side--wait {
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.res-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.res-wait-anim {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.res-wait-anim span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: wait-bounce 1.4s ease-in-out infinite;
+}
+
+.res-wait-anim span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.res-wait-anim span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes wait-bounce {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px);
+  }
+}
+
+.res-wait-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--fg-primary);
+  margin: 0;
+}
+
+/* Redirect */
+.res-redirect {
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.res-redirect-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 28px;
+  border: 1px solid var(--border-default);
+  border-radius: 18px;
+  background: var(--bg-surface);
+  max-width: 420px;
+  text-align: center;
+}
+
+.res-redirect-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0 0 4px;
+  color: var(--fg-primary);
+}
+
+/* Words */
+.res-words {
+  margin-bottom: 32px;
+}
+
+.res-words-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.res-words-head .page-eyebrow {
+  margin-bottom: 6px;
+}
+
+.res-words-title {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 700;
+  letter-spacing: -0.5px;
   color: var(--fg-primary);
-  margin: 0 0 20px;
-  text-align: center;
+  margin: 0;
 }
 
-.word-grid {
+.res-mob-tabs {
+  display: none;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.res-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  margin-bottom: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
-.word-chip-result {
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 13px;
+.res-cols--single {
+  grid-template-columns: 1fr;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.res-col {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.res-col--you {
+  border-top: 3px solid var(--accent);
+}
+
+.res-col--them {
+  border-top: 3px solid var(--navy);
+}
+
+.res-col-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.res-col-name {
+  font-family: var(--font-display);
   font-weight: 600;
-  text-align: center;
-  border: 2px solid transparent;
-  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--fg-primary);
 }
 
-.word-chip-result.found-me {
+.res-col-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.res-col--them .res-col-num {
+  color: var(--navy);
+}
+
+.res-chip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.res-chip-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.res-chip-group-head .mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--navy);
+  background: var(--bg-card);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.res-chip-group-head .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.res-chip-group-head .cnt {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+
+.res-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.r-chip {
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.r-chip--you {
   background: var(--accent-soft);
   color: var(--accent);
-  border-color: var(--accent);
+  border: 1px solid var(--border-accent);
 }
 
-.word-chip-result.found-opponent {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border-color: var(--danger);
+.r-chip--them {
+  background: var(--bg-card);
+  color: var(--navy);
+  border: 1px solid var(--border-subtle);
 }
 
-.word-chip-result.found-both {
-  background: var(--success-soft);
-  color: var(--success);
-  border-color: var(--success);
+.res-empty {
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
 }
 
-.word-chip-result.missed {
+/* All words section */
+.res-all {
+  margin-top: 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.res-all .result-grid {
+  margin: 14px 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.word-chip {
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--border-accent);
+}
+
+.word-chip.both {
+  background: var(--navy);
+  color: var(--milk);
+  border-color: var(--navy);
+}
+
+.word-chip.them-only {
+  background: var(--bg-card);
+  color: var(--navy);
+  border-color: var(--border-subtle);
+}
+
+.word-chip.revealed {
   background: var(--bg-surface);
   color: var(--fg-muted);
   border-color: var(--border-hairline);
 }
 
-.legend {
+.res-legend {
   display: flex;
-  justify-content: center;
-  gap: 24px;
   flex-wrap: wrap;
-  padding: 16px;
-  background: var(--bg-surface);
-  border-radius: 12px;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-hairline);
 }
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--fg-secondary);
-}
-
-.legend-color {
-  width: 20px;
-  height: 20px;
+.lg-sw {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
   border-radius: 4px;
-  border: 2px solid transparent;
+  vertical-align: -2px;
+  margin-right: 6px;
 }
 
-.legend-color.found-me {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+.lg-both {
+  background: var(--navy);
 }
 
-.legend-color.found-opponent {
-  background: var(--danger-soft);
-  border-color: var(--danger);
+.lg-you {
+  background: var(--accent);
 }
 
-.legend-color.found-both {
-  background: var(--success-soft);
-  border-color: var(--success);
+.lg-them {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
 }
 
-.results-actions {
+.lg-miss {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+}
+
+/* Footer */
+.res-foot {
   display: flex;
-  justify-content: center;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-hairline);
   flex-wrap: wrap;
+  gap: 12px;
 }
 
-@media (max-width: 600px) {
-  .results-title {
-    font-size: 32px;
-  }
-
-  .scores-comparison {
+/* MOBILE */
+@media (max-width: 720px) {
+  .res-versus {
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 24px;
+    gap: 12px;
   }
 
-  .vs-divider {
+  .res-vs {
+    flex-direction: row;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .res-vs-bar {
+    width: 100%;
+    flex-direction: row;
+    min-height: 0;
+    height: 8px;
+    flex: 1;
+  }
+
+  .res-pb-score {
+    font-size: 36px;
+  }
+
+  .res-pb {
+    padding: 18px;
+  }
+
+  .res-tile {
+    width: 38px;
+    height: 44px;
+    font-size: 17px;
+  }
+
+  .res-solo {
+    grid-template-columns: 1fr;
+  }
+
+  .res-mob-tabs {
+    display: flex;
+  }
+
+  .res-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .res-cols .res-col {
     display: none;
   }
 
-  .score-value {
-    font-size: 40px;
+  .res-cols[data-mob-tab="you"] .res-col--you {
+    display: block;
   }
 
-  .word-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  .res-cols[data-mob-tab="them"] .res-col--them {
+    display: block;
+  }
+
+  .res-cols[data-mob-tab="all"] .res-col {
+    display: none;
+  }
+
+  .res-all {
+    display: none;
+  }
+
+  .res-cols[data-mob-tab="all"] ~ .res-all {
+    display: block;
+  }
+
+  .res-all.mob-only {
+    display: block !important;
+  }
+
+  .res-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .res-foot .row {
+    justify-content: space-between;
   }
 }
 </style>

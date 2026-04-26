@@ -365,6 +365,66 @@
       "linkAlreadyUsed": "Ссылка уже использована"
     }
   },
+  "results": {
+    "verdict": {
+      "won": "Вы выиграли",
+      "lost": "Вы проиграли",
+      "tie": "Ничья",
+      "pending": "Ожидание"
+    },
+    "challengeBy": "Челлендж от {name}",
+    "finished": "Завершено",
+    "expiresIn": "Истекает через {time}",
+    "created": "Создано {time}",
+    "possibleWords": "{count} возможных слов",
+    "backToMultiplayer": "Мультиплеер",
+    "backToChallenges": "Назад к челленджам",
+    "share": "Поделиться",
+    "playIt": "Играть",
+    "playItFirst": {
+      "title": "Сначала сыграйте",
+      "description": "Результат {name} скрыт, пока вы не отправите свой раунд. Те же буквы, тот же таймер.",
+      "button": "Начать раунд"
+    },
+    "waiting": {
+      "title": "Ждём {name}",
+      "description": "Ваш результат зафиксирован. Мы покажем полные результаты, когда {name} завершит раунд.",
+      "nudge": "Подтолкнуть ссылкой"
+    },
+    "words": {
+      "eyebrow": "Слова",
+      "bothPlayed": "Что нашли вы оба",
+      "youPlayed": "Ваши слова",
+      "theyPlayed": "Слова {name}",
+      "showMissed": "Показать пропущенные",
+      "hideMissed": "Скрыть пропущенные",
+      "allWords": "Все возможные слова",
+      "noWords": "Слова не отправлены."
+    },
+    "legend": {
+      "both": "оба",
+      "you": "только вы",
+      "them": "только {name}",
+      "missed": "пропущено"
+    },
+    "playerBlock": {
+      "words": "слов",
+      "found": "найдено"
+    },
+    "tabs": {
+      "you": "Вы",
+      "them": "{name}",
+      "all": "Все"
+    },
+    "groupLabel": {
+      "letter": "буква",
+      "letters": "букв"
+    },
+    "rematch": "Реванш",
+    "shareResult": "Поделиться результатом",
+    "resultCopied": "ссылка на результат скопирована",
+    "vs": "против"
+  },
   "common": {
     "close": "Закрыть",
     "loading": "Загрузка...",

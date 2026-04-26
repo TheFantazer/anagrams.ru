@@ -365,6 +365,66 @@
       "linkAlreadyUsed": "Link already used"
     }
   },
+  "results": {
+    "verdict": {
+      "won": "You won",
+      "lost": "You lost",
+      "tie": "Tie",
+      "pending": "Pending"
+    },
+    "challengeBy": "Challenge by {name}",
+    "finished": "Finished",
+    "expiresIn": "Expires in {time}",
+    "created": "Created {time}",
+    "possibleWords": "{count} possible words",
+    "backToMultiplayer": "Multiplayer",
+    "backToChallenges": "Back to challenges",
+    "share": "Share",
+    "playIt": "Play it",
+    "playItFirst": {
+      "title": "Play it first",
+      "description": "{name}'s result is hidden until you submit your own round. Same letters, same timer.",
+      "button": "Play round"
+    },
+    "waiting": {
+      "title": "Waiting for {name}",
+      "description": "Your score is locked in. We'll show full results when {name} finishes the round.",
+      "nudge": "Nudge with link"
+    },
+    "words": {
+      "eyebrow": "Words",
+      "bothPlayed": "What each of you found",
+      "youPlayed": "Words you found",
+      "theyPlayed": "Words {name} found",
+      "showMissed": "Show missed words",
+      "hideMissed": "Hide missed",
+      "allWords": "All possible words",
+      "noWords": "No words submitted."
+    },
+    "legend": {
+      "both": "both",
+      "you": "you only",
+      "them": "{name} only",
+      "missed": "missed"
+    },
+    "playerBlock": {
+      "words": "words",
+      "found": "found"
+    },
+    "tabs": {
+      "you": "You",
+      "them": "{name}",
+      "all": "All"
+    },
+    "groupLabel": {
+      "letter": "letter",
+      "letters": "letters"
+    },
+    "rematch": "Rematch",
+    "shareResult": "Share result",
+    "resultCopied": "result link copied",
+    "vs": "vs"
+  },
   "common": {
     "close": "Close",
     "loading": "Loading...",
