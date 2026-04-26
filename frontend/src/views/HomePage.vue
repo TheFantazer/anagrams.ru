@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -9,6 +9,19 @@ const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const gameStore = useGameStore()
+
+// MOCK DATA - Replace with real API calls later
+// TODO: Remove mock data when real API is connected
+const mockYourTurnChallenges = ref([
+  { id: 1, from: 'Alex', sessionId: 'abc123' },
+  { id: 2, from: 'Maria', sessionId: 'def456' },
+  { id: 3, from: 'John', sessionId: 'ghi789' },
+])
+
+const mockIncomingRequests = ref([
+  { id: 1, from: 'Sarah', fromId: 1 },
+  { id: 2, from: 'Mike', fromId: 2 },
+])
 
 // Ambient floating letters
 const ambientLetters = [
@@ -20,6 +33,15 @@ const ambientLetters = [
   { ch: 'M', left: '70%', top: '25%', rot: 12, delay: 1.25, size: 'md' },
   { ch: 'I', left: '82%', top: '36%', rot: -16, delay: 1.5, size: 'lg' },
 ]
+
+const yourTurnOpponents = computed(() => {
+  const opponents = mockYourTurnChallenges.value.slice(0, 2).map(c => c.from)
+  if (mockYourTurnChallenges.value.length > 2) {
+    const moreCount = mockYourTurnChallenges.value.length - 2
+    opponents.push(t('home.alerts.more', { count: moreCount }))
+  }
+  return opponents.join(', ')
+})
 
 function startFastGame() {
   gameStore.startGame(userStore.soloTime, userStore.soloLetters, userStore.soloLang)
@@ -67,6 +89,64 @@ onUnmounted(() => {
 <template>
   <div class="page">
     <div class="shell">
+      <!-- Alert Ribbons -->
+      <div v-if="mockYourTurnChallenges.length > 0 || mockIncomingRequests.length > 0" class="home-alerts">
+        <!-- Your Turn Alert -->
+        <button
+          v-if="mockYourTurnChallenges.length > 0"
+          class="home-alert home-alert--turn"
+          @click="router.push('/multiplayer')"
+        >
+          <span class="home-alert-mark">
+            <span class="home-alert-pulse" />
+          </span>
+          <span class="home-alert-body">
+            <strong>{{ t('home.alerts.yourTurn', {
+              count: mockYourTurnChallenges.length,
+              rounds: mockYourTurnChallenges.length === 1 ? t('home.alerts.round') : t('home.alerts.rounds')
+            }) }}</strong>
+            <span class="home-alert-meta">
+              {{ t('home.alerts.vs', { opponents: yourTurnOpponents }) }}
+            </span>
+          </span>
+          <span class="home-alert-cta">
+            <span>{{ t('home.alerts.play') }}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </span>
+        </button>
+
+        <!-- Friend Requests Alert -->
+        <button
+          v-if="mockIncomingRequests.length > 0"
+          class="home-alert home-alert--req"
+          @click="router.push('/friends')"
+        >
+          <span class="home-alert-mark home-alert-mark--soft">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </span>
+          <span class="home-alert-body">
+            <strong>{{ t('home.alerts.friendRequests', {
+              count: mockIncomingRequests.length,
+              requests: mockIncomingRequests.length === 1 ? t('home.alerts.request') : t('home.alerts.requests')
+            }) }}</strong>
+            <span class="home-alert-meta">{{ t('home.alerts.reviewFriends') }}</span>
+          </span>
+          <span class="home-alert-cta">
+            <span>{{ t('home.alerts.open') }}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </span>
+        </button>
+      </div>
+
       <!-- Hero Section -->
       <section class="home-hero">
         <div class="home-hero-letters" aria-hidden="true">
@@ -232,6 +312,100 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Alert Ribbons */
+.home-alerts {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  padding: var(--sp-5) 0 0;
+}
+.home-alert {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--sp-3);
+  align-items: center;
+  appearance: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  font-family: var(--font-body);
+  transition: all var(--dur-base) var(--ease-std);
+  animation: an-fade-up 0.4s var(--ease-out);
+}
+.home-alert:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-default);
+}
+.home-alert--turn {
+  background: linear-gradient(90deg, rgba(122,74,43,0.08) 0%, var(--bg-surface) 60%);
+  border-color: var(--accent-soft-hover);
+}
+.home-alert-mark {
+  position: relative;
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--milk);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.home-alert-mark--soft {
+  background: var(--bg-card);
+  color: var(--accent);
+}
+.home-alert-pulse {
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background: var(--milk);
+  position: relative;
+}
+.home-alert-pulse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--milk);
+  animation: alert-pulse 1.6s var(--ease-out) infinite;
+}
+@keyframes alert-pulse {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.4); }
+}
+.home-alert-body {
+  display: flex; flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.home-alert-body strong {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-primary);
+}
+.home-alert-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.home-alert-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.home-alert--req .home-alert-cta { color: var(--fg-secondary); }
+
+@media (max-width: 560px) {
+  .home-alert { padding: 12px 14px; }
+  .home-alert-cta span { display: none; }
+}
+
 /* Home Hero */
 .home-hero {
   position: relative;

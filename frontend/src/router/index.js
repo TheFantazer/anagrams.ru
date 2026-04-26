@@ -36,7 +36,7 @@ const router = createRouter({
         {
             path: '/multiplayer',
             name: 'multiplayer',
-            component: () => import('../views/MultiplayerPage.vue')
+            component: () => import('../views/PlayHubPage.vue')
         },
         {
             path: '/play/:sessionId',

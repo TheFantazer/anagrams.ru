@@ -40,6 +40,19 @@
       "pointsScale": "points scale",
       "dictionaries": "two dictionaries",
       "apps": "apps to install"
+    },
+    "alerts": {
+      "yourTurn": "Your turn in {count} {rounds}.",
+      "round": "round",
+      "rounds": "rounds",
+      "vs": "vs {opponents}",
+      "more": "+{count} more",
+      "friendRequests": "{count} friend {requests}.",
+      "request": "request",
+      "requests": "requests",
+      "reviewFriends": "Review on the Friends page.",
+      "play": "Play",
+      "open": "Open"
     }
   },
   "game": {
@@ -79,7 +92,9 @@
       "tie": "It's a tie!",
       "myWords": "My words",
       "opponentWords": "Opponent's",
-      "allWords": "All"
+      "allWords": "All",
+      "copyResult": "Copy result",
+      "resultCopied": "Result copied!"
     }
   },
   "settings": {
@@ -173,6 +188,65 @@
     },
     "you": "You",
     "loading": "Loading..."
+  },
+  "playHub": {
+    "title": "Play",
+    "yourMove": "Your move",
+    "pickARound": "Pick a round.",
+    "matchHistory": "Match history",
+    "soloHistory": "Solo history",
+    "challengeFriend": {
+      "title": "Challenge a friend.",
+      "subtitle": "Same letters, same timer. Compare scores when you both finish — the longer word wins.",
+      "newChallenge": "New challenge",
+      "friends": "Friends",
+      "friendsOnline": "{count} friends online",
+      "waitingOnYou": "{count} waiting on you"
+    },
+    "dailyPuzzle": {
+      "title": "Daily puzzle.",
+      "subtitle": "Same letters for everyone. New set at midnight.",
+      "subtitleDone": "You played today.",
+      "play": "Play today's set",
+      "done": "Done · See results",
+      "resetsIn": "Resets in {time}"
+    },
+    "warmUp": {
+      "title": "Warm up.",
+      "subtitle": "{letters} letters · {time}s · {language}. Or tune it.",
+      "quickPlay": "Quick play",
+      "custom": "Custom"
+    },
+    "activeChallenges": {
+      "title": "Active challenges",
+      "inFlight": "{count} in flight",
+      "yourTurn": "your turn",
+      "waitingOnThem": "waiting on them",
+      "noActive": "No active rounds.",
+      "sendChallenge": "Send a challenge to start one.",
+      "created": "created",
+      "expires": "expires {time}",
+      "waitingOn": "Waiting on {name}",
+      "yourScore": "{score} pts"
+    },
+    "recentMatches": {
+      "title": "Recent matches",
+      "lastFinished": "Last {count} finished",
+      "seeAll": "See all",
+      "vs": "vs"
+    },
+    "newChallengeModal": {
+      "title": "New challenge",
+      "subtitle": "Pick a friend — they get a notification and the same letters.",
+      "searchPlaceholder": "Search friends…",
+      "noFriends": "No friends match. Add some on the Friends page.",
+      "cancel": "Cancel",
+      "send": "Send challenge",
+      "sent": "Sent to {name}",
+      "sentMessage": "They'll get a notification. You can play your round now or wait — order doesn't matter.",
+      "close": "Close",
+      "playYourRound": "Play your round"
+    }
   },
   "multiplayer": {
     "title": "Async Multiplayer",

@@ -14,8 +14,9 @@ const gameStore = useGameStore()
 const drawer = ref(false)
 
 const links = computed(() => [
-  { id: '/', label: t('nav.play'), icon: 'play' },
-  { id: '/multiplayer', label: t('nav.multiplayer'), icon: 'users' },
+  { id: '/', label: 'Home', icon: 'home' },
+  { id: '/multiplayer', label: 'Play', icon: 'play' },
+  { id: '/friends', label: 'Friends', icon: 'users' },
   { id: '/leaderboard', label: t('nav.leaderboard'), icon: 'trophy' },
 ])
 
@@ -61,7 +62,11 @@ const userInitial = computed(() => {
           @click="navigateTo(link.id)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path v-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
+            <template v-if="link.icon === 'home'">
+              <path d="M3 12l9-9 9 9"/>
+              <path d="M5 10v10h14V10"/>
+            </template>
+            <path v-else-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
             <template v-else-if="link.icon === 'users'">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -83,21 +88,6 @@ const userInitial = computed(() => {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
-          </svg>
-        </button>
-
-        <!-- Friends Button (only for authenticated users) -->
-        <button
-          v-if="userStore.isAuthenticated"
-          class="nav-icon"
-          title="Friends"
-          @click="navigateTo('/friends')"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </button>
 
@@ -149,7 +139,11 @@ const userInitial = computed(() => {
         @click="navigateTo(link.id)"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path v-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
+          <template v-if="link.icon === 'home'">
+            <path d="M3 12l9-9 9 9"/>
+            <path d="M5 10v10h14V10"/>
+          </template>
+          <path v-else-if="link.icon === 'play'" d="M6 4l14 8-14 8z"/>
           <template v-else-if="link.icon === 'users'">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>

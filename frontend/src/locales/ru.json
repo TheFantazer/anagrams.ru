@@ -40,6 +40,19 @@
       "pointsScale": "шкала очков",
       "dictionaries": "на двух языках",
       "apps": "Ничего не нужно устанавливать"
+    },
+    "alerts": {
+      "yourTurn": "Ваш ход в {count} {rounds}.",
+      "round": "раунде",
+      "rounds": "раундах",
+      "vs": "против {opponents}",
+      "more": "+{count} ещё",
+      "friendRequests": "{count} {requests} в друзья.",
+      "request": "запрос",
+      "requests": "запроса",
+      "reviewFriends": "Просмотри на странице Друзья.",
+      "play": "Играть",
+      "open": "Открыть"
     }
   },
   "game": {
@@ -79,7 +92,9 @@
       "tie": "Ничья!",
       "myWords": "Мои слова",
       "opponentWords": "Соперника",
-      "allWords": "Все"
+      "allWords": "Все",
+      "copyResult": "Копировать результат",
+      "resultCopied": "Результат скопирован!"
     }
   },
   "settings": {
@@ -173,6 +188,65 @@
     },
     "you": "Ты",
     "loading": "Загрузка..."
+  },
+  "playHub": {
+    "title": "Играть",
+    "yourMove": "Ваш ход",
+    "pickARound": "Выберите раунд.",
+    "matchHistory": "История матчей",
+    "soloHistory": "История соло",
+    "challengeFriend": {
+      "title": "Брось вызов другу.",
+      "subtitle": "Одинаковые буквы, одинаковый таймер. Сравните счёт когда оба закончат — побеждает самое длинное слово.",
+      "newChallenge": "Новый вызов",
+      "friends": "Друзья",
+      "friendsOnline": "{count} друзей онлайн",
+      "waitingOnYou": "{count} ждут вас"
+    },
+    "dailyPuzzle": {
+      "title": "Ежедневная головоломка.",
+      "subtitle": "Одинаковые буквы для всех. Новый набор в полночь.",
+      "subtitleDone": "Вы играли сегодня.",
+      "play": "Играть сегодняшний набор",
+      "done": "Готово · Смотреть результаты",
+      "resetsIn": "Сброс через {time}"
+    },
+    "warmUp": {
+      "title": "Разминка.",
+      "subtitle": "{letters} букв · {time}с · {language}. Или настройте.",
+      "quickPlay": "Быстрая игра",
+      "custom": "Настроить"
+    },
+    "activeChallenges": {
+      "title": "Активные челленджи",
+      "inFlight": "{count} в процессе",
+      "yourTurn": "ваш ход",
+      "waitingOnThem": "ждём их",
+      "noActive": "Нет активных раундов.",
+      "sendChallenge": "Отправьте вызов чтобы начать.",
+      "created": "создан",
+      "expires": "истекает {time}",
+      "waitingOn": "Ждём {name}",
+      "yourScore": "{score} очков"
+    },
+    "recentMatches": {
+      "title": "Недавние матчи",
+      "lastFinished": "Последние {count} завершенных",
+      "seeAll": "Смотреть все",
+      "vs": "против"
+    },
+    "newChallengeModal": {
+      "title": "Новый вызов",
+      "subtitle": "Выберите друга — они получат уведомление и те же буквы.",
+      "searchPlaceholder": "Поиск друзей…",
+      "noFriends": "Нет совпадений. Добавьте друзей на странице Друзья.",
+      "cancel": "Отмена",
+      "send": "Отправить вызов",
+      "sent": "Отправлено {name}",
+      "sentMessage": "Они получат уведомление. Вы можете сыграть свой раунд сейчас или подождать — порядок не важен.",
+      "close": "Закрыть",
+      "playYourRound": "Сыграть свой раунд"
+    }
   },
   "multiplayer": {
     "title": "Асинхронный мультиплеер",

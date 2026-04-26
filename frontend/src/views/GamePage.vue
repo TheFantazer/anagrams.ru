@@ -248,6 +248,17 @@ async function handleChallengeBack() {
   })
 }
 
+function copyResult() {
+  const letters = gameStore.gameLetters?.join('').toLowerCase() || ''
+  const text = `anagrams.ru — I scored ${gameStore.score.toLocaleString()} with ${gameStore.foundWords.length}/${gameStore.validWords?.length || 0} words. Can you beat it? → ${window.location.origin}/r/${letters}`
+
+  navigator.clipboard?.writeText(text).then(() => {
+    userStore.showToast(t('game.gameOver.resultCopied'), 'success')
+  }).catch(() => {
+    userStore.showToast('Failed to copy', 'error')
+  })
+}
+
 const sortedWords = computed(() => {
   if (!gameStore.validWords) return []
   return [...gameStore.validWords].sort((a, b) => {
@@ -546,6 +557,13 @@ const sortedDisplayWords = computed(() => {
             <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
           </svg>
           {{ $t('game.gameOver.challengeFriend') }}
+        </button>
+        <button class="btn btn--ghost btn--lg" @click="copyResult">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          {{ $t('game.gameOver.copyResult') }}
         </button>
       </div>
 
