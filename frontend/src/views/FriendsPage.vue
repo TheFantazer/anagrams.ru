@@ -287,8 +287,6 @@ async function removeFriend(friendId) {
             <div class="request-info">
               <div class="request-label">{{ t('friends.requestTo') }}</div>
               <div class="request-user">{{ request.toUser?.username || request.to_user_id }}</div>
-              {{ console.log(request.toUser)
-              }}
               <div class="request-status" :class="request.status">
                 {{ t(`friends.status.${request.status}`) }}
               </div>

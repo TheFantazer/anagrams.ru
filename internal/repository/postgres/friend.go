@@ -117,16 +117,15 @@ func (r *friendRepository) GetSendingRequests(ctx context.Context, userID uuid.U
 }
 
 func (r *friendRepository) AcceptRequest(ctx context.Context, requestID uuid.UUID) error {
-	// Начинаем транзакцию
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	// 1. Получаем friend request
+	// 1. Получаем request
 	query := `
-		SELECT id, from_user_id, to_user_id, status, created_at, updated_at
+		SELECT id, from_user_id, to_user_id, status
 		FROM friend_requests
 		WHERE id = $1
 	`
@@ -140,24 +139,12 @@ func (r *friendRepository) AcceptRequest(ctx context.Context, requestID uuid.UUI
 		return fmt.Errorf("failed to get friend request: %w", err)
 	}
 
-	// 2. Проверяем что статус pending
+	// 2. Проверяем статус
 	if !req.IsStatusPending() {
 		return domain.ErrFriendRequestNotPending
 	}
 
-	// 3. Обновляем статус на accepted
-	updateQuery := `
-		UPDATE friend_requests
-		SET status = $1, updated_at = $2
-		WHERE id = $3
-	`
-
-	_, err = tx.ExecContext(ctx, updateQuery, domain.FriendRequestStatusAccepted, time.Now().UTC(), requestID)
-	if err != nil {
-		return fmt.Errorf("failed to update friend request status: %w", err)
-	}
-
-	// 4. Создаем две дружеские связи (bidirectional)
+	// 3. Создаём friendships (bidirectional)
 	friendship1, err := domain.NewFriendship(req.ToUserID, req.FromUserID)
 	if err != nil {
 		return err
@@ -193,7 +180,16 @@ func (r *friendRepository) AcceptRequest(ctx context.Context, requestID uuid.UUI
 		return fmt.Errorf("failed to create friendship 2: %w", err)
 	}
 
-	// Коммитим транзакцию
+	deleteQuery := `
+		DELETE FROM friend_requests
+		WHERE id = $1
+	`
+
+	_, err = tx.ExecContext(ctx, deleteQuery, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to delete friend request: %w", err)
+	}
+
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
