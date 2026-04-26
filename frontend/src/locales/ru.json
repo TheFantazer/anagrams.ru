@@ -1,6 +1,8 @@
 {
   "nav": {
     "play": "Играть",
+    "quickPlay": "Быстрая игра",
+    "friends": "Друзья",
     "multiplayer": "Мультиплеер",
     "leaderboard": "Таблица лидеров",
     "signIn": "Войти",

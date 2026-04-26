@@ -13,12 +13,34 @@ const gameStore = useGameStore()
 
 const drawer = ref(false)
 
+// TODO: Replace with real badge counts from backend/store
+const yourTurnCount = ref(0) // Number of challenges waiting for your turn
+const incomingReqCount = ref(0) // Number of incoming friend requests
+
 const links = computed(() => [
   { id: '/', label: 'Home', icon: 'home' },
-  { id: '/multiplayer', label: 'Play', icon: 'play' },
-  { id: '/friends', label: 'Friends', icon: 'users' },
+  { id: '/multiplayer', label: t('nav.play'), icon: 'play', badge: yourTurnCount.value },
+  { id: '/friends', label: t('nav.friends'), icon: 'users', badge: incomingReqCount.value },
   { id: '/leaderboard', label: t('nav.leaderboard'), icon: 'trophy' },
 ])
+
+// Route matching for active state
+const routeMatch = {
+  '/multiplayer': ['/multiplayer', '/match-history', '/results'],
+  '/friends': ['/friends'],
+  '/leaderboard': ['/leaderboard'],
+  '/': ['/']
+}
+
+function isActive(linkId) {
+  // Special case for home - exact match only
+  if (linkId === '/') {
+    return route.path === '/'
+  }
+
+  const paths = routeMatch[linkId] || [linkId]
+  return paths.some(p => route.path.startsWith(p))
+}
 
 function goHome() {
   gameStore.endGame()
@@ -31,8 +53,15 @@ function navigateTo(path) {
   drawer.value = false
 }
 
-function toggleLang() {
-  userStore.soloLang = userStore.soloLang === 'ru' ? 'en' : 'ru'
+function quickPlay() {
+  router.push('/game')
+  drawer.value = false
+}
+
+function signOut() {
+  userStore.signOut()
+  router.push('/')
+  drawer.value = false
 }
 
 const userInitial = computed(() => {
@@ -45,12 +74,17 @@ const userInitial = computed(() => {
   <nav class="nav">
     <div class="shell nav-inner">
       <!-- Brand -->
-      <div class="nav-brand" @click="goHome">
-        <div class="nav-mark">
-          <img src="/icon.png" alt="logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 10px;">
-        </div>
-        <span class="nav-wordmark">anagrams<span class="dot">.</span></span>
+      <div class="nav-brand" @click="goHome" title="anagrams.">
+        <div class="nav-mark">AN</div>
       </div>
+
+      <!-- Quick Play Button -->
+      <button class="nav-quickplay" @click="quickPlay" :title="t('nav.quickPlay')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+        </svg>
+        <span>{{ t('nav.quickPlay') }}</span>
+      </button>
 
       <!-- Desktop Links -->
       <div class="nav-links">
@@ -58,7 +92,7 @@ const userInitial = computed(() => {
           v-for="link in links"
           :key="link.id"
           class="nav-link"
-          :data-active="route.path === link.id"
+          :data-active="isActive(link.id)"
           @click="navigateTo(link.id)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -77,12 +111,12 @@ const userInitial = computed(() => {
             </template>
           </svg>
           {{ link.label }}
+          <span v-if="link.badge && link.badge > 0" class="nav-badge">{{ link.badge }}</span>
         </button>
       </div>
 
       <!-- Right Side -->
       <div class="nav-right">
-
         <!-- Help Button -->
         <button class="nav-icon" :title="$t('nav.help')" @click="userStore.setShowHelp(true)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -112,11 +146,6 @@ const userInitial = computed(() => {
           {{ userInitial }}
         </button>
 
-        <!-- Language change-->
-        <button class="nav-icon" title="Language" @click="toggleLang">
-          {{ userStore.soloLang === "ru" ? "EN" : "RU" }}
-        </button>
-
         <!-- Mobile Menu Button -->
         <button class="nav-burger" @click="drawer = !drawer">
           <svg v-if="!drawer" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -131,11 +160,22 @@ const userInitial = computed(() => {
 
     <!-- Mobile Drawer -->
     <div v-if="drawer" class="nav-drawer">
+      <!-- Quick Play -->
+      <button class="nav-link nav-link--quick" @click="quickPlay">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+        </svg>
+        {{ t('nav.quickPlay') }}
+      </button>
+
+      <div class="hr" />
+
+      <!-- Main Links -->
       <button
         v-for="link in links"
         :key="link.id"
         class="nav-link"
-        :data-active="route.path === link.id"
+        :data-active="isActive(link.id)"
         @click="navigateTo(link.id)"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -154,7 +194,36 @@ const userInitial = computed(() => {
           </template>
         </svg>
         {{ link.label }}
+        <span v-if="link.badge && link.badge > 0" class="nav-badge">{{ link.badge }}</span>
       </button>
+
+      <div class="hr" />
+
+      <!-- Auth Actions -->
+      <template v-if="userStore.isAuthenticated">
+        <button class="nav-link" @click="navigateTo('/settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          {{ $t('nav.settings') }}
+        </button>
+        <button class="nav-link" @click="signOut">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          {{ $t('nav.signOut') }}
+        </button>
+      </template>
+      <template v-else>
+        <button class="nav-link" @click="navigateTo('/auth')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          {{ $t('nav.signIn') }}
+        </button>
+      </template>
     </div>
   </nav>
 </template>
@@ -174,14 +243,11 @@ const userInitial = computed(() => {
 .nav-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--sp-4);
   height: 68px;
 }
 
 .nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
@@ -206,22 +272,42 @@ const userInitial = computed(() => {
   transform: rotate(-4deg);
 }
 
-.nav-wordmark {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--fg-primary);
-  letter-spacing: -0.2px;
+/* Quick Play Button */
+.nav-quickplay {
+  appearance: none;
+  border: 0;
+  background: var(--accent);
+  color: var(--milk);
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--dur-base) var(--ease-out);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.nav-wordmark .dot {
-  color: var(--accent);
+.nav-quickplay:hover {
+  background: color-mix(in oklab, var(--accent) 90%, black);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.nav-quickplay span {
+  white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1;
+  justify-content: center;
 }
 
 .nav-link {
@@ -239,6 +325,7 @@ const userInitial = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
 .nav-link:hover {
@@ -249,6 +336,27 @@ const userInitial = computed(() => {
 .nav-link[data-active="true"] {
   background: var(--navy);
   color: var(--milk);
+}
+
+/* Badge */
+.nav-badge {
+  background: var(--danger);
+  color: var(--milk);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  margin-left: -2px;
+}
+
+.nav-link[data-active="true"] .nav-badge {
+  background: var(--milk);
+  color: var(--danger);
 }
 
 .nav-right {
@@ -294,7 +402,7 @@ const userInitial = computed(() => {
 }
 
 .nav-pill:hover {
-  background: var(--navy-2);
+  background: color-mix(in oklab, var(--navy) 90%, black);
   transform: translateY(-1px);
 }
 
@@ -312,14 +420,42 @@ const userInitial = computed(() => {
   cursor: pointer;
   border: 2px solid var(--milk);
   box-shadow: 0 0 0 1px var(--border-default);
+  transition: transform var(--dur-base);
+}
+
+.nav-avatar:hover {
+  transform: scale(1.05);
 }
 
 .nav-burger {
   display: none;
 }
 
+/* Horizontal divider */
+.hr {
+  height: 1px;
+  background: var(--border-hairline);
+  margin: 8px 0;
+}
+
+@media (max-width: 900px) {
+  .nav-quickplay span {
+    display: none;
+  }
+
+  .nav-quickplay {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 760px) {
   .nav-links {
+    display: none;
+  }
+
+  .nav-quickplay {
     display: none;
   }
 
@@ -333,6 +469,11 @@ const userInitial = computed(() => {
     border: 1px solid var(--border-hairline);
     color: var(--navy);
     cursor: pointer;
+    transition: all var(--dur-base);
+  }
+
+  .nav-burger:hover {
+    background: var(--bg-hover);
   }
 
   .nav-drawer {
@@ -346,6 +487,7 @@ const userInitial = computed(() => {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   .nav-drawer .nav-link {
@@ -353,6 +495,16 @@ const userInitial = computed(() => {
     font-size: 15px;
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .nav-drawer .nav-link--quick {
+    background: var(--accent);
+    color: var(--milk);
+    font-weight: 600;
+  }
+
+  .nav-drawer .nav-link--quick:hover {
+    background: color-mix(in oklab, var(--accent) 90%, black);
   }
 }
 </style>

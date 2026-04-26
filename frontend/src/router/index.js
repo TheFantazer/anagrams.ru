@@ -52,6 +52,16 @@ const router = createRouter({
             path: '/friends',
             name: 'friends',
             component: () => import('../views/FriendsPage.vue')
+        },
+        {
+            path: '/match-history',
+            name: 'match-history',
+            component: () => import('../views/MatchHistoryPage.vue')
+        },
+        {
+            path: '/solo-history',
+            name: 'solo-history',
+            component: () => import('../views/SoloHistoryPage.vue')
         }
     ]
 })

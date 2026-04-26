@@ -1,6 +1,8 @@
 {
   "nav": {
     "play": "Play",
+    "quickPlay": "Quick play",
+    "friends": "Friends",
     "multiplayer": "Multiplayer",
     "leaderboard": "Leaderboard",
     "signIn": "Sign in",
