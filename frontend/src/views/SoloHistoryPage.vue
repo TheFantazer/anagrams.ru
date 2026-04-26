@@ -31,43 +31,69 @@ const stats = ref({
 
 // Fetch solo games from backend
 async function fetchGames() {
+  if (!userStore.userId) {
+    loading.value = false
+    return
+  }
+
   loading.value = true
   try {
     const params = new URLSearchParams({
+      user_id: userStore.userId,
       page: page.value.toString(),
-      limit: pageSize.toString()
+      per_page: pageSize.toString()
     })
 
-    if (typeFilter.value !== 'all') {
-      params.append('type', typeFilter.value)
-    }
-
-    const response = await fetch(`/api/v1/games/solo/history?${params}`, {
-      credentials: 'include'
-    })
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/all?${params}`)
 
     if (!response.ok) {
       throw new Error('Failed to fetch solo history')
     }
 
     const data = await response.json()
-    games.value = data.games || []
-    totalGames.value = data.total || 0
 
-    // Update stats if provided
-    if (data.stats) {
-      stats.value = {
-        totalGames: data.stats.totalGames || 0,
-        bestScore: data.stats.bestScore || 0,
-        totalWords: data.stats.totalWords || 0,
-        totalPoints: data.stats.totalPoints || 0
+    // Filter only solo sessions (with single result)
+    const soloSessions = (data.sessions || []).filter(s => {
+      return s.results && s.results.length === 1 && s.results[0].user_id === userStore.userId
+    })
+
+    // Convert to game format
+    games.value = soloSessions.map(session => {
+      const result = session.results[0]
+
+      return {
+        id: session.id,
+        letters: session.letters,
+        language: session.language,
+        isDaily: false, // TODO: Determine if it's a daily puzzle
+        score: result.score || 0,
+        wordsFound: result.word_count || 0,
+        timeLimit: session.time_limit,
+        createdAt: result.played_at || session.created_at
       }
+    })
+
+    // Apply type filter
+    let filtered = games.value
+    if (typeFilter.value !== 'all') {
+      filtered = filtered.filter(g => {
+        if (typeFilter.value === 'daily') return g.isDaily
+        if (typeFilter.value === 'practice') return !g.isDaily
+        return true
+      })
     }
+
+    games.value = filtered
+    totalGames.value = filtered.length
+
+    // Calculate stats
+    calculateMockStats()
   } catch (error) {
     console.error('Error fetching solo history:', error)
     userStore.showToast('Failed to load solo history', 'error')
 
-    // Mock data fallback for development
+    // Fallback to mock data
     games.value = generateMockGames()
     totalGames.value = games.value.length
     calculateMockStats()

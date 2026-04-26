@@ -43,51 +43,80 @@ const opponents = computed(() => {
 
 // Fetch matches from backend
 async function fetchMatches() {
+  if (!userStore.userId) {
+    loading.value = false
+    return
+  }
+
   loading.value = true
   try {
-    // TODO: Enable when backend endpoint is ready
-    // const params = new URLSearchParams({
-    //   page: page.value.toString(),
-    //   limit: pageSize.toString()
-    // })
+    const params = new URLSearchParams({
+      user_id: userStore.userId,
+      page: page.value.toString(),
+      per_page: pageSize.toString()
+    })
 
-    // if (resultFilter.value !== 'all') {
-    //   params.append('result', resultFilter.value)
-    // }
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/sessions/all?${params}`)
 
-    // if (opponentFilter.value !== 'all') {
-    //   params.append('opponent', opponentFilter.value)
-    // }
+    if (!response.ok) {
+      throw new Error('Failed to fetch match history')
+    }
 
-    // const response = await fetch(`/api/v1/matches/history?${params}`, {
-    //   credentials: 'include'
-    // })
+    const data = await response.json()
 
-    // if (!response.ok) {
-    //   throw new Error('Failed to fetch match history')
-    // }
+    // Filter only multiplayer sessions (with multiple results)
+    const multiplayerSessions = (data.sessions || []).filter(s => s.results && s.results.length > 1)
 
-    // const data = await response.json()
-    // matches.value = data.matches || []
-    // totalMatches.value = data.total || 0
+    // Convert to match format
+    matches.value = multiplayerSessions.map(session => {
+      const myResult = session.results.find(r => r.user_id === userStore.userId)
+      const opponentResult = session.results.find(r => r.user_id !== userStore.userId)
 
-    // // Update stats if provided
-    // if (data.stats) {
-    //   stats.value = {
-    //     wins: data.stats.wins || 0,
-    //     ties: data.stats.ties || 0,
-    //     losses: data.stats.losses || 0,
-    //     totalPoints: data.stats.totalPoints || 0
-    //   }
-    // }
+      if (!myResult || !opponentResult) return null
 
-    // Mock data for development
-    matches.value = generateMockMatches()
-    totalMatches.value = matches.value.length
+      const myScore = myResult.score || 0
+      const opponentScore = opponentResult.score || 0
+      const delta = myScore - opponentScore
+
+      let result = 'tie'
+      if (delta > 0) result = 'won'
+      else if (delta < 0) result = 'lost'
+
+      return {
+        id: session.id,
+        result,
+        opponentUsername: opponentResult.player_name,
+        letters: session.letters,
+        myScore,
+        opponentScore,
+        delta,
+        createdAt: session.created_at
+      }
+    }).filter(Boolean)
+
+    // Apply filters
+    let filtered = matches.value
+    if (resultFilter.value !== 'all') {
+      filtered = filtered.filter(m => m.result === resultFilter.value)
+    }
+    if (opponentFilter.value !== 'all') {
+      filtered = filtered.filter(m => m.opponentUsername === opponentFilter.value)
+    }
+
+    matches.value = filtered
+    totalMatches.value = filtered.length
+
+    // Calculate stats
     calculateMockStats()
   } catch (error) {
     console.error('Error fetching match history:', error)
     userStore.showToast('Failed to load match history', 'error')
+
+    // Fallback to mock data
+    matches.value = generateMockMatches()
+    totalMatches.value = matches.value.length
+    calculateMockStats()
   } finally {
     loading.value = false
   }

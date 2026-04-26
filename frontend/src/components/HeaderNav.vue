@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
@@ -12,10 +12,52 @@ const userStore = useUserStore()
 const gameStore = useGameStore()
 
 const drawer = ref(false)
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-// TODO: Replace with real badge counts from backend/store
+// Badge counts from backend
 const yourTurnCount = ref(0) // Number of challenges waiting for your turn
 const incomingReqCount = ref(0) // Number of incoming friend requests
+
+// Load badge counts
+async function loadBadgeCounts() {
+  if (!userStore.userId) return
+
+  try {
+    // Load incoming friend requests count
+    const friendsRes = await fetch(`${apiUrl}/api/v1/friends/requests/pending?user_id=${userStore.userId}`)
+    if (friendsRes.ok) {
+      const requests = await friendsRes.json()
+      incomingReqCount.value = requests.length
+    }
+
+    // Load sessions where it's your turn
+    const sessionsRes = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.userId}`)
+    if (sessionsRes.ok) {
+      const sessions = await sessionsRes.json()
+      // Count sessions where user hasn't played yet
+      yourTurnCount.value = sessions.filter(s => !s.played).length
+    }
+  } catch (error) {
+    console.error('Failed to load badge counts:', error)
+  }
+}
+
+// Watch for userId changes and reload counts
+watch(() => userStore.userId, (newVal) => {
+  if (newVal) {
+    loadBadgeCounts()
+  } else {
+    yourTurnCount.value = 0
+    incomingReqCount.value = 0
+  }
+}, { immediate: true })
+
+// Reload counts on mount if user is authenticated
+onMounted(() => {
+  if (userStore.userId) {
+    loadBadgeCounts()
+  }
+})
 
 const links = computed(() => [
   { id: '/', label: 'Home', icon: 'home' },
