@@ -224,7 +224,7 @@ onMounted(() => {
         <div class="ph-card ph-card--multi">
           <div class="ph-card-corner">
             <span class="ph-num">01</span>
-            <span class="ph-tag ph-tag--accent">Multiplayer</span>
+            <span class="ph-tag ph-tag--accent">{{$t('playHub.challengeFriend.tag')}}</span>
           </div>
           <h3 class="ph-card-title">{{ $t('playHub.challengeFriend.title') }}</h3>
           <p class="ph-card-sub">{{ $t('playHub.challengeFriend.subtitle') }}</p>
@@ -264,7 +264,7 @@ onMounted(() => {
         <div class="ph-card ph-card--daily">
           <div class="ph-card-corner">
             <span class="ph-num">02</span>
-            <span class="ph-tag ph-tag--accent">Today only</span>
+            <span class="ph-tag ph-tag--accent">{{$t('playHub.dailyPuzzle.tag')}}</span>
           </div>
           <h3 class="ph-card-title">{{ $t('playHub.dailyPuzzle.title') }}</h3>
           <p class="ph-card-sub">{{ $t('playHub.dailyPuzzle.subtitle') }}</p>
@@ -288,7 +288,7 @@ onMounted(() => {
         <div class="ph-card ph-card--solo">
           <div class="ph-card-corner">
             <span class="ph-num">03</span>
-            <span class="ph-tag">Solo</span>
+            <span class="ph-tag">{{$t('playHub.warmUp.tag')}}</span>
           </div>
           <h3 class="ph-card-title">{{ $t('playHub.warmUp.title') }}</h3>
           <p class="ph-card-sub">{{ $t('playHub.warmUp.subtitle', { letters: userStore.soloLetters, time: userStore.soloTime, language: userStore.soloLang.toUpperCase() }) }}</p>
@@ -316,7 +316,7 @@ onMounted(() => {
               {{ userStore.soloTime }}s
             </span>
             <span class="dot-sep">·</span>
-            <span>{{ userStore.soloLetters }} letters</span>
+            <span>{{ userStore.soloLetters }} {{$t('playHub.warmUp.letters')}}</span>
             <span class="dot-sep">·</span>
             <span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -407,7 +407,7 @@ onMounted(() => {
               </template>
               <template v-else-if="hasUserPlayed(challenge)">
                 <span class="ph-ch-label ph-ch-label--wait">
-                  {{ $t('playHub.activeChallenges.waitingOn', { name: challenge.creator_username || 'opponent' }) }}
+                  {{ $t('playHub.activeChallenges.waitingOn', { name: challenge.creator_username || $t('playHub.activeChallenges.opponent') }) }}
                 </span>
                 <span class="ph-ch-score mono">
                   {{ challenge.results?.find(r => r.user_id === userStore.userId)?.score?.toLocaleString() || '—' }} pts

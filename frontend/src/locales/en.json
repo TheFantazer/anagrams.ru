@@ -201,7 +201,8 @@
       "newChallenge": "New challenge",
       "friends": "Friends",
       "friendsOnline": "{count} friends online",
-      "waitingOnYou": "{count} waiting on you"
+      "waitingOnYou": "{count} waiting on you",
+      "tag": "Multiplayer"
     },
     "dailyPuzzle": {
       "title": "Daily puzzle.",
@@ -209,13 +210,16 @@
       "subtitleDone": "You played today.",
       "play": "Play today's set",
       "done": "Done · See results",
-      "resetsIn": "Resets in {time}"
+      "resetsIn": "Resets in {time}",
+      "tag": "Today only"
     },
     "warmUp": {
       "title": "Warm up.",
       "subtitle": "{letters} letters · {time}s · {language}. Or tune it.",
       "quickPlay": "Quick play",
-      "custom": "Custom"
+      "custom": "Custom",
+      "tag": "Solo",
+      "letters": "letters"
     },
     "activeChallenges": {
       "title": "Active challenges",
@@ -227,7 +231,8 @@
       "created": "created",
       "expires": "expires {time}",
       "waitingOn": "Waiting on {name}",
-      "yourScore": "{score} pts"
+      "yourScore": "{score} pts",
+      "opponent": "opponent"
     },
     "recentMatches": {
       "title": "Recent matches",
@@ -439,6 +444,11 @@
   },
   "friends": {
     "title": "Friends",
+    "friend": "friend",
+    "friends": "friends",
+    "allFriends": "All friends",
+    "requests": "Requests",
+    "online": "online",
     "tabs": {
       "friends": "Friends",
       "pending": "Pending",

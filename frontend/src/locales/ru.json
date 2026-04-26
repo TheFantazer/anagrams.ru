@@ -201,7 +201,8 @@
       "newChallenge": "Новый вызов",
       "friends": "Друзья",
       "friendsOnline": "{count} друзей онлайн",
-      "waitingOnYou": "{count} ждут вас"
+      "waitingOnYou": "{count} ждут вас",
+      "tag": "Мультиплеер"
     },
     "dailyPuzzle": {
       "title": "Ежедневная головоломка.",
@@ -209,13 +210,16 @@
       "subtitleDone": "Вы играли сегодня.",
       "play": "Играть сегодняшний набор",
       "done": "Готово · Смотреть результаты",
-      "resetsIn": "Сброс через {time}"
+      "resetsIn": "Сброс через {time}",
+      "tag": "Только сегодня"
     },
     "warmUp": {
       "title": "Разминка.",
       "subtitle": "{letters} букв · {time}с · {language}. Или настройте.",
       "quickPlay": "Быстрая игра",
-      "custom": "Настроить"
+      "custom": "Настроить",
+      "tag": "В одиночку",
+      "letters": "букв"
     },
     "activeChallenges": {
       "title": "Активные челленджи",
@@ -227,7 +231,8 @@
       "created": "создан",
       "expires": "истекает {time}",
       "waitingOn": "Ждём {name}",
-      "yourScore": "{score} очков"
+      "yourScore": "{score} очков",
+      "opponent": "соперника"
     },
     "recentMatches": {
       "title": "Недавние матчи",
@@ -439,6 +444,11 @@
   },
   "friends": {
     "title": "Друзья",
+    "friend": "друг",
+    "friends": "друга",
+    "allFriends": "Все друзья",
+    "requests": "Запросы",
+    "online": "в сети",
     "tabs": {
       "friends": "Друзья",
       "pending": "Входящие",

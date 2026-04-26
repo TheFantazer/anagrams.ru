@@ -1,28 +1,58 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
+import Modal from '../components/Modal.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const userStore = useUserStore()
 
-const activeTab = ref('friends') // friends, pending, sent, search
+const tab = ref('all') // all, requests, add
 const friends = ref([])
-const pendingRequests = ref([])
-const sentRequests = ref([])
-const searchResults = ref([])
+const incomingRequests = ref([])
+const outgoingRequests = ref([])
 const searchQuery = ref('')
+const addSearchQuery = ref('')
+const searchResults = ref([])
+const openProfile = ref(null)
 const loading = ref(false)
-const searching = ref(false)
-const userCache = ref({}) // Cache for user data by ID
+const inviteCopied = ref(false)
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+// Filtered friends based on search
+const filteredFriends = computed(() => {
+  if (!searchQuery.value.trim()) return friends.value
+  const q = searchQuery.value.toLowerCase()
+  return friends.value.filter(f =>
+    f.username?.toLowerCase().includes(q)
+  )
+})
+
+// Online friends count
+const onlineFriendsCount = computed(() => {
+  return filteredFriends.value.filter(f => f.online).length
+})
+
+// Mock suggested friends - TODO: Replace with real API
+const suggestedFriends = ref([
+  { name: 'alex_word', reason: 'Plays often', id: 999 },
+  { name: 'maria_fast', reason: 'Top 100 player', id: 998 },
+])
+
+// Mock match history for profile - TODO: Replace with real API
+const mockMatches = [
+  { id: 1, result: 'won', letters: 'streami', yourScore: 2400, theirScore: 1800, date: '2 days ago' },
+  { id: 2, result: 'lost', letters: 'masters', yourScore: 1600, theirScore: 2200, date: '5 days ago' },
+  { id: 3, result: 'tie', letters: 'anagram', yourScore: 1900, theirScore: 1900, date: '1 week ago' },
+]
 
 onMounted(() => {
   if (userStore.isAuthenticated) {
     loadFriends()
-    loadPendingRequests()
-    loadSentRequests()
+    loadRequests()
   }
 })
 
@@ -33,7 +63,16 @@ async function loadFriends() {
   try {
     const response = await fetch(`${apiUrl}/api/v1/friends?user_id=${userStore.userId}`)
     if (response.ok) {
-      friends.value = await response.json()
+      const data = await response.json()
+      // Add mock data for demonstration
+      friends.value = data.map((f, i) => ({
+        ...f,
+        online: i % 3 === 0, // Mock online status
+        score: 5000 + i * 200, // Mock score
+        streak: 5 + i, // Mock streak
+        bestWord: 'streami', // Mock best word
+        joined: '2 weeks ago' // Mock join date
+      }))
     }
   } catch (error) {
     console.error('Failed to load friends:', error)
@@ -42,84 +81,57 @@ async function loadFriends() {
   }
 }
 
-async function getUserInfo(userId) {
-  if (userCache.value[userId]) {
-    return userCache.value[userId]
-  }
-
-  try {
-    const response = await fetch(`${apiUrl}/api/v1/users/${userId}`)
-    if (response.ok) {
-      const user = await response.json()
-
-      userCache.value[userId] = user
-      return user
-    }
-  } catch (error) {
-    console.error('Failed to load user info:', error)
-  }
-
-  return null
-}
-
-async function loadPendingRequests() {
+async function loadRequests() {
   if (!userStore.userId) return
 
   try {
-    const response = await fetch(`${apiUrl}/api/v1/friends/requests/pending?user_id=${userStore.userId}`)
-    if (response.ok) {
-      const requests = await response.json()
-      // Load user info for each request
-      for (const request of requests) {
-        request.fromUser = await getUserInfo(request.from_user_id)
-      }
-      pendingRequests.value = requests
+    // Load incoming
+    const incomingRes = await fetch(`${apiUrl}/api/v1/friends/requests/pending?user_id=${userStore.userId}`)
+    if (incomingRes.ok) {
+      const incoming = await incomingRes.json()
+      incomingRequests.value = incoming.map((r, i) => ({
+        ...r,
+        name: r.from_username || 'User',
+        mutual: i % 2, // Mock mutual friends
+        sent: '2 days ago', // Mock sent time
+        msg: i === 0 ? 'Let\'s play!' : null // Mock message
+      }))
+    }
+
+    // Load outgoing
+    const outgoingRes = await fetch(`${apiUrl}/api/v1/friends/requests/sent?user_id=${userStore.userId}`)
+    if (outgoingRes.ok) {
+      const outgoing = await outgoingRes.json()
+      outgoingRequests.value = outgoing.map((r, i) => ({
+        ...r,
+        name: r.to_username || 'User',
+        mutual: i % 3, // Mock mutual friends
+        sent: '1 day ago' // Mock sent time
+      }))
     }
   } catch (error) {
-    console.error('Failed to load pending requests:', error)
-  }
-}
-
-async function loadSentRequests() {
-  if (!userStore.userId) return
-
-  try {
-    const response = await fetch(`${apiUrl}/api/v1/friends/requests/sent?user_id=${userStore.userId}`)
-    if (response.ok) {
-      const requests = await response.json()
-      // Load user info for each request
-      for (const request of requests) {
-        request.toUser = await getUserInfo(request.to_user_id)
-      }
-      sentRequests.value = requests
-    }
-  } catch (error) {
-    console.error('Failed to load sent requests:', error)
+    console.error('Failed to load requests:', error)
   }
 }
 
 async function searchUsers() {
-  if (!searchQuery.value.trim()) {
+  if (!addSearchQuery.value.trim()) {
     searchResults.value = []
     return
   }
 
-  searching.value = true
   try {
-    const response = await fetch(`${apiUrl}/api/v1/users/search?q=${encodeURIComponent(searchQuery.value)}`)
+    const response = await fetch(`${apiUrl}/api/v1/users/search?q=${encodeURIComponent(addSearchQuery.value)}`)
     if (response.ok) {
       const results = await response.json()
-      // Исключаем себя из результатов
       searchResults.value = results.filter(user => user.id !== userStore.userId)
     }
   } catch (error) {
     console.error('Failed to search users:', error)
-  } finally {
-    searching.value = false
   }
 }
 
-async function sendFriendRequest(userId) {
+async function sendRequest(userId, name) {
   try {
     const response = await fetch(`${apiUrl}/api/v1/friends/requests?user_id=${userStore.userId}`, {
       method: 'POST',
@@ -128,409 +140,1129 @@ async function sendFriendRequest(userId) {
     })
 
     if (response.ok) {
-      alert(t('friends.requestSent'))
-      await loadSentRequests()
-      // Убираем из результатов поиска
+      userStore.showToast(`Friend request sent to ${name}`, 'success')
+      await loadRequests()
       searchResults.value = searchResults.value.filter(u => u.id !== userId)
     } else {
-      const error = await response.json()
-      alert(error.message || t('friends.requestFailed'))
+      userStore.showToast('Failed to send request', 'error')
     }
   } catch (error) {
-    console.error('Failed to send friend request:', error)
-    alert(t('friends.requestFailed'))
+    console.error('Failed to send request:', error)
+    userStore.showToast('Failed to send request', 'error')
   }
 }
 
-async function acceptRequest(requestId) {
+async function acceptRequest(requestId, name) {
   try {
     const response = await fetch(`${apiUrl}/api/v1/friends/requests/${requestId}/accept?user_id=${userStore.userId}`, {
       method: 'POST'
     })
 
     if (response.ok) {
-      alert(t('friends.requestAccepted'))
-      await Promise.all([loadFriends(), loadPendingRequests()])
+      userStore.showToast(`${name} added to friends`, 'success')
+      await Promise.all([loadFriends(), loadRequests()])
     } else {
-      alert(t('friends.requestFailed'))
+      userStore.showToast('Failed to accept request', 'error')
     }
   } catch (error) {
     console.error('Failed to accept request:', error)
-    alert(t('friends.requestFailed'))
+    userStore.showToast('Failed to accept request', 'error')
   }
 }
 
-async function rejectRequest(requestId) {
+async function declineRequest(requestId, name) {
   try {
     const response = await fetch(`${apiUrl}/api/v1/friends/requests/${requestId}/reject?user_id=${userStore.userId}`, {
       method: 'POST'
     })
 
     if (response.ok) {
-      alert(t('friends.requestRejected'))
-      await loadPendingRequests()
+      userStore.showToast(`Request from ${name} declined`, 'info')
+      await loadRequests()
     } else {
-      alert(t('friends.requestFailed'))
+      userStore.showToast('Failed to decline request', 'error')
     }
   } catch (error) {
-    console.error('Failed to reject request:', error)
-    alert(t('friends.requestFailed'))
+    console.error('Failed to decline request:', error)
+    userStore.showToast('Failed to decline request', 'error')
   }
 }
 
-async function removeFriend(friendId) {
-  if (!confirm(t('friends.confirmRemove'))) return
-
+async function cancelRequest(requestId, name) {
   try {
-    const response = await fetch(`${apiUrl}/api/v1/friends/${friendId}?user_id=${userStore.userId}`, {
+    const response = await fetch(`${apiUrl}/api/v1/friends/requests/${requestId}?user_id=${userStore.userId}`, {
       method: 'DELETE'
     })
 
     if (response.ok) {
-      alert(t('friends.friendRemoved'))
-      await loadFriends()
+      userStore.showToast(`Request to ${name} cancelled`, 'info')
+      await loadRequests()
     } else {
-      alert(t('friends.removeFailed'))
+      userStore.showToast('Failed to cancel request', 'error')
     }
   } catch (error) {
-    console.error('Failed to remove friend:', error)
-    alert(t('friends.removeFailed'))
+    console.error('Failed to cancel request:', error)
+    userStore.showToast('Failed to cancel request', 'error')
   }
+}
+
+function copyInviteLink() {
+  const link = `anagrams.ru/u/${userStore.username}`
+  navigator.clipboard?.writeText(link)
+  inviteCopied.value = true
+  userStore.showToast('Invite link copied', 'success')
+  setTimeout(() => { inviteCopied.value = false }, 2200)
+}
+
+function challengeFriend(name) {
+  userStore.showToast(`Challenge sent to ${name}!`, 'success')
+  router.push('/multiplayer')
+}
+
+// Head-to-head stats for profile modal
+function getH2HStats(friendName) {
+  const wins = mockMatches.filter(m => m.result === 'won').length
+  const losses = mockMatches.filter(m => m.result === 'lost').length
+  const ties = mockMatches.filter(m => m.result === 'tie').length
+  return { wins, losses, ties }
 }
 </script>
 
 <template>
   <div class="page">
-    <div class="shell multi-wrap">
-      <header class="page-head" style="justify-content: center">
-        <h1 class="page-title-display">{{ t('friends.title') }}</h1>
+    <div class="shell fr-wrap">
+      <header class="page-head">
+        <div>
+          <div class="page-eyebrow">{{ $t('friends.title') }}</div>
+          <h1 class="page-title-display">
+            {{ friends.length }} {{ friends.length === 1 ? $t('friends.friend') : $t('friends.friends') }}
+            <template v-if="incomingRequests.length > 0">, <span style="color:var(--accent)">{{ incomingRequests.length }} waiting</span></template>.
+          </h1>
+        </div>
+        <button class="btn btn--accent btn--sm" @click="tab = 'add'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          {{$t('friends.addFriend')}}
+        </button>
       </header>
 
       <!-- Tabs -->
-      <div class="tabs">
+      <div class="fr-tabs">
         <button
-          :class="['tab', { active: activeTab === 'friends' }]"
-          @click="activeTab = 'friends'"
+          :class="['fr-tab', { 'is-active': tab === 'all' }]"
+          @click="tab = 'all'"
         >
-          {{ t('friends.tabs.friends') }} ({{ friends.length }})
+          {{$t('friends.allFriends')}}
+          <span v-if="friends.length > 0" class="fr-tab-count">{{ friends.length }}</span>
         </button>
         <button
-          :class="['tab', { active: activeTab === 'pending' }]"
-          @click="activeTab = 'pending'"
+          :class="['fr-tab', { 'is-active': tab === 'requests' }]"
+          @click="tab = 'requests'"
         >
-          {{ t('friends.tabs.pending') }}
-          <span v-if="pendingRequests.length > 0" class="badge">{{ pendingRequests.length }}</span>
+          {{$t('friends.requests')}}
+          <span v-if="incomingRequests.length > 0" class="fr-tab-count is-accent">{{ incomingRequests.length }}</span>
         </button>
         <button
-          :class="['tab', { active: activeTab === 'sent' }]"
-          @click="activeTab = 'sent'"
+          :class="['fr-tab', { 'is-active': tab === 'add' }]"
+          @click="tab = 'add'"
         >
-          {{ t('friends.tabs.sent') }} ({{ sentRequests.length }})
-        </button>
-        <button
-          :class="['tab', { active: activeTab === 'search' }]"
-          @click="activeTab = 'search'"
-        >
-          {{ t('friends.tabs.search') }}
+          {{$t('friends.addFriend')}}
         </button>
       </div>
 
-      <!-- Friends List -->
-      <div v-if="activeTab === 'friends'" class="tab-content">
-        <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-        <div v-else-if="friends.length === 0" class="empty-state">
-          {{ t('friends.noFriends') }}
+      <!-- ALL FRIENDS -->
+      <section v-if="tab === 'all'">
+        <div class="fr-search">
+          <input
+            v-model="searchQuery"
+            class="input"
+            placeholder="Search by username…"
+          />
+          <span class="fr-online-count muted">
+            <span class="online-dot" /> {{ onlineFriendsCount }} {{$t('friends.online')}}
+          </span>
         </div>
-        <div v-else class="friends-list">
-          <div v-for="friend in friends" :key="friend.id" class="friend-card">
-            <div class="friend-info">
-              <div class="friend-name">{{ friend.username }}</div>
-              <div class="friend-email">{{ friend.email }}</div>
+        <div class="fr-grid">
+          <div v-for="friend in filteredFriends" :key="friend.id" class="fr-card">
+            <button class="fr-card-main" @click="openProfile = friend">
+              <div class="fr-card-avatar">
+                {{ friend.username[0].toUpperCase() }}
+                <span v-if="friend.online" class="online-dot online-dot--card" />
+              </div>
+              <div class="fr-card-meta">
+                <div class="fr-card-name">{{ friend.username }}</div>
+                <div class="fr-card-sub muted">
+                  {{ friend.online ? 'Online now' : `Joined ${friend.joined}` }}
+                </div>
+              </div>
+            </button>
+            <div class="fr-card-stats">
+              <div>
+                <span class="mono">{{ friend.score?.toLocaleString() || '0' }}</span>
+                <span class="lbl">pts</span>
+              </div>
+              <div class="fr-card-sep" />
+              <div>
+                <span class="mono">{{ friend.streak || 0 }}d</span>
+                <span class="lbl">streak</span>
+              </div>
             </div>
-            <button @click="removeFriend(friend.id)" class="btn-remove">
-              {{ t('friends.remove') }}
+            <button class="btn btn--accent btn--sm btn--block" @click="challengeFriend(friend.username)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+              </svg>
+              Challenge
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- Pending Requests -->
-      <div v-if="activeTab === 'pending'" class="tab-content">
-        <div v-if="pendingRequests.length === 0" class="empty-state">
-          {{ t('friends.noPending') }}
-        </div>
-        <div v-else class="requests-list">
-          <div v-for="request in pendingRequests" :key="request.id" class="request-card">
-            <div class="request-info">
-              <div class="request-label">{{ t('friends.requestFrom') }}</div>
-              <div class="request-user">{{ request.fromUser?.username || request.from_user_id }}</div>
-            </div>
-            <div class="request-actions">
-              <button @click="acceptRequest(request.id)" class="btn btn--sm btn--success">
-                {{ t('friends.accept') }}
-              </button>
-              <button @click="rejectRequest(request.id)" class="btn btn--sm btn--danger">
-                {{ t('friends.reject') }}
-              </button>
+          <div v-if="filteredFriends.length === 0" class="fr-empty">
+            <div class="muted" style="text-align:center; padding:40px 20px; grid-column:1 / -1">
+              {{ searchQuery ? `No friends match "${searchQuery}".` : $t('friends.noFriends') }}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Sent Requests -->
-      <div v-if="activeTab === 'sent'" class="tab-content">
-        <div v-if="sentRequests.length === 0" class="empty-state">
-          {{ t('friends.noSent') }}
-        </div>
-        <div v-else class="requests-list">
-          <div v-for="request in sentRequests" :key="request.id" class="request-card">
-            <div class="request-info">
-              <div class="request-label">{{ t('friends.requestTo') }}</div>
-              <div class="request-user">{{ request.toUser?.username || request.to_user_id }}</div>
-              <div class="request-status" :class="request.status">
-                {{ t(`friends.status.${request.status}`) }}
+      <!-- REQUESTS -->
+      <section v-if="tab === 'requests'" class="fr-requests">
+        <!-- Incoming -->
+        <div class="fr-req-block">
+          <div class="fr-req-head">
+            <div class="page-eyebrow">Incoming</div>
+            <h3 class="fr-req-title">
+              {{ incomingRequests.length }} {{ incomingRequests.length === 1 ? 'person wants' : 'people want' }} to play
+            </h3>
+          </div>
+          <div v-if="incomingRequests.length === 0" class="fr-empty-soft muted">
+            No incoming requests.
+          </div>
+          <div v-else class="fr-req-list">
+            <div v-for="request in incomingRequests" :key="request.id" class="fr-req fr-req--in">
+              <div class="fr-req-who">
+                <div class="fr-avatar fr-avatar--lg">{{ request.name[0].toUpperCase() }}</div>
+                <div>
+                  <div class="fr-req-name">{{ request.name }}</div>
+                  <div class="fr-req-meta">
+                    <template v-if="request.mutual > 0">
+                      <span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        {{ request.mutual }} mutual
+                      </span>
+                      <span class="dot-sep">·</span>
+                    </template>
+                    <span>sent {{ request.sent }}</span>
+                  </div>
+                  <div v-if="request.msg" class="fr-req-msg">&ldquo;{{ request.msg }}&rdquo;</div>
+                </div>
+              </div>
+              <div class="fr-req-actions">
+                <button class="btn btn--ghost btn--sm" @click="declineRequest(request.id, request.name)">Decline</button>
+                <button class="btn btn--accent btn--sm" @click="acceptRequest(request.id, request.name)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                  Accept
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Search Users -->
-      <div v-if="activeTab === 'search'" class="tab-content">
-        <div class="search-box">
-          <input
-            v-model="searchQuery"
-            @input="searchUsers"
-            type="text"
-            :placeholder="t('friends.searchPlaceholder')"
-            class="search-input"
-          />
-        </div>
-
-        <div v-if="searching" class="loading">{{ t('common.searching') }}</div>
-        <div v-else-if="searchQuery && searchResults.length === 0" class="empty-state">
-          {{ t('friends.noResults') }}
-        </div>
-        <div v-else-if="searchResults.length > 0" class="search-results">
-          <div v-for="user in searchResults" :key="user.id" class="user-card">
-            <div class="user-info">
-              <div class="user-name">{{ user.username }}</div>
-              <div class="user-email">{{ user.email }}</div>
+        <!-- Outgoing -->
+        <div class="fr-req-block">
+          <div class="fr-req-head">
+            <div class="page-eyebrow">Outgoing</div>
+            <h3 class="fr-req-title">{{ outgoingRequests.length }} pending</h3>
+          </div>
+          <div v-if="outgoingRequests.length === 0" class="fr-empty-soft muted">
+            No pending invites.
+          </div>
+          <div v-else class="fr-req-list">
+            <div v-for="request in outgoingRequests" :key="request.id" class="fr-req fr-req--out">
+              <div class="fr-req-who">
+                <div class="fr-avatar fr-avatar--lg fr-avatar--muted">{{ request.name[0].toUpperCase() }}</div>
+                <div>
+                  <div class="fr-req-name">{{ request.name }}</div>
+                  <div class="fr-req-meta">
+                    <template v-if="request.mutual > 0">
+                      <span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        {{ request.mutual }} mutual
+                      </span>
+                      <span class="dot-sep">·</span>
+                    </template>
+                    <span>sent {{ request.sent }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fr-req-actions">
+                <span class="fr-req-pending">
+                  <span class="pulse-dot" /> Awaiting
+                </span>
+                <button class="btn btn--ghost btn--sm" @click="cancelRequest(request.id, request.name)">Cancel</button>
+              </div>
             </div>
-            <button @click="sendFriendRequest(user.id)" class="btn-add">
-              {{ t('friends.addFriend') }}
-            </button>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- ADD FRIENDS -->
+      <section v-if="tab === 'add'" class="fr-add">
+        <div class="fr-add-grid">
+          <!-- Search -->
+          <div class="card fr-add-card">
+            <div class="page-eyebrow">01 · Search</div>
+            <h3 class="fr-add-title">Find by username</h3>
+            <p class="muted" style="font-size:13px; margin:0 0 14px">
+              Exact match or partial — three letters minimum.
+            </p>
+            <div class="fr-search-input-wrap">
+              <input
+                v-model="addSearchQuery"
+                @input="searchUsers"
+                class="input"
+                placeholder="@username"
+              />
+              <button class="btn btn--accent btn--sm" @click="searchUsers">Search</button>
+            </div>
+
+            <!-- Search Results -->
+            <div v-if="searchResults.length > 0" style="margin-top:18px">
+              <div class="fr-eyebrow-mini">Results</div>
+              <div class="fr-suggested">
+                <div v-for="user in searchResults" :key="user.id" class="fr-sugg">
+                  <div class="fr-sugg-who">
+                    <div class="fr-avatar">{{ user.username[0].toUpperCase() }}</div>
+                    <div>
+                      <div class="fr-sugg-name">{{ user.username }}</div>
+                      <div class="fr-sugg-reason muted">{{ user.email }}</div>
+                    </div>
+                  </div>
+                  <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.username)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Suggested -->
+            <div v-if="suggestedFriends.length > 0" style="margin-top:18px">
+              <div class="fr-eyebrow-mini">Suggested</div>
+              <div class="fr-suggested">
+                <div v-for="user in suggestedFriends" :key="user.id" class="fr-sugg">
+                  <div class="fr-sugg-who">
+                    <div class="fr-avatar">{{ user.name[0].toUpperCase() }}</div>
+                    <div>
+                      <div class="fr-sugg-name">{{ user.name }}</div>
+                      <div class="fr-sugg-reason muted">{{ user.reason }}</div>
+                    </div>
+                  </div>
+                  <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.name)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invite link -->
+          <div class="card fr-add-card fr-add-card--invite">
+            <div class="page-eyebrow">02 · Invite</div>
+            <h3 class="fr-add-title">Share your link</h3>
+            <p class="muted" style="font-size:13px; margin:0 0 14px">
+              Anyone with this link can send you a friend request directly.
+            </p>
+            <div class="fr-link-box">
+              <span class="mono">anagrams.ru/u/{{ userStore.username || 'user' }}</span>
+              <button class="btn btn--primary btn--sm" @click="copyInviteLink">
+                <svg v-if="!inviteCopied" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                {{ inviteCopied ? 'Copied' : 'Copy' }}
+              </button>
+            </div>
+            <div class="fr-share-row">
+              <button class="btn btn--ghost btn--sm">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"/>
+                  <circle cx="6" cy="12" r="3"/>
+                  <circle cx="18" cy="19" r="3"/>
+                  <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                </svg>
+                Share
+              </button>
+              <span class="muted" style="font-size:12px">Link works for 30 days.</span>
+            </div>
+            <div class="fr-qr">
+              <div class="fr-qr-grid">
+                <span v-for="i in 49" :key="i" class="fr-qr-cell" :data-on="(i * 7 + 3) % 5 < 2 ? 'true' : 'false'" />
+              </div>
+              <div class="fr-qr-text muted">QR placeholder</div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
+
+    <!-- Profile Modal -->
+    <Modal :open="!!openProfile" :on-close="() => openProfile = null" :title="openProfile?.username" wide>
+      <div v-if="openProfile">
+        <div class="fr-prof-head">
+          <div class="fr-prof-avatar">
+            {{ openProfile.username[0].toUpperCase() }}
+            <span v-if="openProfile.online" class="online-dot online-dot--card" />
+          </div>
+          <div>
+            <div class="fr-prof-name">{{ openProfile.username }}</div>
+            <div class="muted" style="font-size:13px">
+              {{ openProfile.online ? 'Online now' : `Joined ${openProfile.joined}` }} · {{ openProfile.streak }}d streak
+            </div>
+          </div>
+        </div>
+
+        <div class="fr-prof-stats">
+          <div class="fr-prof-stat">
+            <div class="fr-prof-stat-v mono">{{ openProfile.score?.toLocaleString() }}</div>
+            <div class="fr-prof-stat-k">leaderboard score</div>
+          </div>
+          <div class="fr-prof-stat">
+            <div class="fr-prof-stat-v mono">{{ openProfile.bestWord?.toLowerCase() }}</div>
+            <div class="fr-prof-stat-k">best word</div>
+          </div>
+          <div class="fr-prof-stat">
+            <div class="fr-prof-stat-v mono">{{ mockMatches.length }}</div>
+            <div class="fr-prof-stat-k">matches with you</div>
+          </div>
+        </div>
+
+        <!-- Head-to-head Record -->
+        <div v-if="mockMatches.length > 0" class="fr-prof-record">
+          <div class="page-eyebrow" style="margin-bottom:8px">Head-to-head</div>
+          <div class="fr-prof-bar">
+            <div class="fr-prof-bar-w" :style="{ flex: getH2HStats().wins || 0.001 }">
+              <span v-if="getH2HStats().wins > 0">{{ getH2HStats().wins }} W</span>
+            </div>
+            <div class="fr-prof-bar-t" :style="{ flex: getH2HStats().ties || 0.001 }">
+              <span v-if="getH2HStats().ties > 0">{{ getH2HStats().ties }} T</span>
+            </div>
+            <div class="fr-prof-bar-l" :style="{ flex: getH2HStats().losses || 0.001 }">
+              <span v-if="getH2HStats().losses > 0">{{ getH2HStats().losses }} L</span>
+            </div>
+          </div>
+          <div class="fr-prof-recent">
+            <div class="fr-eyebrow-mini">Recent</div>
+            <div v-for="match in mockMatches.slice(0, 3)" :key="match.id" :class="['fr-prof-recent-row', `rm-${match.result}`]">
+              <span :class="['fr-prof-recent-tag', `rm-${match.result}`]">
+                {{ match.result === 'won' ? 'W' : match.result === 'lost' ? 'L' : 'T' }}
+              </span>
+              <span class="mono fr-prof-recent-letters">{{ match.letters }}</span>
+              <span class="mono">{{ match.yourScore.toLocaleString() }} <span class="muted">·</span> {{ match.theirScore.toLocaleString() }}</span>
+              <span class="muted" style="margin-left:auto; font-size:12px">{{ match.date }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fr-prof-actions">
+          <button class="btn btn--ghost" @click="openProfile = null">Close</button>
+          <button class="btn btn--accent" @click="challengeFriend(openProfile.username); openProfile = null">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+            </svg>
+            Challenge to a round
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
 <style scoped>
-.tabs {
+/* Import all styles from friends.css */
+.fr-wrap {
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-12);
+}
+
+/* Tabs */
+.fr-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 32px;
-  background: var(--bg-card);
-  padding: 8px;
-  border-radius: 12px;
-  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-hairline);
+  margin-bottom: var(--sp-6);
 }
 
-.tab {
-  flex: 1;
-  min-width: 120px;
-  padding: 12px 16px;
+.fr-tab {
+  appearance: none;
+  border: 0;
   background: transparent;
-  border: none;
-  color: var(--fg-secondary);
+  padding: 12px 4px;
+  margin-right: var(--sp-6);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--fg-muted);
   cursor: pointer;
-  border-radius: 8px;
-  transition: all var(--dur-base) var(--ease-std);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   position: relative;
+  transition: color var(--dur-base);
+  letter-spacing: 0.2px;
 }
 
-.tab:hover {
-  background: var(--bg-hover);
+.fr-tab:hover {
+  color: var(--fg-secondary);
+}
+
+.fr-tab.is-active {
   color: var(--fg-primary);
 }
 
-.tab.active {
-  background: var(--navy);
+.fr-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.fr-tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--fg-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fr-tab-count.is-accent {
+  background: var(--accent);
   color: var(--milk);
 }
 
-.badge {
-  display: inline-block;
-  background: var(--danger);
-  color: var(--milk);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  margin-left: 4px;
+/* Search bar */
+.fr-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
 }
 
-.tab-content {
+.fr-search .input {
+  flex: 1;
+}
+
+.fr-online-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--success);
+}
+
+.online-dot--card {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  border: 2px solid var(--bg-surface);
+  width: 11px;
+  height: 11px;
+}
+
+/* Friend grid */
+.fr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.fr-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 32px;
-  min-height: 400px;
-}
-
-.loading, .empty-state {
-  text-align: center;
-  color: var(--fg-muted);
-  padding: 48px 16px;
-  font-size: 15px;
-  font-family: var(--font-body);
-}
-
-.friends-list, .requests-list, .search-results {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.friend-card, .request-card, .user-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-hairline);
-  border-radius: 12px;
+  gap: var(--sp-3);
   transition: all var(--dur-base) var(--ease-std);
 }
 
-.friend-card:hover, .request-card:hover, .user-card:hover {
+.fr-card:hover {
   border-color: var(--border-default);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 
-.friend-info, .request-info, .user-info {
+.fr-card-main {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.fr-card-avatar {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fg-primary);
+  flex-shrink: 0;
+}
+
+.fr-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.fr-card-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-primary);
+  margin-bottom: 2px;
+}
+
+.fr-card-sub {
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.fr-card-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+.fr-card-stats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   flex: 1;
 }
 
-.friend-name, .user-name {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 600;
+.fr-card-stats .mono {
+  font-weight: 700;
   color: var(--fg-primary);
-  margin-bottom: 4px;
+  font-size: 13px;
 }
 
-.friend-email, .user-email, .request-user {
-  font-family: var(--font-body);
+.fr-card-stats .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.fr-card-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  flex: 0 0 auto !important;
+}
+
+/* Requests panels */
+.fr-requests {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+}
+
+@media (max-width: 820px) {
+  .fr-requests {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fr-req-block {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--sp-5);
+}
+
+.fr-req-head {
+  margin-bottom: var(--sp-4);
+}
+
+.fr-req-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  margin: 4px 0 0;
+  color: var(--fg-primary);
+  text-transform: none;
+}
+
+.fr-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.fr-req {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+
+.fr-req--in {
+  border-color: var(--accent-soft);
+}
+
+.fr-req-who {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.fr-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--fg-primary);
+  flex-shrink: 0;
+}
+
+.fr-avatar--lg {
+  width: 42px;
+  height: 42px;
+  font-size: 15px;
+}
+
+.fr-avatar--muted {
+  color: var(--fg-muted);
+}
+
+.fr-req-name {
+  font-weight: 600;
   font-size: 14px;
+  color: var(--fg-primary);
+}
+
+.fr-req-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+
+.fr-req-msg {
+  margin-top: 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--fg-secondary);
+  line-height: 1.5;
+}
+
+.fr-req-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.fr-req-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--fg-muted);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--warning);
+  animation: pulse-anim 1.6s var(--ease-std) infinite;
+}
+
+@keyframes pulse-anim {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+.fr-empty-soft {
+  padding: var(--sp-5);
+  text-align: center;
+  font-size: 13px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+}
+
+/* Add friends */
+.fr-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+}
+
+@media (max-width: 820px) {
+  .fr-add-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fr-add-card {
+  padding: var(--sp-5);
+}
+
+.fr-add-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  margin: 4px 0 6px;
+  color: var(--fg-primary);
+  text-transform: none;
+}
+
+.fr-search-input-wrap {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.fr-search-input-wrap .input {
+  flex: 1;
+}
+
+.fr-eyebrow-mini {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--fg-muted);
+  margin-bottom: var(--sp-3);
+}
+
+.fr-suggested {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fr-sugg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+}
+
+.fr-sugg-who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.fr-sugg-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.fr-sugg-reason {
+  font-size: 11px;
+}
+
+.fr-link-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--sp-3);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-3);
+}
+
+.fr-link-box .mono {
+  font-size: 13px;
   color: var(--fg-secondary);
 }
 
-.request-label {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--fg-muted);
+.fr-share-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+/* QR placeholder */
+.fr-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+}
+
+.fr-qr-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 18px);
+  gap: 2px;
+  padding: 8px;
+  background: var(--bg-surface);
+  border-radius: 6px;
+}
+
+.fr-qr-cell {
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border-radius: 2px;
+}
+
+.fr-qr-cell[data-on="true"] {
+  background: var(--navy);
+}
+
+.fr-qr-text {
+  margin-top: var(--sp-2);
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* Profile modal */
+.fr-prof-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border-hairline);
+  margin-bottom: var(--sp-4);
+}
+
+.fr-prof-avatar {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--fg-primary);
+}
+
+.fr-prof-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.fr-prof-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.fr-prof-stat {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3);
+  text-align: center;
+}
+
+.fr-prof-stat-v {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fg-primary);
   margin-bottom: 4px;
 }
 
-.request-status {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 4px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-body);
-}
-
-.request-status.pending {
-  background: var(--warning);
-  color: var(--milk);
-}
-
-.request-status.accepted {
-  background: var(--success);
-  color: var(--milk);
-}
-
-.request-status.rejected {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border: 1px solid var(--danger-border);
-}
-
-.request-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn--success {
-  background: var(--success);
-  color: var(--milk);
-}
-
-.btn--success:hover {
-  background: var(--success);
-  opacity: 0.9;
-}
-
-.btn--danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border: 1px solid var(--danger-border);
-}
-
-.btn--danger:hover {
-  background: var(--danger);
-  color: var(--milk);
-}
-
-.search-box {
-  margin-bottom: 24px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  font-family: var(--font-body);
-  font-size: 15px;
-  color: var(--fg-primary);
-  background: var(--bg-surface);
-  transition: all var(--dur-base) var(--ease-std);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-.search-input::placeholder {
+.fr-prof-stat-k {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
   color: var(--fg-muted);
+  font-weight: 600;
 }
 
-@media (max-width: 640px) {
-  .friend-card, .request-card, .user-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
+.fr-prof-record {
+  margin-bottom: var(--sp-5);
+}
 
-  .request-actions {
-    width: 100%;
-  }
+.fr-prof-bar {
+  display: flex;
+  height: 28px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: var(--sp-4);
+  background: var(--bg-card);
+}
 
-  .request-actions button {
-    flex: 1;
-  }
+.fr-prof-bar-w {
+  background: var(--success);
+}
+
+.fr-prof-bar-l {
+  background: var(--danger);
+}
+
+.fr-prof-bar-t {
+  background: var(--fg-faint);
+}
+
+.fr-prof-bar > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--milk);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fr-prof-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fr-prof-recent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.fr-prof-recent-tag {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--milk);
+  flex-shrink: 0;
+}
+
+.fr-prof-recent-tag.rm-won {
+  background: var(--success);
+}
+
+.fr-prof-recent-tag.rm-lost {
+  background: var(--danger);
+}
+
+.fr-prof-recent-tag.rm-tie {
+  background: var(--fg-faint);
+}
+
+.fr-prof-recent-letters {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--fg-secondary);
+}
+
+.fr-prof-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.dot-sep {
+  color: var(--fg-faint);
 }
 </style>
