@@ -106,3 +106,25 @@ type FriendRequestResponse struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
+
+type DailyPuzzleResponse struct {
+	ID         uuid.UUID `json:"id"`
+	PuzzleDate time.Time `json:"puzzle_date"`
+	Letters    string    `json:"letters"`
+	Language   string    `json:"language"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type DailySessionResponse struct {
+	Session    SessionResponse     `json:"session"`
+	HasPlayed  bool                `json:"has_played"`
+	DailyStats *DailyStatsResponse `json:"daily_stats,omitempty"`
+}
+
+type DailyStatsResponse struct {
+	UserID          uuid.UUID  `json:"user_id"`
+	CurrentStreak   int        `json:"current_streak"`
+	LongestStreak   int        `json:"longest_streak"`
+	LastPlayedDate  *time.Time `json:"last_played_date,omitempty"`
+	TotalDailyGames int        `json:"total_daily_games"`
+}

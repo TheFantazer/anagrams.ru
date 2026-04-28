@@ -96,3 +96,15 @@ type StatsRepository interface {
 	GetUserStats(ctx context.Context, userID uuid.UUID) (*UserStats, error)
 	GetLeaderboard(ctx context.Context, period string, limit int) ([]*LeaderboardEntry, error)
 }
+
+type DailyPuzzleRepository interface {
+	Create(ctx context.Context, puzzle *domain.DailyPuzzle) error
+	GetByDate(ctx context.Context, date time.Time) (*domain.DailyPuzzle, error)
+	GetToday(ctx context.Context) (*domain.DailyPuzzle, error)
+}
+
+type UserDailyStatsRepository interface {
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*domain.UserDailyStats, error)
+	Upsert(ctx context.Context, stats *domain.UserDailyStats) error
+	HasPlayedToday(ctx context.Context, userID uuid.UUID) (bool, error)
+}

@@ -8,17 +8,19 @@ import (
 )
 
 type Session struct {
-	ID           uuid.UUID  `json:"id"`
-	Letters      string     `json:"letters"`
-	Language     string     `json:"language"`
-	TimeLimit    int        `json:"time_limit"`
-	LetterCount  int        `json:"letter_count"`
-	ValidWords   []string   `json:"valid_words"`
-	MaxScore     int        `json:"max_score"`
-	CreatorID    *uuid.UUID `json:"creator_id,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	MaxOpponents int        `json:"max_opponents"` // How many opponents allowed (1 for current 1v1, N for future NvN)
-	InviteMode   string     `json:"invite_mode"`   // "link" or "friend"
+	ID            uuid.UUID  `json:"id"`
+	Letters       string     `json:"letters"`
+	Language      string     `json:"language"`
+	TimeLimit     int        `json:"time_limit"`
+	LetterCount   int        `json:"letter_count"`
+	ValidWords    []string   `json:"valid_words"`
+	MaxScore      int        `json:"max_score"`
+	CreatorID     *uuid.UUID `json:"creator_id,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	MaxOpponents  int        `json:"max_opponents"` // How many opponents allowed (1 for current 1v1, N for future NvN)
+	InviteMode    string     `json:"invite_mode"`   // "link" or "friend"
+	IsDaily       bool       `json:"is_daily"`      // Whether this is a daily puzzle
+	DailyPuzzleID *uuid.UUID `json:"daily_puzzle_id,omitempty"`
 }
 
 func NewSession(letters, language string, timeLimit, letterCount int, validWords []string) (*Session, error) {

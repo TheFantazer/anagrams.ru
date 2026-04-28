@@ -9,12 +9,13 @@ import (
 	"github.com/TheFantazer/anagrams.ru/internal/service"
 )
 
-func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, sessionInviteRepo repository.SessionInviteRepository, participantRepo repository.SessionParticipantRepository, cfg *config.Config, logger *slog.Logger) http.Handler {
+func NewRouter(gameService service.GameService, authService service.AuthService, jwtService service.JWTService, friendService service.FriendService, dailyPuzzleService service.DailyPuzzleService, sessionInviteRepo repository.SessionInviteRepository, participantRepo repository.SessionParticipantRepository, cfg *config.Config, logger *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	gameHandler := NewGameHandler(gameService, authService, sessionInviteRepo, participantRepo, logger)
 	authHandler := NewAuthHandler(authService, logger)
 	friendHandler := NewFriendHandler(friendService, logger)
+	dailyPuzzleHandler := NewDailyPuzzleHandler(dailyPuzzleService, gameService, logger)
 	oauthHandler := NewOAuthHandler(
 		authService,
 		jwtService,
@@ -60,6 +61,11 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	// User search endpoint
 	mux.HandleFunc("GET /api/v1/users/search", friendHandler.SearchUsers)
 	mux.HandleFunc("GET /api/v1/users/{id}", friendHandler.GetUserByID)
+
+	// Daily puzzle endpoints
+	mux.HandleFunc("GET /api/v1/daily-puzzle/today", dailyPuzzleHandler.GetTodaysPuzzle)
+	mux.HandleFunc("GET /api/v1/daily-puzzle/stats", dailyPuzzleHandler.GetDailyStats)
+	mux.HandleFunc("POST /api/v1/daily-puzzle/submit", dailyPuzzleHandler.SubmitDailyResult)
 
 	handler := RecoveryMiddleware(logger)(
 		RequestIDMiddleware(

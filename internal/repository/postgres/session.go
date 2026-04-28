@@ -23,15 +23,17 @@ func NewSessionRepository(db *sqlx.DB) repository.SessionRepository {
 }
 
 type sessionDB struct {
-	ID          uuid.UUID       `db:"id"`
-	Letters     string          `db:"letters"`
-	Language    string          `db:"language"`
-	TimeLimit   int             `db:"time_limit"`
-	LetterCount int             `db:"letter_count"`
-	ValidWords  json.RawMessage `db:"valid_words"`
-	MaxScore    int             `db:"max_score"`
-	CreatorID   *uuid.UUID      `db:"creator_id"`
-	CreatedAt   time.Time       `db:"created_at"`
+	ID            uuid.UUID       `db:"id"`
+	Letters       string          `db:"letters"`
+	Language      string          `db:"language"`
+	TimeLimit     int             `db:"time_limit"`
+	LetterCount   int             `db:"letter_count"`
+	ValidWords    json.RawMessage `db:"valid_words"`
+	MaxScore      int             `db:"max_score"`
+	CreatorID     *uuid.UUID      `db:"creator_id"`
+	CreatedAt     time.Time       `db:"created_at"`
+	IsDaily       bool            `db:"is_daily"`
+	DailyPuzzleID *uuid.UUID      `db:"daily_puzzle_id"`
 }
 
 func (s *sessionDB) toDomain() (*domain.Session, error) {
@@ -41,15 +43,17 @@ func (s *sessionDB) toDomain() (*domain.Session, error) {
 	}
 
 	return &domain.Session{
-		ID:          s.ID,
-		Letters:     s.Letters,
-		Language:    s.Language,
-		TimeLimit:   s.TimeLimit,
-		LetterCount: s.LetterCount,
-		ValidWords:  validWords,
-		MaxScore:    s.MaxScore,
-		CreatorID:   s.CreatorID,
-		CreatedAt:   s.CreatedAt,
+		ID:            s.ID,
+		Letters:       s.Letters,
+		Language:      s.Language,
+		TimeLimit:     s.TimeLimit,
+		LetterCount:   s.LetterCount,
+		ValidWords:    validWords,
+		MaxScore:      s.MaxScore,
+		CreatorID:     s.CreatorID,
+		CreatedAt:     s.CreatedAt,
+		IsDaily:       s.IsDaily,
+		DailyPuzzleID: s.DailyPuzzleID,
 	}, nil
 }
 func fromDomainSession(s *domain.Session) (*sessionDB, error) {
@@ -58,15 +62,17 @@ func fromDomainSession(s *domain.Session) (*sessionDB, error) {
 		return nil, fmt.Errorf("failed to marshal valid_words: %w", err)
 	}
 	return &sessionDB{
-		ID:          s.ID,
-		Letters:     s.Letters,
-		Language:    s.Language,
-		TimeLimit:   s.TimeLimit,
-		LetterCount: s.LetterCount,
-		ValidWords:  validWordsJSON,
-		MaxScore:    s.MaxScore,
-		CreatorID:   s.CreatorID,
-		CreatedAt:   s.CreatedAt,
+		ID:            s.ID,
+		Letters:       s.Letters,
+		Language:      s.Language,
+		TimeLimit:     s.TimeLimit,
+		LetterCount:   s.LetterCount,
+		ValidWords:    validWordsJSON,
+		MaxScore:      s.MaxScore,
+		CreatorID:     s.CreatorID,
+		CreatedAt:     s.CreatedAt,
+		IsDaily:       s.IsDaily,
+		DailyPuzzleID: s.DailyPuzzleID,
 	}, nil
 }
 func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) error {
@@ -75,8 +81,8 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		return fmt.Errorf("failed to convert session: %w", err)
 	}
 	query := `
-				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+				INSERT INTO game_sessions (id, letters, language, time_limit, letter_count, valid_words, max_score, creator_id, created_at, is_daily, daily_puzzle_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 	_, err = r.db.ExecContext(
 		ctx,
@@ -90,6 +96,8 @@ func (r *postgresSessionRepo) Create(ctx context.Context, s *domain.Session) err
 		dbSession.MaxScore,
 		dbSession.CreatorID,
 		dbSession.CreatedAt,
+		dbSession.IsDaily,
+		dbSession.DailyPuzzleID,
 	)
 
 	if err != nil {

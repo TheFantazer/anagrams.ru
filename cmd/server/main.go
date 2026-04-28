@@ -61,14 +61,17 @@ func main() {
 	friendRepo := postgres.NewFriendRepository(db)
 	sessionInviteRepo := postgres.NewSessionInviteRepository(db)
 	participantRepo := postgres.NewSessionParticipantRepository(db)
+	dailyPuzzleRepo := postgres.NewDailyPuzzleRepository(db)
+	userDailyStatsRepo := postgres.NewUserDailyStatsRepository(db)
 
 	letterGen := dictionary.NewLetterGenerator()
 	gameService := service.NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	authService := service.NewAuthService(userRepo, statsRepo)
 	jwtService := service.NewJWTService(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
 	friendService := service.NewFriendService(friendRepo, userRepo)
+	dailyPuzzleService := service.NewDailyPuzzleService(dailyPuzzleRepo, userDailyStatsRepo, sessionRepo, resultRepo, dictionaries, letterGen)
 
-	router := handler.NewRouter(gameService, authService, jwtService, friendService, sessionInviteRepo, participantRepo, cfg, logger)
+	router := handler.NewRouter(gameService, authService, jwtService, friendService, dailyPuzzleService, sessionInviteRepo, participantRepo, cfg, logger)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.App.Port,
