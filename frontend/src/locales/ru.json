@@ -1,5 +1,6 @@
 {
   "nav": {
+    "home": "Главная",
     "play": "Играть",
     "quickPlay": "Быстрая игра",
     "friends": "Друзья",
@@ -9,6 +10,52 @@
     "signOut": "Выйти",
     "settings": "Настройки",
     "help": "Как играть"
+  },
+  "history": {
+    "match": {
+      "title": "История матчей",
+      "won": "выиграно",
+      "tied": "ничьи",
+      "lost": "проиграно",
+      "totalPts": "всего очков",
+      "result": "Результат",
+      "all": "Все",
+      "won_filter": "Выиграно",
+      "lost_filter": "Проиграно",
+      "tied_filter": "Ничья",
+      "opponent": "Оппонент",
+      "anyone": "Любой",
+      "letters": "Буквы",
+      "score": "Счёт",
+      "delta": "Δ",
+      "when": "Когда",
+      "view": "Просмотр",
+      "noMatches": "Матчей пока нет.",
+      "noMatchesFiltered": "Нет матчей по этим фильтрам.",
+      "clearFilters": "Сбросить фильтры",
+      "loading": "Загрузка матчей..."
+    },
+    "solo": {
+      "title": "История соло",
+      "games": "игр",
+      "best": "лучший",
+      "words": "слов",
+      "totalPts": "всего очков",
+      "type": "Тип",
+      "all": "Все",
+      "dailyOnly": "Только дневные",
+      "practiceOnly": "Только практика",
+      "letters": "Буквы",
+      "mode": "Режим",
+      "score": "Счёт",
+      "when": "Когда",
+      "replay": "Повтор",
+      "noGames": "Игр пока нет.",
+      "noGamesFiltered": "Нет игр по этому фильтру.",
+      "clearFilter": "Сбросить фильтр",
+      "loading": "Загрузка игр..."
+    },
+    "backToPlay": "Играть"
   },
   "home": {
     "titleHigh": "Найди каждое слово.",

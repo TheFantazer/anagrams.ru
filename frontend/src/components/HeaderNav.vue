@@ -60,15 +60,15 @@ onMounted(() => {
 })
 
 const links = computed(() => [
-  { id: '/', label: 'Home', icon: 'home' },
-  { id: '/multiplayer', label: t('nav.play'), icon: 'play', badge: yourTurnCount.value },
+  { id: '/', label: t('nav.home'), icon: 'home' },
+  { id: '/play', label: t('nav.play'), icon: 'play', badge: yourTurnCount.value },
   { id: '/friends', label: t('nav.friends'), icon: 'users', badge: incomingReqCount.value },
   { id: '/leaderboard', label: t('nav.leaderboard'), icon: 'trophy' },
 ])
 
 // Route matching for active state
 const routeMatch = {
-  '/multiplayer': ['/multiplayer', '/match-history', '/results'],
+  '/play': ['/play', '/match-history', '/results'],
   '/friends': ['/friends'],
   '/leaderboard': ['/leaderboard'],
   '/': ['/']
@@ -96,6 +96,7 @@ function navigateTo(path) {
 }
 
 function quickPlay() {
+  gameStore.startGame(userStore.soloTime, userStore.soloLetters, userStore.soloLang)
   router.push('/game')
   drawer.value = false
 }

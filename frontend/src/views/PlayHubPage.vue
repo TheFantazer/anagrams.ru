@@ -415,7 +415,7 @@ onMounted(() => {
             v-for="challenge in activeChallenges"
             :key="challenge.id"
             :class="['ph-ch', { 'is-yours': isYourTurn(challenge), 'is-waiting': !isYourTurn(challenge) }]"
-            @click="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/play/${challenge.id}`)"
+            @click="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/challenge/${challenge.id}`)"
           >
             <div class="ph-ch-side">
               <span :class="['ph-dot', isYourTurn(challenge) ? 'ph-dot--turn' : 'ph-dot--wait']" />
@@ -458,7 +458,7 @@ onMounted(() => {
               </template>
             </div>
             <div class="ph-ch-cta">
-              <button v-if="isYourTurn(challenge)" class="btn btn--accent btn--sm" @click.stop="router.push(`/play/${challenge.id}`)">
+              <button v-if="isYourTurn(challenge)" class="btn btn--accent btn--sm" @click.stop="router.push(`/challenge/${challenge.id}`)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M6 4l14 8-14 8z"/>
                 </svg>

@@ -9,6 +9,8 @@ const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
 // Filters
 const resultFilter = ref('all') // all, won, lost, tie
 const opponentFilter = ref('all')
@@ -18,27 +20,51 @@ const page = ref(1)
 const pageSize = 15
 
 // Data
-const matches = ref([])
-const totalMatches = ref(0)
+const allMatches = ref([])
 const loading = ref(false)
 
-// Stats
-const stats = ref({
-  wins: 0,
-  ties: 0,
-  losses: 0,
-  totalPoints: 0
+// Stats (calculated from all matches, not just filtered)
+const stats = computed(() => {
+  const wins = allMatches.value.filter(m => m.result === 'won').length
+  const ties = allMatches.value.filter(m => m.result === 'tie').length
+  const losses = allMatches.value.filter(m => m.result === 'lost').length
+  const totalPoints = allMatches.value.reduce((sum, m) => sum + m.myScore, 0)
+  return { wins, ties, losses, totalPoints }
 })
 
 // Unique opponents for filter dropdown
 const opponents = computed(() => {
   const unique = new Set()
-  matches.value.forEach(m => {
-    if (m.opponentUsername) {
-      unique.add(m.opponentUsername)
-    }
+  allMatches.value.forEach(m => {
+    if (m.opponentUsername) unique.add(m.opponentUsername)
   })
-  return Array.from(unique).sort()
+  return ['all', ...Array.from(unique).sort()]
+})
+
+// Filtered matches
+const filteredMatches = computed(() => {
+  let filtered = allMatches.value
+
+  if (resultFilter.value !== 'all') {
+    filtered = filtered.filter(m => m.result === resultFilter.value)
+  }
+
+  if (opponentFilter.value !== 'all') {
+    filtered = filtered.filter(m => m.opponentUsername === opponentFilter.value)
+  }
+
+  return filtered
+})
+
+// Paginated slice
+const paginatedMatches = computed(() => {
+  const start = (page.value - 1) * pageSize
+  const end = start + pageSize
+  return filteredMatches.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredMatches.value.length / pageSize))
 })
 
 // Fetch matches from backend
@@ -52,11 +78,10 @@ async function fetchMatches() {
   try {
     const params = new URLSearchParams({
       user_id: userStore.userId,
-      page: page.value.toString(),
-      per_page: pageSize.toString()
+      page: '1',
+      per_page: '100' // Get all matches for client-side filtering
     })
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
     const response = await fetch(`${apiUrl}/api/v1/sessions/all?${params}`)
 
     if (!response.ok) {
@@ -65,11 +90,13 @@ async function fetchMatches() {
 
     const data = await response.json()
 
-    // Filter only multiplayer sessions (with multiple results)
-    const multiplayerSessions = (data.sessions || []).filter(s => s.results && s.results.length > 1)
+    // Filter only completed multiplayer sessions
+    const multiplayerSessions = (data.sessions || []).filter(s =>
+      s.results && s.results.length >= 2
+    )
 
     // Convert to match format
-    matches.value = multiplayerSessions.map(session => {
+    allMatches.value = multiplayerSessions.map(session => {
       const myResult = session.results.find(r => r.user_id === userStore.userId)
       const opponentResult = session.results.find(r => r.user_id !== userStore.userId)
 
@@ -86,117 +113,45 @@ async function fetchMatches() {
       return {
         id: session.id,
         result,
-        opponentUsername: opponentResult.player_name,
+        opponentUsername: opponentResult.player_name || 'Unknown',
         letters: session.letters,
         myScore,
         opponentScore,
         delta,
-        createdAt: session.created_at
+        createdAt: myResult.played_at || session.created_at
       }
     }).filter(Boolean)
 
-    // Apply filters
-    let filtered = matches.value
-    if (resultFilter.value !== 'all') {
-      filtered = filtered.filter(m => m.result === resultFilter.value)
-    }
-    if (opponentFilter.value !== 'all') {
-      filtered = filtered.filter(m => m.opponentUsername === opponentFilter.value)
-    }
-
-    matches.value = filtered
-    totalMatches.value = filtered.length
-
-    // Calculate stats
-    calculateMockStats()
   } catch (error) {
     console.error('Error fetching match history:', error)
     userStore.showToast('Failed to load match history', 'error')
-
-    // Fallback to mock data
-    matches.value = generateMockMatches()
-    totalMatches.value = matches.value.length
-    calculateMockStats()
+    allMatches.value = []
   } finally {
     loading.value = false
   }
 }
 
-// Mock data generator (fallback)
-function generateMockMatches() {
-  const results = ['won', 'lost', 'tie']
-  const opponents = ['alice_m', 'bob_k', 'charlie_d', 'diana_s', 'evan_r']
-  const letterSets = ['ABCDEFG', 'TESTING', 'EXAMPLE', 'WORDGAM', 'PLAYNOW']
-
-  const mockData = []
-  for (let i = 0; i < 25; i++) {
-    const result = results[Math.floor(Math.random() * results.length)]
-    const myScore = 800 + Math.floor(Math.random() * 1200)
-    const theirScore = result === 'won'
-      ? myScore - Math.floor(Math.random() * 300) - 50
-      : result === 'lost'
-      ? myScore + Math.floor(Math.random() * 300) + 50
-      : myScore + Math.floor(Math.random() * 40) - 20
-
-    mockData.push({
-      id: `match-${i}`,
-      result,
-      opponentUsername: opponents[Math.floor(Math.random() * opponents.length)],
-      letters: letterSets[Math.floor(Math.random() * letterSets.length)],
-      myScore,
-      opponentScore: theirScore,
-      delta: myScore - theirScore,
-      createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-    })
-  }
-
-  return mockData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-}
-
-function calculateMockStats() {
-  stats.value = {
-    wins: matches.value.filter(m => m.result === 'won').length,
-    ties: matches.value.filter(m => m.result === 'tie').length,
-    losses: matches.value.filter(m => m.result === 'lost').length,
-    totalPoints: matches.value.reduce((sum, m) => sum + (m.myScore || 0), 0)
-  }
-}
-
-// Format date relative (e.g., "2h ago", "3d ago")
-function formatRelativeTime(isoDate) {
+// Format date helper
+function formatDate(dateStr) {
+  const date = new Date(dateStr)
   const now = new Date()
-  const date = new Date(isoDate)
   const diffMs = now - date
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 60) return `${diffMins}m ${t('multiplayer.ago')}`
-  if (diffHours < 24) return `${diffHours}h ${t('multiplayer.ago')}`
-  if (diffDays === 1) return t('multiplayer.yesterday')
-  if (diffDays < 7) return `${diffDays}d ${t('multiplayer.ago')}`
-
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays === 1) return 'yesterday'
+  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
   return date.toLocaleDateString()
 }
 
-// View match details
-function viewMatch(matchId) {
-  router.push(`/results/${matchId}`)
-}
-
-// Computed values
-const totalPages = computed(() => Math.max(1, Math.ceil(totalMatches.value / pageSize)))
-const showing = computed(() => Math.min(pageSize, totalMatches.value - (page.value - 1) * pageSize))
-
-// Watch filters and reset to page 1
+// Reset page when filters change
 watch([resultFilter, opponentFilter], () => {
   page.value = 1
-  fetchMatches()
-})
-
-// Watch page changes
-watch(page, () => {
-  fetchMatches()
 })
 
 onMounted(() => {
@@ -205,417 +160,427 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="hist-wrap">
-    <div class="hist-head">
-      <div>
-        <div class="page-eyebrow muted">History</div>
-        <h1 class="display">Match History</h1>
-        <p class="muted">Head-to-head games against friends.</p>
-      </div>
-    </div>
+  <div class="page">
+    <div class="shell hist-wrap">
+      <!-- Header -->
+      <header class="page-head">
+        <div>
+          <button class="btn btn--ghost btn--sm" @click="router.push('/play')" style="margin-bottom: 8px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            {{ t('history.backToPlay') }}
+          </button>
+          <div class="page-eyebrow">{{ t('history.match.title') }}</div>
+          <h1 class="page-title-display">{{ t('history.match.title') }}.</h1>
+        </div>
+        <div class="hist-stats">
+          <div class="hist-stat">
+            <span class="mono">{{ stats.wins }}</span>
+            <span class="lbl">{{ t('history.match.won') }}</span>
+          </div>
+          <div class="hist-stat">
+            <span class="mono">{{ stats.ties }}</span>
+            <span class="lbl">{{ t('history.match.tied') }}</span>
+          </div>
+          <div class="hist-stat">
+            <span class="mono">{{ stats.losses }}</span>
+            <span class="lbl">{{ t('history.match.lost') }}</span>
+          </div>
+          <div class="hist-stat">
+            <span class="mono">{{ stats.totalPoints.toLocaleString() }}</span>
+            <span class="lbl">{{ t('history.match.totalPts') }}</span>
+          </div>
+        </div>
+      </header>
 
-    <!-- Stats Overview -->
-    <div class="hist-stats">
-      <div class="hist-stat-card">
-        <div class="hist-stat-num accent-text">{{ stats.wins }}</div>
-        <div class="hist-stat-lbl muted">Wins</div>
-      </div>
-      <div class="hist-stat-card">
-        <div class="hist-stat-num" style="color: var(--fg-muted)">{{ stats.ties }}</div>
-        <div class="hist-stat-lbl muted">Ties</div>
-      </div>
-      <div class="hist-stat-card">
-        <div class="hist-stat-num" style="color: var(--danger)">{{ stats.losses }}</div>
-        <div class="hist-stat-lbl muted">Losses</div>
-      </div>
-      <div class="hist-stat-card">
-        <div class="hist-stat-num mono">{{ stats.totalPoints.toLocaleString() }}</div>
-        <div class="hist-stat-lbl muted">Total points</div>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="hist-filters">
-      <div class="hist-filter-group">
-        <label class="hist-filter-label muted">Result</label>
-        <div class="chip-toggle-group">
-          <button
-            :class="['chip-toggle', { 'is-active': resultFilter === 'all' }]"
-            @click="resultFilter = 'all'"
-          >
-            All
-          </button>
-          <button
-            :class="['chip-toggle', { 'is-active': resultFilter === 'won' }]"
-            @click="resultFilter = 'won'"
-          >
-            Won
-          </button>
-          <button
-            :class="['chip-toggle', { 'is-active': resultFilter === 'lost' }]"
-            @click="resultFilter = 'lost'"
-          >
-            Lost
-          </button>
-          <button
-            :class="['chip-toggle', { 'is-active': resultFilter === 'tie' }]"
-            @click="resultFilter = 'tie'"
-          >
-            Tie
-          </button>
+      <!-- Filters -->
+      <div class="hist-filters">
+        <div class="hist-filter-grp">
+          <span class="hist-filter-lbl muted">{{ t('history.match.result') }}</span>
+          <div class="checkbox-row">
+            <button
+              class="chip-toggle"
+              :data-active="resultFilter === 'all'"
+              @click="resultFilter = 'all'"
+            >
+              {{ t('history.match.all') }}
+            </button>
+            <button
+              class="chip-toggle"
+              :data-active="resultFilter === 'won'"
+              @click="resultFilter = 'won'"
+            >
+              {{ t('history.match.won_filter') }}
+            </button>
+            <button
+              class="chip-toggle"
+              :data-active="resultFilter === 'lost'"
+              @click="resultFilter = 'lost'"
+            >
+              {{ t('history.match.lost_filter') }}
+            </button>
+            <button
+              class="chip-toggle"
+              :data-active="resultFilter === 'tie'"
+              @click="resultFilter = 'tie'"
+            >
+              {{ t('history.match.tied_filter') }}
+            </button>
+          </div>
+        </div>
+        <div class="hist-filter-grp">
+          <span class="hist-filter-lbl muted">{{ t('history.match.opponent') }}</span>
+          <select v-model="opponentFilter" class="hist-select">
+            <option v-for="opp in opponents" :key="opp" :value="opp">
+              {{ opp === 'all' ? t('history.match.anyone') : opp }}
+            </option>
+          </select>
         </div>
       </div>
 
-      <div class="hist-filter-group">
-        <label class="hist-filter-label muted">Opponent</label>
-        <select v-model="opponentFilter" class="input">
-          <option value="all">All opponents</option>
-          <option v-for="opp in opponents" :key="opp" :value="opp">{{ opp }}</option>
-        </select>
+      <!-- Loading state -->
+      <div v-if="loading" class="hist-empty">
+        <div class="muted">{{ t('history.match.loading') }}</div>
       </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="hist-loading">
-      <p class="muted">{{ t('common.loading') }}</p>
-    </div>
+      <!-- Empty state -->
+      <div v-else-if="filteredMatches.length === 0" class="hist-empty">
+        <div class="muted">
+          {{ allMatches.length === 0 ? t('history.match.noMatches') : t('history.match.noMatchesFiltered') }}
+        </div>
+        <button
+          v-if="resultFilter !== 'all' || opponentFilter !== 'all'"
+          class="btn btn--soft btn--sm"
+          @click="resultFilter = 'all'; opponentFilter = 'all'"
+        >
+          {{ t('history.match.clearFilters') }}
+        </button>
+      </div>
 
-    <!-- Empty State -->
-    <div v-else-if="matches.length === 0" class="hist-empty">
-      <p class="muted">No matches found. Play some multiplayer games to see them here!</p>
-    </div>
+      <!-- Table -->
+      <div v-else class="hist-table">
+        <!-- Header -->
+        <div class="hist-row hist-row--head">
+          <span class="hr-col-result">{{ t('history.match.result') }}</span>
+          <span class="hr-col-with">{{ t('history.match.opponent') }}</span>
+          <span class="hr-col-letters">{{ t('history.match.letters') }}</span>
+          <span class="hr-col-score">{{ t('history.match.score') }}</span>
+          <span class="hr-col-delta">{{ t('history.match.delta') }}</span>
+          <span class="hr-col-date">{{ t('history.match.when') }}</span>
+          <span class="hr-col-cta" />
+        </div>
 
-    <!-- Table -->
-    <div v-else class="hist-table-wrap">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th>Result</th>
-            <th>Opponent</th>
-            <th>Letters</th>
-            <th class="hist-th-score">Your score</th>
-            <th class="hist-th-score">Their score</th>
-            <th class="hist-th-delta">Delta</th>
-            <th>When</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="match in matches" :key="match.id" class="hist-row">
-            <td>
-              <span
-                :class="[
-                  'hist-result-badge',
-                  `hist-result-badge--${match.result}`
-                ]"
-              >
-                {{ match.result === 'won' ? '✓ Won' : match.result === 'lost' ? '✗ Lost' : '− Tie' }}
-              </span>
-            </td>
-            <td>
-              <div class="hist-opponent">
-                <div class="hist-avatar">{{ match.opponentUsername?.[0]?.toUpperCase() || '?' }}</div>
-                <span>{{ match.opponentUsername || 'Unknown' }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="mono hist-letters">{{ match.letters }}</span>
-            </td>
-            <td class="hist-score">
-              <span class="mono">{{ match.myScore?.toLocaleString() || '—' }}</span>
-            </td>
-            <td class="hist-score">
-              <span class="mono">{{ match.opponentScore?.toLocaleString() || '—' }}</span>
-            </td>
-            <td class="hist-delta">
-              <span
-                v-if="match.delta !== undefined"
-                :class="[
-                  'mono',
-                  'hist-delta-num',
-                  match.delta > 0 ? 'hist-delta--pos' : match.delta < 0 ? 'hist-delta--neg' : ''
-                ]"
-              >
-                {{ match.delta > 0 ? '+' : '' }}{{ match.delta }}
-              </span>
-              <span v-else class="mono">—</span>
-            </td>
-            <td>
-              <span class="muted hist-when">{{ formatRelativeTime(match.createdAt) }}</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-ghost" @click="viewMatch(match.id)">
-                View
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <!-- Rows -->
+        <div
+          v-for="m in paginatedMatches"
+          :key="m.id"
+          :class="['hist-row', `rm-${m.result}`]"
+        >
+          <span :class="['hr-col-result', 'hr-result', `rm-${m.result}`]">
+            {{ m.result === 'won' ? 'W' : m.result === 'lost' ? 'L' : 'T' }}
+          </span>
+          <span class="hr-col-with">
+            <span class="hr-avatar">{{ m.opponentUsername[0].toUpperCase() }}</span>
+            <span>{{ m.opponentUsername }}</span>
+          </span>
+          <span class="hr-col-letters mono">{{ m.letters }}</span>
+          <span class="hr-col-score mono">
+            {{ m.myScore.toLocaleString() }} <span class="muted">·</span> {{ m.opponentScore.toLocaleString() }}
+          </span>
+          <span :class="['hr-col-delta', 'mono', `rm-${m.result}`]">
+            <template v-if="m.result === 'won'">+{{ Math.abs(m.delta).toLocaleString() }}</template>
+            <template v-else-if="m.result === 'lost'">−{{ Math.abs(m.delta).toLocaleString() }}</template>
+            <template v-else>0</template>
+          </span>
+          <span class="hr-col-date muted">{{ formatDate(m.createdAt) }}</span>
+          <span class="hr-col-cta">
+            <button class="btn btn--ghost btn--sm" @click="router.push(`/results/${m.id}`)">
+              {{ t('history.match.view') }}
+            </button>
+          </span>
+        </div>
+      </div>
 
-    <!-- Pagination -->
-    <Pagination
-      v-if="!loading && matches.length > 0"
-      :page="page"
-      :total-pages="totalPages"
-      :showing="showing"
-      :total="totalMatches"
-      :page-size="pageSize"
-      @update:page="page = $event"
-    />
+      <!-- Pagination -->
+      <Pagination
+        v-if="filteredMatches.length > 0"
+        :page="page"
+        :total-pages="totalPages"
+        :showing="paginatedMatches.length"
+        :total="filteredMatches.length"
+        @update:page="page = $event"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* Import history styles */
 .hist-wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: var(--sp-8) var(--sp-5);
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-12);
 }
 
-.hist-head {
-  margin-bottom: var(--sp-6);
-}
-
-.page-eyebrow {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 600;
-  margin-bottom: var(--sp-2);
-}
-
-h1.display {
-  font-family: var(--font-display);
-  font-size: 42px;
-  font-weight: 700;
-  margin-bottom: var(--sp-2);
-  color: var(--navy);
-}
-
-/* Stats Grid */
+/* ===== Header stats ==================================================== */
 .hist-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-6);
-}
-
-.hist-stat-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: var(--sp-4);
-  text-align: center;
-}
-
-.hist-stat-num {
-  font-family: var(--font-mono);
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: var(--sp-2);
-}
-
-.hist-stat-lbl {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-}
-
-/* Filters */
-.hist-filters {
   display: flex;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-5);
+  gap: var(--sp-3);
   flex-wrap: wrap;
 }
 
-.hist-filter-group {
+.hist-stat {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  flex: 1;
-  min-width: 200px;
-}
-
-.hist-filter-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-}
-
-/* Table */
-.hist-table-wrap {
+  padding: var(--sp-3) var(--sp-4);
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  overflow: hidden;
-  margin-bottom: var(--sp-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  min-width: 80px;
 }
 
-.hist-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.hist-table thead {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.hist-table th {
-  padding: var(--sp-3) var(--sp-4);
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-  color: var(--fg-muted);
-}
-
-.hist-table th.hist-th-score,
-.hist-table th.hist-th-delta {
-  text-align: right;
-}
-
-.hist-table tbody tr {
-  border-bottom: 1px solid var(--border-hairline);
-  transition: background var(--dur-fast);
-}
-
-.hist-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.hist-table tbody tr:hover {
-  background: color-mix(in oklab, var(--bg-card) 50%, transparent);
-}
-
-.hist-table td {
-  padding: var(--sp-3) var(--sp-4);
-  font-size: 14px;
+.hist-stat .mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
   color: var(--fg-primary);
 }
 
-.hist-score {
-  text-align: right;
-}
-
-.hist-delta {
-  text-align: right;
-}
-
-/* Result Badge */
-.hist-result-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-}
-
-.hist-result-badge--won {
-  background: var(--success-soft, color-mix(in oklab, var(--success) 12%, transparent));
-  color: var(--success);
-  border: 1px solid color-mix(in oklab, var(--success) 30%, transparent);
-}
-
-.hist-result-badge--lost {
-  background: color-mix(in oklab, var(--danger) 12%, transparent);
-  color: var(--danger);
-  border: 1px solid color-mix(in oklab, var(--danger) 30%, transparent);
-}
-
-.hist-result-badge--tie {
-  background: var(--bg-card);
+.hist-stat .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
   color: var(--fg-muted);
-  border: 1px solid var(--border-subtle);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
-/* Opponent */
-.hist-opponent {
+/* ===== Filters ======================================================== */
+.hist-filters {
+  display: flex;
+  gap: var(--sp-5);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+}
+
+.hist-filter-grp {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
 }
 
-.hist-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: var(--grad-accent);
-  color: var(--milk);
-  font-family: var(--font-display);
-  font-weight: 700;
+.hist-filter-lbl {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+.hist-select {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-family: var(--font-body);
   font-size: 13px;
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+
+.hist-select:focus {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ===== Empty state ==================================================== */
+.hist-empty {
+  padding: var(--sp-8);
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+/* ===== Table ========================================================== */
+.hist-table {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+}
+
+.hist-row {
+  display: grid;
+  grid-template-columns: 60px 160px 140px 160px 80px 1fr 80px;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: 14px var(--sp-4);
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: 13px;
+  transition: background var(--dur-fast);
+}
+
+.hist-row:last-child {
+  border-bottom: 0;
+}
+
+.hist-row:not(.hist-row--head):hover {
+  background: var(--bg-card);
+}
+
+.hist-row--head {
+  background: var(--bg-card);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  color: var(--fg-muted);
+  padding: 10px var(--sp-4);
+}
+
+.hr-result {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--milk);
+}
+
+.hr-result.rm-won {
+  background: var(--success);
+}
+
+.hr-result.rm-lost {
+  background: var(--danger);
+}
+
+.hr-result.rm-tie {
+  background: var(--fg-faint);
+}
+
+.hr-col-with {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+.hr-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   display: grid;
   place-items: center;
-  border: 2px solid var(--milk);
-  box-shadow: 0 0 0 1px var(--border-default);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
   flex-shrink: 0;
 }
 
-.hist-letters {
-  font-size: 13px;
+.hr-col-letters {
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--navy);
+  font-size: 13px;
+  color: var(--fg-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.hist-delta-num {
-  font-size: 14px;
+.hr-col-score {
+  color: var(--fg-secondary);
+}
+
+.hr-col-delta {
   font-weight: 700;
+  text-align: right;
 }
 
-.hist-delta--pos {
+.hr-col-delta.rm-won {
   color: var(--success);
 }
 
-.hist-delta--neg {
+.hr-col-delta.rm-lost {
   color: var(--danger);
 }
 
-.hist-when {
+.hr-col-delta.rm-tie {
+  color: var(--fg-muted);
+}
+
+.hr-col-date {
   font-size: 12px;
 }
 
-/* Loading/Empty States */
-.hist-loading,
-.hist-empty {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: var(--sp-8);
-  text-align: center;
-  margin-bottom: var(--sp-4);
+.hr-col-cta {
+  display: flex;
+  justify-content: flex-end;
 }
 
-/* Responsive */
 @media (max-width: 820px) {
-  .hist-table-wrap {
-    overflow-x: auto;
+  .hist-row {
+    grid-template-columns: 36px 1fr auto;
+    grid-template-areas:
+      "res with cta"
+      "res letters score"
+      ". delta date";
+    row-gap: 4px;
+    padding: var(--sp-3);
   }
 
-  .hist-table {
-    min-width: 700px;
-  }
-}
-
-@media (max-width: 720px) {
-  h1.display {
-    font-size: 32px;
+  .hist-row--head {
+    display: none;
   }
 
-  .hist-stats {
-    grid-template-columns: repeat(2, 1fr);
+  .hr-col-result {
+    grid-area: res;
   }
 
-  .hist-filters {
-    flex-direction: column;
+  .hr-col-with {
+    grid-area: with;
+  }
+
+  .hr-col-letters {
+    grid-area: letters;
+    font-size: 12px;
+  }
+
+  .hr-col-score {
+    grid-area: score;
+    text-align: right;
+    font-size: 11px;
+  }
+
+  .hr-col-delta {
+    grid-area: delta;
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .hr-col-date {
+    grid-area: date;
+    text-align: right;
+  }
+
+  .hr-col-cta {
+    grid-area: cta;
   }
 }
 </style>

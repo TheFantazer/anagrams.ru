@@ -120,11 +120,11 @@ async function loadResults() {
 }
 
 function goBack() {
-  router.push('/multiplayer')
+  router.push('/play')
 }
 
 function playChallenge() {
-  router.push(`/play/${sessionId.value}`)
+  router.push(`/challenge/${sessionId.value}`)
 }
 
 function share() {

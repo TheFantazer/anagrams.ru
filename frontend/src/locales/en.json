@@ -1,5 +1,6 @@
 {
   "nav": {
+    "home": "Home",
     "play": "Play",
     "quickPlay": "Quick play",
     "friends": "Friends",
@@ -9,6 +10,52 @@
     "signOut": "Sign out",
     "settings": "Settings",
     "help": "How to play"
+  },
+  "history": {
+    "match": {
+      "title": "Match history",
+      "won": "won",
+      "tied": "tied",
+      "lost": "lost",
+      "totalPts": "total pts",
+      "result": "Result",
+      "all": "All",
+      "won_filter": "Won",
+      "lost_filter": "Lost",
+      "tied_filter": "Tied",
+      "opponent": "Opponent",
+      "anyone": "Anyone",
+      "letters": "Letters",
+      "score": "Score",
+      "delta": "Δ",
+      "when": "When",
+      "view": "View",
+      "noMatches": "No matches yet.",
+      "noMatchesFiltered": "No matches match these filters.",
+      "clearFilters": "Clear filters",
+      "loading": "Loading matches..."
+    },
+    "solo": {
+      "title": "Solo history",
+      "games": "games",
+      "best": "best",
+      "words": "words",
+      "totalPts": "total pts",
+      "type": "Type",
+      "all": "All",
+      "dailyOnly": "Daily only",
+      "practiceOnly": "Practice only",
+      "letters": "Letters",
+      "mode": "Mode",
+      "score": "Score",
+      "when": "When",
+      "replay": "Replay",
+      "noGames": "No games yet.",
+      "noGamesFiltered": "No games match this filter.",
+      "clearFilter": "Clear filter",
+      "loading": "Loading games..."
+    },
+    "backToPlay": "Play"
   },
   "home": {
     "titleHigh": "Find every word.",

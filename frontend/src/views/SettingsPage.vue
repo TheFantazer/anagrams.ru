@@ -242,7 +242,7 @@ const languageOptions = computed(() => [
       </div>
 
       <div style="margin-top:24px">
-        <button class="btn btn--accent btn--lg" @click="$router.push('/')">
+        <button class="btn btn--accent btn--lg" @click="userStore.setShowSoloSettings(true)">
           {{ $t('settings.startNewGame') }}
         </button>
       </div>

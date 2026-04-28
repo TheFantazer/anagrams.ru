@@ -137,7 +137,7 @@ watch(() => userStore.userId, (newVal) => {
         <button
           v-if="yourTurnChallenges.length > 0"
           class="home-alert home-alert--turn"
-          @click="router.push('/multiplayer')"
+          @click="router.push('/play')"
         >
           <span class="home-alert-mark">
             <span class="home-alert-pulse" />
@@ -285,7 +285,7 @@ watch(() => userStore.userId, (newVal) => {
           </div>
 
           <!-- Multiplayer -->
-          <div class="mode-card" @click="router.push('/multiplayer')">
+          <div class="mode-card" @click="router.push('/play')">
             <div class="mode-card-top">
               <span class="mode-num">03</span>
               <span class="mode-tag">{{ $t('home.modesTags.multiplayer') }}</span>

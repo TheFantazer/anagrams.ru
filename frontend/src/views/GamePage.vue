@@ -80,7 +80,7 @@ async function loadMultiplayerSession() {
         if (startResponse.status === 403) {
           // Link already used by another player
           alert(t('multiplayer.linkAlreadyUsed'))
-          router.push('/multiplayer')
+          router.push('/play')
           return
         }
         throw new Error('Failed to start session')
@@ -237,7 +237,7 @@ async function handlePlayAgain() {
 async function handleChallengeBack() {
   // Создаём ответную игру с теми же настройками и переходим на /multiplayer
   router.push({
-    path: '/multiplayer',
+    path: '/play',
     query: {
       create: 'true',
       language: gameStore.lastGameLang,
@@ -548,7 +548,7 @@ const sortedDisplayWords = computed(() => {
         <button
           v-else
           class="btn btn--primary btn--lg"
-          @click="router.push('/multiplayer')"
+          @click="router.push('/play')"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="18" cy="5" r="3"/>

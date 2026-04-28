@@ -34,12 +34,12 @@ const router = createRouter({
             component: () => import('../views/LeaderboardPage.vue')
         },
         {
-            path: '/multiplayer',
-            name: 'multiplayer',
+            path: '/play',
+            name: 'play',
             component: () => import('../views/PlayHubPage.vue')
         },
         {
-            path: '/play/:sessionId',
+            path: '/challenge/:sessionId',
             name: 'challenge',
             component: () => import('../views/ChallengeInfoPage.vue')
         },

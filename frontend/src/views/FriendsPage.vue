@@ -222,7 +222,7 @@ function copyInviteLink() {
 
 function challengeFriend(name) {
   userStore.showToast(`Challenge sent to ${name}!`, 'success')
-  router.push('/multiplayer')
+  router.push('/play')
 }
 
 // Load matches against a specific friend
