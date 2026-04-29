@@ -248,13 +248,14 @@ async function playDailyPuzzle() {
   if (!dailyPuzzle.value || hasPlayedToday.value) return
 
   // Use startGame with existing session pattern
-  // Signature: startGame(letters, language, timeLimit, sessionId, isDaily)
+  // Signature: startGame(letters, language, timeLimit, sessionId, isDaily, validWords)
   await gameStore.startGame(
     dailyPuzzle.value.letters,
     dailyPuzzle.value.language,
     dailyPuzzle.value.time_limit,
     dailyPuzzle.value.id,
-    true // isDaily flag
+    true, // isDaily flag
+    dailyPuzzle.value.valid_words
   )
 
   router.push('/game')

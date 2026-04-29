@@ -502,7 +502,7 @@ const sortedDisplayWords = computed(() => {
       <div class="over-meta">
         <div class="cell">
           <div class="cell-num">
-            <template v-if="gameStore.hideLetters">
+            <template v-if="gameStore.hideLetters && !gameStore.isDaily">
               {{ gameStore.foundWords.length }}
             </template>
             <template v-else>
@@ -511,7 +511,7 @@ const sortedDisplayWords = computed(() => {
           </div>
           <div class="cell-lbl">{{ $t('game.gameOver.wordsFound') }}</div>
         </div>
-        <div v-if="!gameStore.hideLetters" class="cell">
+        <div v-if="!gameStore.hideLetters || gameStore.isDaily" class="cell">
           <div class="cell-num">{{ percentFound }}%</div>
           <div class="cell-lbl">{{ $t('game.gameOver.percentFound') }}</div>
         </div>
@@ -520,7 +520,7 @@ const sortedDisplayWords = computed(() => {
           <div class="cell-lbl">{{ $t('game.gameOver.longestWord') }}</div>
         </div>
         <div class="cell">
-          <div class="cell-num mono" style="font-size:14px">{{ gameStore.hideLetters ? '?'.repeat(gameStore.gameLetters?.length || 0) : (gameStore.gameLetters?.join('').toLowerCase() || '') }}</div>
+          <div class="cell-num mono" style="font-size:14px">{{ (gameStore.hideLetters && !gameStore.isDaily) ? '?'.repeat(gameStore.gameLetters?.length || 0) : (gameStore.gameLetters?.join('').toLowerCase() || '') }}</div>
           <div class="cell-lbl">set</div>
         </div>
       </div>
@@ -569,7 +569,7 @@ const sortedDisplayWords = computed(() => {
 
       <div class="found-rail-head" style="margin-top:32px;border-top:1px solid var(--border-hairline);padding-top:24px">
         <span class="title">
-          <template v-if="gameStore.hideLetters">
+          <template v-if="gameStore.hideLetters && !gameStore.isDaily">
             All words
           </template>
           <template v-else>

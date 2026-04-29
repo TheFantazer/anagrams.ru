@@ -105,7 +105,7 @@ func (s *dailyPuzzleService) GetTodaysSession(ctx context.Context, language stri
 		return nil, fmt.Errorf("no valid words found for daily puzzle")
 	}
 
-	const dailyTimeLimit = 180
+	const dailyTimeLimit = 60
 
 	session, err := domain.NewSession(
 		puzzle.Letters,

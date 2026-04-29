@@ -175,7 +175,7 @@ const languageOptions = computed(() => [
             <label class="field-label">{{ $t('settings.gameDefaults.letters') }}</label>
             <div class="checkbox-row">
               <button
-                v-for="n in [6, 7, 8, 9, 10]"
+                v-for="n in [6, 7, 8]"
                 :key="n"
                 class="chip-toggle chip-toggle--mono"
                 :data-active="userStore.soloLetters === n"

@@ -94,7 +94,7 @@ export const useGameStore = defineStore('game', () => {
     return letters
   }
 
-  async function startGame(timeOrLetters, lettersOrLang, langOrTime, existingSessionId = null, isDailyPuzzle = false) {
+  async function startGame(timeOrLetters, lettersOrLang, langOrTime, existingSessionId = null, isDailyPuzzle = false, dailyValidWords = null) {
     let time, letters, lang
 
     // Если передан existingSessionId, значит вызов из мультиплеера или daily puzzle
@@ -120,7 +120,7 @@ export const useGameStore = defineStore('game', () => {
     lastGameWasMultiplayer.value = !!existingSessionId
 
     try {
-      if (existingSessionId) {
+      if (existingSessionId && !isDailyPuzzle) {
         // Мультиплеер: загружаем существующую сессию
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
         const response = await fetch(`${apiUrl}/api/v1/sessions/${existingSessionId}`)
@@ -138,6 +138,17 @@ export const useGameStore = defineStore('game', () => {
         score.value = 0
         timeLeft.value = session.time_limit
         initialTime.value = session.time_limit
+        gameActive.value = true
+        usedLetterIndices.value = []
+      } else if (existingSessionId && isDailyPuzzle) {
+        // Daily puzzle: данные уже переданы через параметры
+        gameLetters.value = letters.toUpperCase().split('')
+        validWords.value = dailyValidWords ? dailyValidWords.map(w => w.toUpperCase()) : []
+        inputWord.value = ''
+        foundWords.value = []
+        score.value = 0
+        timeLeft.value = time
+        initialTime.value = time
         gameActive.value = true
         usedLetterIndices.value = []
       } else {
