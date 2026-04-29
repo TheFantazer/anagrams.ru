@@ -22,6 +22,7 @@ export const useGameStore = defineStore('game', () => {
   const validWords = ref([])
   const sessionId = ref(null)
   const usedLetterIndices = ref([])
+  const isDaily = ref(false)
 
   const settingsLang = ref('ru')
   const settingsLetters = ref(7)
@@ -93,21 +94,23 @@ export const useGameStore = defineStore('game', () => {
     return letters
   }
 
-  async function startGame(timeOrLetters, lettersOrLang, langOrTime, existingSessionId = null) {
+  async function startGame(timeOrLetters, lettersOrLang, langOrTime, existingSessionId = null, isDailyPuzzle = false) {
     let time, letters, lang
 
-    // Если передан existingSessionId, значит вызов из мультиплеера
+    // Если передан existingSessionId, значит вызов из мультиплеера или daily puzzle
     // В этом случае: timeOrLetters = letters (string), lettersOrLang = lang, langOrTime = time
     if (existingSessionId) {
       letters = timeOrLetters
       lang = lettersOrLang
       time = langOrTime
       sessionId.value = existingSessionId
+      isDaily.value = isDailyPuzzle
     } else {
       // Стандартный вызов из соло-игры: time, letters (count), lang
       time = timeOrLetters
       letters = lettersOrLang
       lang = langOrTime
+      isDaily.value = false
     }
 
     // Save last game parameters
@@ -307,7 +310,12 @@ export const useGameStore = defineStore('game', () => {
           }
         }
 
-        const response = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`, {
+        // Choose endpoint based on whether it's a daily puzzle
+        const endpoint = isDaily.value
+          ? `${apiUrl}/api/v1/daily-puzzle/submit`
+          : `${apiUrl}/api/v1/sessions/${sessionId.value}/results`
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -361,6 +369,7 @@ export const useGameStore = defineStore('game', () => {
     validWords.value = []
     sessionId.value = null
     usedLetterIndices.value = []
+    isDaily.value = false
   }
 
   
@@ -399,6 +408,7 @@ export const useGameStore = defineStore('game', () => {
     validWords,
     sessionId,
     usedLetterIndices,
+    isDaily,
     lastGameTime,
     lastGameLetters,
     lastGameLang,

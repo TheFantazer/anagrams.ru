@@ -378,7 +378,7 @@ const sortedDisplayWords = computed(() => {
             <div>
               <div class="hud-stat-label">{{ $t('game.found') }}</div>
               <div class="hud-stat-value">
-                <template v-if="gameStore.hideLetters">
+                <template v-if="gameStore.hideLetters || gameStore.isDaily">
                   {{ gameStore.foundWords.length }}
                 </template>
                 <template v-else>
@@ -526,7 +526,7 @@ const sortedDisplayWords = computed(() => {
       </div>
 
       <div class="row gap-2" style="justify-content:center;flex-wrap:wrap;margin-bottom:12px">
-        <button class="btn btn--accent btn--lg" @click="handlePlayAgain">
+        <button v-if="!gameStore.isDaily" class="btn btn--accent btn--lg" @click="handlePlayAgain">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
           </svg>
@@ -546,7 +546,7 @@ const sortedDisplayWords = computed(() => {
           {{ $t('game.gameOver.challengeBack') }}
         </button>
         <button
-          v-else
+          v-else-if="!gameStore.isDaily"
           class="btn btn--primary btn--lg"
           @click="router.push('/play')"
         >

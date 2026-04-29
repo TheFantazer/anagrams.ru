@@ -25,6 +25,12 @@ const modalStep = ref('pick') // 'pick' | 'sent'
 const recentMatches = ref([])
 const loadingRecentMatches = ref(false)
 
+// Daily puzzle
+const dailyPuzzle = ref(null)
+const loadingDaily = ref(false)
+const hasPlayedToday = ref(false)
+const dailyStats = ref(null)
+
 // Computed
 const yourTurnCount = computed(() => {
   return activeChallenges.value.filter(c => {
@@ -203,6 +209,57 @@ function isYourTurn(challenge) {
   return !userResult && challenge.type === 'invited'
 }
 
+async function loadDailyPuzzle() {
+  loadingDaily.value = true
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    let url = `${apiUrl}/api/v1/daily-puzzle/today?language=${userStore.soloLang}`
+
+    if (userStore.userId) {
+      url += `&user_id=${userStore.userId}`
+    }
+
+    const response = await fetch(url)
+    if (response.ok) {
+      const data = await response.json()
+      dailyPuzzle.value = data.session
+      hasPlayedToday.value = data.has_played || false
+      dailyStats.value = data.daily_stats || null
+    }
+  } catch (error) {
+    console.error('Failed to load daily puzzle:', error)
+  } finally {
+    loadingDaily.value = false
+  }
+}
+
+function getTimeUntilMidnightUTC() {
+  const now = new Date()
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0))
+  const diff = midnight - now
+
+  const hours = Math.floor(diff / 3600000)
+  const minutes = Math.floor((diff % 3600000) / 60000)
+
+  return `${hours}h ${minutes}m`
+}
+
+async function playDailyPuzzle() {
+  if (!dailyPuzzle.value || hasPlayedToday.value) return
+
+  // Use startGame with existing session pattern
+  // Signature: startGame(letters, language, timeLimit, sessionId, isDaily)
+  await gameStore.startGame(
+    dailyPuzzle.value.letters,
+    dailyPuzzle.value.language,
+    dailyPuzzle.value.time_limit,
+    dailyPuzzle.value.id,
+    true // isDaily flag
+  )
+
+  router.push('/game')
+}
+
 function formatDate(dateStr) {
   const date = new Date(dateStr)
   const now = new Date()
@@ -222,6 +279,7 @@ function formatDate(dateStr) {
 onMounted(() => {
   loadActiveChallenges()
   loadRecentMatches()
+  loadDailyPuzzle()
 })
 </script>
 
@@ -303,27 +361,57 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Daily card (MOCK) -->
+        <!-- Daily puzzle card -->
         <div class="ph-card ph-card--daily">
           <div class="ph-card-corner">
             <span class="ph-num">02</span>
             <span class="ph-tag ph-tag--accent">{{$t('playHub.dailyPuzzle.tag')}}</span>
           </div>
           <h3 class="ph-card-title">{{ $t('playHub.dailyPuzzle.title') }}</h3>
-          <p class="ph-card-sub">{{ $t('playHub.dailyPuzzle.subtitle') }}</p>
+          <p class="ph-card-sub">
+            <template v-if="hasPlayedToday">
+              {{ $t('playHub.dailyPuzzle.completedToday') }}
+            </template>
+            <template v-else-if="dailyStats && dailyStats.current_streak > 0">
+              {{ $t('playHub.dailyPuzzle.streakInfo', { streak: dailyStats.current_streak }) }}
+            </template>
+            <template v-else>
+              {{ $t('playHub.dailyPuzzle.subtitle') }}
+            </template>
+          </p>
           <div class="ph-card-actions">
-            <button class="btn btn--primary" disabled>
+            <button
+              class="btn btn--primary"
+              :disabled="!dailyPuzzle || hasPlayedToday || loadingDaily"
+              @click="playDailyPuzzle"
+            >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 4l14 8-14 8z"/>
               </svg>
-              {{ $t('playHub.dailyPuzzle.play') }}
+              <template v-if="loadingDaily">{{ $t('common.loading') }}</template>
+              <template v-else-if="hasPlayedToday">{{ $t('playHub.dailyPuzzle.completed') }}</template>
+              <template v-else>{{ $t('playHub.dailyPuzzle.play') }}</template>
             </button>
           </div>
-          <div class="ph-daily-tiles">
-            <span v-for="(L, i) in ['B','R','I','G','H','T','E']" :key="i" class="ph-daily-tile" :style="{ animationDelay: `${i * 0.04}s` }">{{ L }}</span>
+          <div v-if="dailyPuzzle" class="ph-daily-tiles">
+            <span
+              v-for="(L, i) in dailyPuzzle.letters.split('')"
+              :key="i"
+              class="ph-daily-tile"
+              :style="{ animationDelay: `${i * 0.04}s` }"
+            >
+              {{ hasPlayedToday ? L.toLowerCase() : '?' }}
+            </span>
+          </div>
+          <div v-else class="ph-daily-tiles">
+            <span v-for="i in 7" :key="i" class="ph-daily-tile">?</span>
           </div>
           <div class="ph-card-meta">
-            <span>{{ $t('playHub.dailyPuzzle.resetsIn', { time: '9h 22m' }) }}</span>
+            <span>{{ $t('playHub.dailyPuzzle.resetsIn', { time: getTimeUntilMidnightUTC() }) }}</span>
+            <template v-if="dailyStats && dailyStats.current_streak > 0">
+              <span class="dot-sep">·</span>
+              <span>{{ $t('playHub.dailyPuzzle.streak', { count: dailyStats.current_streak }) }}</span>
+            </template>
           </div>
         </div>
 
