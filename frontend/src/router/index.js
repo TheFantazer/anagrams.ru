@@ -62,6 +62,11 @@ const router = createRouter({
             path: '/solo-history',
             name: 'solo-history',
             component: () => import('../views/SoloHistoryPage.vue')
+        },
+        {
+            path: '/privacy',
+            name: 'privacy',
+            component: () => import('../views/PrivacyPage.vue')
         }
     ]
 })

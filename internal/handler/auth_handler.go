@@ -36,6 +36,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !req.AcceptedPrivacyPolicy {
+		respondError(w, http.StatusBadRequest, "privacy_policy_required", "You must accept the privacy policy")
+		return
+	}
+
 	user, err := h.authService.Register(r.Context(), req.Username, req.Email, req.Password)
 	if err != nil {
 		status, errCode, message := mapAuthError(err)
@@ -263,6 +268,8 @@ func mapAuthError(err error) (int, string, string) {
 		return http.StatusConflict, "email_taken", "Email is already taken"
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		return http.StatusUnauthorized, "invalid_credentials", "Invalid username or password"
+	case errors.Is(err, domain.ErrPrivacyPolicyNotAccepted):
+		return http.StatusBadRequest, "privacy_policy_required", "You must accept the privacy policy"
 	case errors.Is(err, repository.ErrNotFound):
 		return http.StatusNotFound, "not_found", "User not found"
 	default:

@@ -195,7 +195,6 @@
       "signIn": "Sign in",
       "signUp": "Sign up"
     },
-    "continueWithGoogle": "Continue with Google",
     "orUseUsername": "or use your username or email",
     "orUseUsernameSignUp": "or use your username",
     "fields": {
@@ -218,7 +217,10 @@
     "toggles": {
       "noAccount": "Don't have an account? Sign up",
       "hasAccount": "Already have one? Sign in"
-    }
+    },
+    "acceptPrivacy": "I agree to the",
+    "privacyPolicy": "privacy policy",
+    "privacyRequired": "You must accept the privacy policy"
   },
   "leaderboard": {
     "title": "Who's hunting words best",
@@ -531,5 +533,11 @@
       "accepted": "Accepted",
       "rejected": "Rejected"
     }
+  },
+  "footer": {
+    "privacyPolicy": "Privacy Policy"
+  },
+  "privacy": {
+    "title": "Privacy Policy"
   }
 }

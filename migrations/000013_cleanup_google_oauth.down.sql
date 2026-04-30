@@ -1,0 +1,2 @@
+-- This migration cannot be reversed as Google OAuth data is permanently removed
+-- No action needed for rollback

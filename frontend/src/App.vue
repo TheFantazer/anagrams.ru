@@ -3,6 +3,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useUserStore } from './stores/userStore'
 import HeaderNav from './components/HeaderNav.vue'
+import Footer from './components/Footer.vue'
 import HelpModal from './components/HelpModal.vue'
 import SoloSettingsModal from './components/SoloSettingsModal.vue'
 import ToastStack from './components/ToastStack.vue'
@@ -35,6 +36,9 @@ onUnmounted(() => {
 
       <!-- Page content -->
       <RouterView />
+
+      <!-- Footer -->
+      <Footer />
     </div>
 
     <!-- Modals -->
