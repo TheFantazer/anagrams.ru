@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
@@ -11,8 +11,24 @@ const userStore = useUserStore()
 const username = ref('')
 const email = ref('')
 const password = ref('')
+const acceptedPrivacy = ref(false)
 const error = ref('')
 const loading = ref(false)
+
+onMounted(() => {
+  const script = document.createElement('script')
+  script.src = 'https://telegram.org/js/telegram-widget.js?22'
+  script.async = true
+  script.setAttribute('data-telegram-login', import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'YOUR_BOT_USERNAME')
+  script.setAttribute('data-size', 'large')
+  script.setAttribute('data-auth-url', `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/auth/telegram/callback`)
+  script.setAttribute('data-request-access', 'write')
+
+  const container = document.getElementById('telegram-login-container')
+  if (container) {
+    container.appendChild(script)
+  }
+})
 
 async function handleSubmit() {
   error.value = ''
@@ -39,7 +55,8 @@ async function register() {
     body: JSON.stringify({
       username: username.value,
       email: email.value,
-      password: password.value
+      password: password.value,
+      accepted_privacy_policy: true
     })
   })
 
@@ -82,20 +99,6 @@ async function login() {
   }
 }
 
-function handleGoogleLogin() {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-
-  // Сохраняем текущий редирект для Google OAuth
-  const redirectPath = sessionStorage.getItem('redirectAfterAuth')
-  if (redirectPath) {
-    // Передаём через query param для Google OAuth callback
-    const encodedRedirect = encodeURIComponent(redirectPath)
-    window.location.href = `${apiUrl}/api/v1/auth/google?redirect=${encodedRedirect}`
-  } else {
-    window.location.href = `${apiUrl}/api/v1/auth/google`
-  }
-}
-
 const eyebrowText = computed(() =>
   userStore.loginTab === 'login' ? t('auth.welcomeBack') : t('auth.joinTheBoard')
 )
@@ -115,6 +118,12 @@ const usernameLabel = computed(() =>
 const submitButtonText = computed(() =>
   loading.value ? t('auth.actions.loading') : (userStore.loginTab === 'login' ? t('auth.actions.signIn') : t('auth.actions.createAccount'))
 )
+
+const isSubmitDisabled = computed(() => {
+  if (loading.value) return true
+  if (userStore.loginTab === 'register' && !acceptedPrivacy.value) return true
+  return false
+})
 
 const toggleText = computed(() =>
   userStore.loginTab === 'login' ? t('auth.toggles.noAccount') : t('auth.toggles.hasAccount')
@@ -181,16 +190,8 @@ const orText = computed(() =>
             />
           </div>
 
-          <!-- Google OAuth button -->
-          <button type="button" class="btn btn--ghost btn--block" style="padding:14px" @click="handleGoogleLogin">
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            {{ $t('auth.continueWithGoogle') }}
-          </button>
+          <!-- Telegram Login Widget -->
+          <div id="telegram-login-container" style="display: flex; justify-content: center; margin-bottom: 20px"></div>
 
           <div class="auth-or">
             <span>{{ orText }}</span>
@@ -218,11 +219,28 @@ const orText = computed(() =>
             <input v-model="password" class="input" type="password" :placeholder="$t('auth.placeholders.password')" />
           </div>
 
+          <!-- Privacy Policy Checkbox (only for registration) -->
+          <div v-if="userStore.loginTab === 'register'" style="margin: 16px 0">
+            <label style="display: flex; align-items: start; gap: 8px; cursor: pointer">
+              <input
+                type="checkbox"
+                v-model="acceptedPrivacy"
+                style="margin-top: 2px; cursor: pointer"
+              />
+              <span style="font-size: 13px; line-height: 1.4">
+                {{ $t('auth.acceptPrivacy') }}
+                <router-link to="/privacy" style="color: var(--cocoa); text-decoration: underline">
+                  {{ $t('auth.privacyPolicy') }}
+                </router-link>
+              </span>
+            </label>
+          </div>
+
           <!-- Error message -->
           <div v-if="error" class="auth-err">{{ error }}</div>
 
           <!-- Submit button -->
-          <button type="submit" class="btn btn--accent btn--block btn--lg" :disabled="loading">
+          <button type="submit" class="btn btn--accent btn--block btn--lg" :disabled="isSubmitDisabled">
             {{ submitButtonText }}
           </button>
 

@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-	App         AppConfig
-	Postgres    PostgresConfig
-	Redis       RedisConfig
-	Dict        DictConfig
-	Game        GameConfig
-	GoogleOAuth GoogleOAuthConfig
-	JWT         JWTConfig
+	App      AppConfig
+	Postgres PostgresConfig
+	Redis    RedisConfig
+	Dict     DictConfig
+	Game     GameConfig
+	Telegram TelegramConfig
+	JWT      JWTConfig
 }
 
 type AppConfig struct {
@@ -53,10 +53,8 @@ type GameConfig struct {
 	MinWordLength      int
 }
 
-type GoogleOAuthConfig struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURI  string
+type TelegramConfig struct {
+	BotToken string
 }
 
 type JWTConfig struct {
@@ -97,10 +95,8 @@ func Load() (*Config, error) {
 			DefaultLetterCount: getEnvInt("GAME_DEFAULT_LETTER_COUNT", 7),
 			MinWordLength:      getEnvInt("GAME_MIN_WORD_LENGTH", 3),
 		},
-		GoogleOAuth: GoogleOAuthConfig{
-			ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
-			ClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
-			RedirectURI:  getEnv("GOOGLE_REDIRECT_URI", ""),
+		Telegram: TelegramConfig{
+			BotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
 		},
 		JWT: JWTConfig{
 			Secret:     getEnv("JWT_SECRET", ""),

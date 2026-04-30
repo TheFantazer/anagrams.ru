@@ -16,12 +16,10 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	authHandler := NewAuthHandler(authService, logger)
 	friendHandler := NewFriendHandler(friendService, logger)
 	dailyPuzzleHandler := NewDailyPuzzleHandler(dailyPuzzleService, gameService, logger)
-	oauthHandler := NewOAuthHandler(
+	telegramHandler := NewTelegramHandler(
 		authService,
 		jwtService,
-		cfg.GoogleOAuth.ClientID,
-		cfg.GoogleOAuth.ClientSecret,
-		cfg.GoogleOAuth.RedirectURI,
+		cfg.Telegram.BotToken,
 		cfg.App.FrontendURL,
 		logger,
 	)
@@ -42,12 +40,12 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/v1/auth/me", authHandler.GetMe)
 	mux.HandleFunc("PUT /api/v1/auth/settings", authHandler.UpdateSettings)
+	//mux.HandleFunc("PUT /api/v1/auth/username", authHandler.UpdateUsername)
 	mux.HandleFunc("GET /api/v1/auth/stats", authHandler.GetStats)
 	mux.HandleFunc("GET /api/v1/leaderboard", authHandler.GetLeaderboard)
 
-	// OAuth endpoints
-	mux.HandleFunc("GET /api/v1/auth/google", oauthHandler.GoogleLogin)
-	mux.HandleFunc("GET /api/v1/auth/google/callback", oauthHandler.GoogleCallback)
+	// Telegram auth endpoint
+	mux.HandleFunc("GET /api/v1/auth/telegram/callback", telegramHandler.TelegramCallback)
 
 	// Friend endpoints
 	mux.HandleFunc("POST /api/v1/friends/requests", friendHandler.SendFriendRequest)
