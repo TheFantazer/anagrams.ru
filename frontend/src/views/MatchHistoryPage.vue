@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { useUserStore } from '../stores/userStore'
+import {ref, computed, onMounted, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {useI18n} from 'vue-i18n'
+import {useUserStore} from '../stores/userStore'
 import Pagination from '../components/Pagination.vue'
+import AuthPrompt from '@/components/AuthPrompt.vue'
 
-const { t } = useI18n()
+const {t} = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -29,7 +30,7 @@ const stats = computed(() => {
   const ties = allMatches.value.filter(m => m.result === 'tie').length
   const losses = allMatches.value.filter(m => m.result === 'lost').length
   const totalPoints = allMatches.value.reduce((sum, m) => sum + m.myScore, 0)
-  return { wins, ties, losses, totalPoints }
+  return {wins, ties, losses, totalPoints}
 })
 
 // Unique opponents for filter dropdown
@@ -92,7 +93,7 @@ async function fetchMatches() {
 
     // Filter only completed multiplayer sessions
     const multiplayerSessions = (data.sessions || []).filter(s =>
-      s.results && s.results.length >= 2
+        s.results && s.results.length >= 2
     )
 
     // Convert to match format
@@ -166,7 +167,8 @@ onMounted(() => {
       <header class="page-head">
         <div>
           <button class="btn btn--ghost btn--sm" @click="router.push('/play')" style="margin-bottom: 8px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             {{ t('history.backToPlay') }}
@@ -174,7 +176,7 @@ onMounted(() => {
           <div class="page-eyebrow">{{ t('history.match.title') }}</div>
           <h1 class="page-title-display">{{ t('history.match.title') }}.</h1>
         </div>
-        <div class="hist-stats">
+        <div v-if="userStore.isAuthenticated" class="hist-stats">
           <div class="hist-stat">
             <span class="mono">{{ stats.wins }}</span>
             <span class="lbl">{{ t('history.match.won') }}</span>
@@ -193,123 +195,128 @@ onMounted(() => {
           </div>
         </div>
       </header>
-
-      <!-- Filters -->
-      <div class="hist-filters">
-        <div class="hist-filter-grp">
-          <span class="hist-filter-lbl muted">{{ t('history.match.result') }}</span>
-          <div class="checkbox-row">
-            <button
-              class="chip-toggle"
-              :data-active="resultFilter === 'all'"
-              @click="resultFilter = 'all'"
-            >
-              {{ t('history.match.all') }}
-            </button>
-            <button
-              class="chip-toggle"
-              :data-active="resultFilter === 'won'"
-              @click="resultFilter = 'won'"
-            >
-              {{ t('history.match.won_filter') }}
-            </button>
-            <button
-              class="chip-toggle"
-              :data-active="resultFilter === 'lost'"
-              @click="resultFilter = 'lost'"
-            >
-              {{ t('history.match.lost_filter') }}
-            </button>
-            <button
-              class="chip-toggle"
-              :data-active="resultFilter === 'tie'"
-              @click="resultFilter = 'tie'"
-            >
-              {{ t('history.match.tied_filter') }}
-            </button>
+      <div v-if="userStore.isAuthenticated">
+        <!-- Filters -->
+        <div class="hist-filters">
+          <div class="hist-filter-grp">
+            <span class="hist-filter-lbl muted">{{ t('history.match.result') }}</span>
+            <div class="checkbox-row">
+              <button
+                  class="chip-toggle"
+                  :data-active="resultFilter === 'all'"
+                  @click="resultFilter = 'all'"
+              >
+                {{ t('history.match.all') }}
+              </button>
+              <button
+                  class="chip-toggle"
+                  :data-active="resultFilter === 'won'"
+                  @click="resultFilter = 'won'"
+              >
+                {{ t('history.match.won_filter') }}
+              </button>
+              <button
+                  class="chip-toggle"
+                  :data-active="resultFilter === 'lost'"
+                  @click="resultFilter = 'lost'"
+              >
+                {{ t('history.match.lost_filter') }}
+              </button>
+              <button
+                  class="chip-toggle"
+                  :data-active="resultFilter === 'tie'"
+                  @click="resultFilter = 'tie'"
+              >
+                {{ t('history.match.tied_filter') }}
+              </button>
+            </div>
+          </div>
+          <div class="hist-filter-grp">
+            <span class="hist-filter-lbl muted">{{ t('history.match.opponent') }}</span>
+            <select v-model="opponentFilter" class="hist-select">
+              <option v-for="opp in opponents" :key="opp" :value="opp">
+                {{ opp === 'all' ? t('history.match.anyone') : opp }}
+              </option>
+            </select>
           </div>
         </div>
-        <div class="hist-filter-grp">
-          <span class="hist-filter-lbl muted">{{ t('history.match.opponent') }}</span>
-          <select v-model="opponentFilter" class="hist-select">
-            <option v-for="opp in opponents" :key="opp" :value="opp">
-              {{ opp === 'all' ? t('history.match.anyone') : opp }}
-            </option>
-          </select>
-        </div>
-      </div>
 
-      <!-- Loading state -->
-      <div v-if="loading" class="hist-empty">
-        <div class="muted">{{ t('history.match.loading') }}</div>
-      </div>
-
-      <!-- Empty state -->
-      <div v-else-if="filteredMatches.length === 0" class="hist-empty">
-        <div class="muted">
-          {{ allMatches.length === 0 ? t('history.match.noMatches') : t('history.match.noMatchesFiltered') }}
-        </div>
-        <button
-          v-if="resultFilter !== 'all' || opponentFilter !== 'all'"
-          class="btn btn--soft btn--sm"
-          @click="resultFilter = 'all'; opponentFilter = 'all'"
-        >
-          {{ t('history.match.clearFilters') }}
-        </button>
-      </div>
-
-      <!-- Table -->
-      <div v-else class="hist-table">
-        <!-- Header -->
-        <div class="hist-row hist-row--head">
-          <span class="hr-col-result">{{ t('history.match.result') }}</span>
-          <span class="hr-col-with">{{ t('history.match.opponent') }}</span>
-          <span class="hr-col-letters">{{ t('history.match.letters') }}</span>
-          <span class="hr-col-score">{{ t('history.match.score') }}</span>
-          <span class="hr-col-delta">{{ t('history.match.delta') }}</span>
-          <span class="hr-col-date">{{ t('history.match.when') }}</span>
-          <span class="hr-col-cta" />
+        <!-- Loading state -->
+        <div v-if="loading" class="hist-empty">
+          <div class="muted">{{ t('history.match.loading') }}</div>
         </div>
 
-        <!-- Rows -->
-        <div
-          v-for="m in paginatedMatches"
-          :key="m.id"
-          :class="['hist-row', `rm-${m.result}`]"
-        >
+        <!-- Empty state -->
+        <div v-else-if="filteredMatches.length === 0" class="hist-empty">
+          <div class="muted">
+            {{ allMatches.length === 0 ? t('history.match.noMatches') : t('history.match.noMatchesFiltered') }}
+          </div>
+          <button
+              v-if="resultFilter !== 'all' || opponentFilter !== 'all'"
+              class="btn btn--soft btn--sm"
+              @click="resultFilter = 'all'; opponentFilter = 'all'"
+          >
+            {{ t('history.match.clearFilters') }}
+          </button>
+        </div>
+
+        <!-- Table -->
+        <div v-else class="hist-table">
+          <!-- Header -->
+          <div class="hist-row hist-row--head">
+            <span class="hr-col-result">{{ t('history.match.result') }}</span>
+            <span class="hr-col-with">{{ t('history.match.opponent') }}</span>
+            <span class="hr-col-letters">{{ t('history.match.letters') }}</span>
+            <span class="hr-col-score">{{ t('history.match.score') }}</span>
+            <span class="hr-col-delta">{{ t('history.match.delta') }}</span>
+            <span class="hr-col-date">{{ t('history.match.when') }}</span>
+            <span class="hr-col-cta"/>
+          </div>
+
+          <!-- Rows -->
+          <div
+              v-for="m in paginatedMatches"
+              :key="m.id"
+              :class="['hist-row', `rm-${m.result}`]"
+          >
           <span :class="['hr-col-result', 'hr-result', `rm-${m.result}`]">
             {{ m.result === 'won' ? 'W' : m.result === 'lost' ? 'L' : 'T' }}
           </span>
-          <span class="hr-col-with">
+            <span class="hr-col-with">
             <span class="hr-avatar">{{ m.opponentUsername[0].toUpperCase() }}</span>
             <span>{{ m.opponentUsername }}</span>
           </span>
-          <span class="hr-col-letters mono">{{ m.letters }}</span>
-          <span class="hr-col-score mono">
+            <span class="hr-col-letters mono">{{ m.letters }}</span>
+            <span class="hr-col-score mono">
             {{ m.myScore.toLocaleString() }} <span class="muted">·</span> {{ m.opponentScore.toLocaleString() }}
           </span>
-          <span :class="['hr-col-delta', 'mono', `rm-${m.result}`]">
+            <span :class="['hr-col-delta', 'mono', `rm-${m.result}`]">
             <template v-if="m.result === 'won'">+{{ Math.abs(m.delta).toLocaleString() }}</template>
             <template v-else-if="m.result === 'lost'">−{{ Math.abs(m.delta).toLocaleString() }}</template>
             <template v-else>0</template>
           </span>
-          <span class="hr-col-date muted">{{ formatDate(m.createdAt) }}</span>
-          <span class="hr-col-cta">
+            <span class="hr-col-date muted">{{ formatDate(m.createdAt) }}</span>
+            <span class="hr-col-cta">
             <button class="btn btn--ghost btn--sm" @click="router.push(`/results/${m.id}`)">
               {{ t('history.match.view') }}
             </button>
           </span>
+          </div>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <Pagination
-        v-if="filteredMatches.length > 0"
-        :page="page"
-        :total-pages="totalPages"
-        :showing="paginatedMatches.length"
-        :total="filteredMatches.length"
-        @update:page="page = $event"
+        <!-- Pagination -->
+        <Pagination
+            v-if="filteredMatches.length > 0"
+            :page="page"
+            :total-pages="totalPages"
+            :showing="paginatedMatches.length"
+            :total="filteredMatches.length"
+            @update:page="page = $event"
+        />
+      </div>
+      <AuthPrompt
+          v-if="!userStore.isAuthenticated"
+          :text="$t('history.loginToSee')"
       />
     </div>
   </div>

@@ -12,6 +12,7 @@
     "help": "How to play"
   },
   "history": {
+    "loginToSee": "Log In to see your match history",
     "match": {
       "title": "Match history",
       "won": "won",
@@ -246,6 +247,7 @@
     "pickARound": "Pick a round.",
     "matchHistory": "Match history",
     "soloHistory": "Solo history",
+    "signIn": "Sign in",
     "challengeFriend": {
       "title": "Challenge a friend.",
       "subtitle": "Same letters, same timer. Compare scores when you both finish — the longer word wins.",
@@ -253,7 +255,8 @@
       "friends": "Friends",
       "friendsOnline": "{count} friends online",
       "waitingOnYou": "{count} waiting on you",
-      "tag": "Multiplayer"
+      "tag": "Multiplayer",
+      "loginToPlay": "Sign in to play with friends"
     },
     "dailyPuzzle": {
       "title": "Daily puzzle.",
@@ -287,7 +290,9 @@
       "expires": "expires {time}",
       "waitingOn": "Waiting on {name}",
       "yourScore": "{score} pts",
-      "opponent": "opponent"
+      "opponent": "opponent",
+      "loginToSee": "Sign in to see your challenges",
+      "loginToTrack": "Track your games and compete with friends."
     },
     "recentMatches": {
       "title": "Recent matches",

@@ -12,6 +12,7 @@
     "help": "Как играть"
   },
   "history": {
+    "loginToSee": "Войдите, чтобы увидеть историю матчей",
     "match": {
       "title": "История матчей",
       "won": "выиграно",
@@ -246,6 +247,7 @@
     "pickARound": "Выберите раунд.",
     "matchHistory": "История матчей",
     "soloHistory": "История соло",
+    "signIn": "Войти",
     "challengeFriend": {
       "title": "Брось вызов другу.",
       "subtitle": "Одинаковые буквы, одинаковый таймер. Сравните счёт когда оба закончат — побеждает самое длинное слово.",
@@ -253,7 +255,8 @@
       "friends": "Друзья",
       "friendsOnline": "{count} друзей онлайн",
       "waitingOnYou": "{count} ждут вас",
-      "tag": "Мультиплеер"
+      "tag": "Мультиплеер",
+      "loginToPlay": "Войдите чтобы играть с друзьями"
     },
     "dailyPuzzle": {
       "title": "Ежедневная головоломка.",
@@ -287,7 +290,9 @@
       "expires": "истекает {time}",
       "waitingOn": "Ждём {name}",
       "yourScore": "{score} очков",
-      "opponent": "соперника"
+      "opponent": "соперника",
+      "loginToTrack": "Отслеживайте свои игры и соревнуйтесь с друзьями.",
+      "loginToSee": "Войдите, чтобы увидеть свои испытания"
     },
     "recentMatches": {
       "title": "Недавние матчи",
@@ -504,6 +509,7 @@
     "allFriends": "Все друзья",
     "requests": "Запросы",
     "online": "в сети",
+    "loginToSee": "Log in to see and add your friends",
     "tabs": {
       "friends": "Друзья",
       "pending": "Входящие",

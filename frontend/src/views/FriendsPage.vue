@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import Modal from '../components/Modal.vue'
+import AuthPrompt from '@/components/AuthPrompt.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -312,7 +313,7 @@ function getH2HStats(friendName) {
             <template v-if="incomingRequests.length > 0">, <span style="color:var(--accent)">{{ incomingRequests.length }} waiting</span></template>.
           </h1>
         </div>
-        <button class="btn btn--accent btn--sm" @click="tab = 'add'">
+        <button  v-if="userStore.isAuthenticated" class="btn btn--accent btn--sm" @click="tab = 'add'">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 5v14M5 12h14"/>
           </svg>
@@ -320,103 +321,104 @@ function getH2HStats(friendName) {
         </button>
       </header>
 
-      <!-- Tabs -->
-      <div class="fr-tabs">
-        <button
-          :class="['fr-tab', { 'is-active': tab === 'all' }]"
-          @click="tab = 'all'"
-        >
-          {{$t('friends.allFriends')}}
-          <span v-if="friends.length > 0" class="fr-tab-count">{{ friends.length }}</span>
-        </button>
-        <button
-          :class="['fr-tab', { 'is-active': tab === 'requests' }]"
-          @click="tab = 'requests'"
-        >
-          {{$t('friends.requests')}}
-          <span v-if="incomingRequests.length > 0" class="fr-tab-count is-accent">{{ incomingRequests.length }}</span>
-        </button>
-        <button
-          :class="['fr-tab', { 'is-active': tab === 'add' }]"
-          @click="tab = 'add'"
-        >
-          {{$t('friends.addFriend')}}
-        </button>
-      </div>
+      <div v-if="userStore.isAuthenticated">
+        <!-- Tabs -->
+        <div class="fr-tabs">
+          <button
+              :class="['fr-tab', { 'is-active': tab === 'all' }]"
+              @click="tab = 'all'"
+          >
+            {{$t('friends.allFriends')}}
+            <span v-if="friends.length > 0" class="fr-tab-count">{{ friends.length }}</span>
+          </button>
+          <button
+              :class="['fr-tab', { 'is-active': tab === 'requests' }]"
+              @click="tab = 'requests'"
+          >
+            {{$t('friends.requests')}}
+            <span v-if="incomingRequests.length > 0" class="fr-tab-count is-accent">{{ incomingRequests.length }}</span>
+          </button>
+          <button
+              :class="['fr-tab', { 'is-active': tab === 'add' }]"
+              @click="tab = 'add'"
+          >
+            {{$t('friends.addFriend')}}
+          </button>
+        </div>
 
-      <!-- ALL FRIENDS -->
-      <section v-if="tab === 'all'">
-        <div class="fr-search">
-          <input
-            v-model="searchQuery"
-            class="input"
-            placeholder="Search by username…"
-          />
-          <span class="fr-online-count muted">
+        <!-- ALL FRIENDS -->
+        <section v-if="tab === 'all'">
+          <div class="fr-search">
+            <input
+                v-model="searchQuery"
+                class="input"
+                placeholder="Search by username…"
+            />
+            <span class="fr-online-count muted">
             <span class="online-dot" /> {{ onlineFriendsCount }} {{$t('friends.online')}}
           </span>
-        </div>
-        <div class="fr-grid">
-          <div v-for="friend in filteredFriends" :key="friend.id" class="fr-card">
-            <button class="fr-card-main" @click="openProfile = friend">
-              <div class="fr-card-avatar">
-                {{ friend.username[0].toUpperCase() }}
-                <span v-if="friend.online" class="online-dot online-dot--card" />
-              </div>
-              <div class="fr-card-meta">
-                <div class="fr-card-name">{{ friend.username }}</div>
-                <div class="fr-card-sub muted">
-                  {{ friend.online ? 'Online now' : `Joined ${friend.joined}` }}
+          </div>
+          <div class="fr-grid">
+            <div v-for="friend in filteredFriends" :key="friend.id" class="fr-card">
+              <button class="fr-card-main" @click="openProfile = friend">
+                <div class="fr-card-avatar">
+                  {{ friend.username[0].toUpperCase() }}
+                  <span v-if="friend.online" class="online-dot online-dot--card" />
+                </div>
+                <div class="fr-card-meta">
+                  <div class="fr-card-name">{{ friend.username }}</div>
+                  <div class="fr-card-sub muted">
+                    {{ friend.online ? 'Online now' : `Joined ${friend.joined}` }}
+                  </div>
+                </div>
+              </button>
+              <div class="fr-card-stats">
+                <div>
+                  <span class="mono">{{ friend.score?.toLocaleString() || '0' }}</span>
+                  <span class="lbl">pts</span>
+                </div>
+                <div class="fr-card-sep" />
+                <div>
+                  <span class="mono">{{ friend.streak || 0 }}d</span>
+                  <span class="lbl">streak</span>
                 </div>
               </div>
-            </button>
-            <div class="fr-card-stats">
-              <div>
-                <span class="mono">{{ friend.score?.toLocaleString() || '0' }}</span>
-                <span class="lbl">pts</span>
-              </div>
-              <div class="fr-card-sep" />
-              <div>
-                <span class="mono">{{ friend.streak || 0 }}d</span>
-                <span class="lbl">streak</span>
+              <button class="btn btn--accent btn--sm btn--block" @click="challengeFriend(friend.username)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+                </svg>
+                Challenge
+              </button>
+            </div>
+            <div v-if="filteredFriends.length === 0" class="fr-empty">
+              <div class="muted" style="text-align:center; padding:40px 20px; grid-column:1 / -1">
+                {{ searchQuery ? `No friends match "${searchQuery}".` : $t('friends.noFriends') }}
               </div>
             </div>
-            <button class="btn btn--accent btn--sm btn--block" @click="challengeFriend(friend.username)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
-              </svg>
-              Challenge
-            </button>
           </div>
-          <div v-if="filteredFriends.length === 0" class="fr-empty">
-            <div class="muted" style="text-align:center; padding:40px 20px; grid-column:1 / -1">
-              {{ searchQuery ? `No friends match "${searchQuery}".` : $t('friends.noFriends') }}
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- REQUESTS -->
-      <section v-if="tab === 'requests'" class="fr-requests">
-        <!-- Incoming -->
-        <div class="fr-req-block">
-          <div class="fr-req-head">
-            <div class="page-eyebrow">Incoming</div>
-            <h3 class="fr-req-title">
-              {{ incomingRequests.length }} {{ incomingRequests.length === 1 ? 'person wants' : 'people want' }} to play
-            </h3>
-          </div>
-          <div v-if="incomingRequests.length === 0" class="fr-empty-soft muted">
-            No incoming requests.
-          </div>
-          <div v-else class="fr-req-list">
-            <div v-for="request in incomingRequests" :key="request.id" class="fr-req fr-req--in">
-              <div class="fr-req-who">
-                <div class="fr-avatar fr-avatar--lg">{{ request.name[0].toUpperCase() }}</div>
-                <div>
-                  <div class="fr-req-name">{{ request.name }}</div>
-                  <div class="fr-req-meta">
-                    <template v-if="request.mutual > 0">
+        <!-- REQUESTS -->
+        <section v-if="tab === 'requests'" class="fr-requests">
+          <!-- Incoming -->
+          <div class="fr-req-block">
+            <div class="fr-req-head">
+              <div class="page-eyebrow">Incoming</div>
+              <h3 class="fr-req-title">
+                {{ incomingRequests.length }} {{ incomingRequests.length === 1 ? 'person wants' : 'people want' }} to play
+              </h3>
+            </div>
+            <div v-if="incomingRequests.length === 0" class="fr-empty-soft muted">
+              No incoming requests.
+            </div>
+            <div v-else class="fr-req-list">
+              <div v-for="request in incomingRequests" :key="request.id" class="fr-req fr-req--in">
+                <div class="fr-req-who">
+                  <div class="fr-avatar fr-avatar--lg">{{ request.name[0].toUpperCase() }}</div>
+                  <div>
+                    <div class="fr-req-name">{{ request.name }}</div>
+                    <div class="fr-req-meta">
+                      <template v-if="request.mutual > 0">
                       <span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -426,43 +428,43 @@ function getH2HStats(friendName) {
                         </svg>
                         {{ request.mutual }} mutual
                       </span>
-                      <span class="dot-sep">·</span>
-                    </template>
-                    <span>sent {{ request.sent }}</span>
+                        <span class="dot-sep">·</span>
+                      </template>
+                      <span>sent {{ request.sent }}</span>
+                    </div>
+                    <div v-if="request.msg" class="fr-req-msg">&ldquo;{{ request.msg }}&rdquo;</div>
                   </div>
-                  <div v-if="request.msg" class="fr-req-msg">&ldquo;{{ request.msg }}&rdquo;</div>
                 </div>
-              </div>
-              <div class="fr-req-actions">
-                <button class="btn btn--ghost btn--sm" @click="declineRequest(request.id, request.name)">Decline</button>
-                <button class="btn btn--accent btn--sm" @click="acceptRequest(request.id, request.name)">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 6L9 17l-5-5"/>
-                  </svg>
-                  Accept
-                </button>
+                <div class="fr-req-actions">
+                  <button class="btn btn--ghost btn--sm" @click="declineRequest(request.id, request.name)">Decline</button>
+                  <button class="btn btn--accent btn--sm" @click="acceptRequest(request.id, request.name)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    Accept
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Outgoing -->
-        <div class="fr-req-block">
-          <div class="fr-req-head">
-            <div class="page-eyebrow">Outgoing</div>
-            <h3 class="fr-req-title">{{ outgoingRequests.length }} pending</h3>
-          </div>
-          <div v-if="outgoingRequests.length === 0" class="fr-empty-soft muted">
-            No pending invites.
-          </div>
-          <div v-else class="fr-req-list">
-            <div v-for="request in outgoingRequests" :key="request.id" class="fr-req fr-req--out">
-              <div class="fr-req-who">
-                <div class="fr-avatar fr-avatar--lg fr-avatar--muted">{{ request.name[0].toUpperCase() }}</div>
-                <div>
-                  <div class="fr-req-name">{{ request.name }}</div>
-                  <div class="fr-req-meta">
-                    <template v-if="request.mutual > 0">
+          <!-- Outgoing -->
+          <div class="fr-req-block">
+            <div class="fr-req-head">
+              <div class="page-eyebrow">Outgoing</div>
+              <h3 class="fr-req-title">{{ outgoingRequests.length }} pending</h3>
+            </div>
+            <div v-if="outgoingRequests.length === 0" class="fr-empty-soft muted">
+              No pending invites.
+            </div>
+            <div v-else class="fr-req-list">
+              <div v-for="request in outgoingRequests" :key="request.id" class="fr-req fr-req--out">
+                <div class="fr-req-who">
+                  <div class="fr-avatar fr-avatar--lg fr-avatar--muted">{{ request.name[0].toUpperCase() }}</div>
+                  <div>
+                    <div class="fr-req-name">{{ request.name }}</div>
+                    <div class="fr-req-meta">
+                      <template v-if="request.mutual > 0">
                       <span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -472,129 +474,134 @@ function getH2HStats(friendName) {
                         </svg>
                         {{ request.mutual }} mutual
                       </span>
-                      <span class="dot-sep">·</span>
-                    </template>
-                    <span>sent {{ request.sent }}</span>
+                        <span class="dot-sep">·</span>
+                      </template>
+                      <span>sent {{ request.sent }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="fr-req-actions">
+                <div class="fr-req-actions">
                 <span class="fr-req-pending">
                   <span class="pulse-dot" /> Awaiting
                 </span>
-                <button class="btn btn--ghost btn--sm" @click="cancelRequest(request.id, request.name)">Cancel</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ADD FRIENDS -->
-      <section v-if="tab === 'add'" class="fr-add">
-        <div class="fr-add-grid">
-          <!-- Search -->
-          <div class="card fr-add-card">
-            <div class="page-eyebrow">01 · Search</div>
-            <h3 class="fr-add-title">Find by username</h3>
-            <p class="muted" style="font-size:13px; margin:0 0 14px">
-              Exact match or partial — three letters minimum.
-            </p>
-            <div class="fr-search-input-wrap">
-              <input
-                v-model="addSearchQuery"
-                @input="searchUsers"
-                class="input"
-                placeholder="@username"
-              />
-              <button class="btn btn--accent btn--sm" @click="searchUsers">Search</button>
-            </div>
-
-            <!-- Search Results -->
-            <div v-if="searchResults.length > 0" style="margin-top:18px">
-              <div class="fr-eyebrow-mini">Results</div>
-              <div class="fr-suggested">
-                <div v-for="user in searchResults" :key="user.id" class="fr-sugg">
-                  <div class="fr-sugg-who">
-                    <div class="fr-avatar">{{ user.username[0].toUpperCase() }}</div>
-                    <div>
-                      <div class="fr-sugg-name">{{ user.username }}</div>
-                      <div class="fr-sugg-reason muted">{{ user.email }}</div>
-                    </div>
-                  </div>
-                  <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.username)">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Suggested -->
-            <div v-if="suggestedFriends.length > 0" style="margin-top:18px">
-              <div class="fr-eyebrow-mini">Suggested</div>
-              <div class="fr-suggested">
-                <div v-for="user in suggestedFriends" :key="user.id" class="fr-sugg">
-                  <div class="fr-sugg-who">
-                    <div class="fr-avatar">{{ user.name[0].toUpperCase() }}</div>
-                    <div>
-                      <div class="fr-sugg-name">{{ user.name }}</div>
-                      <div class="fr-sugg-reason muted">{{ user.reason }}</div>
-                    </div>
-                  </div>
-                  <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.name)">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    Add
-                  </button>
+                  <button class="btn btn--ghost btn--sm" @click="cancelRequest(request.id, request.name)">Cancel</button>
                 </div>
               </div>
             </div>
           </div>
+        </section>
 
-          <!-- Invite link -->
-          <div class="card fr-add-card fr-add-card--invite">
-            <div class="page-eyebrow">02 · Invite</div>
-            <h3 class="fr-add-title">Share your link</h3>
-            <p class="muted" style="font-size:13px; margin:0 0 14px">
-              Anyone with this link can send you a friend request directly.
-            </p>
-            <div class="fr-link-box">
-              <span class="mono">anagrams.ru/u/{{ userStore.username || 'user' }}</span>
-              <button class="btn btn--primary btn--sm" @click="copyInviteLink">
-                <svg v-if="!inviteCopied" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2"/>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                </svg>
-                <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 6L9 17l-5-5"/>
-                </svg>
-                {{ inviteCopied ? 'Copied' : 'Copy' }}
-              </button>
-            </div>
-            <div class="fr-share-row">
-              <button class="btn btn--ghost btn--sm">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="18" cy="5" r="3"/>
-                  <circle cx="6" cy="12" r="3"/>
-                  <circle cx="18" cy="19" r="3"/>
-                  <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
-                </svg>
-                Share
-              </button>
-              <span class="muted" style="font-size:12px">Link works for 30 days.</span>
-            </div>
-            <div class="fr-qr">
-              <div class="fr-qr-grid">
-                <span v-for="i in 49" :key="i" class="fr-qr-cell" :data-on="(i * 7 + 3) % 5 < 2 ? 'true' : 'false'" />
+        <!-- ADD FRIENDS -->
+        <section v-if="tab === 'add'" class="fr-add">
+          <div class="fr-add-grid">
+            <!-- Search -->
+            <div class="card fr-add-card">
+              <div class="page-eyebrow">01 · Search</div>
+              <h3 class="fr-add-title">Find by username</h3>
+              <p class="muted" style="font-size:13px; margin:0 0 14px">
+                Exact match or partial — three letters minimum.
+              </p>
+              <div class="fr-search-input-wrap">
+                <input
+                    v-model="addSearchQuery"
+                    @input="searchUsers"
+                    class="input"
+                    placeholder="@username"
+                />
+                <button class="btn btn--accent btn--sm" @click="searchUsers">Search</button>
               </div>
-              <div class="fr-qr-text muted">QR placeholder</div>
+
+              <!-- Search Results -->
+              <div v-if="searchResults.length > 0" style="margin-top:18px">
+                <div class="fr-eyebrow-mini">Results</div>
+                <div class="fr-suggested">
+                  <div v-for="user in searchResults" :key="user.id" class="fr-sugg">
+                    <div class="fr-sugg-who">
+                      <div class="fr-avatar">{{ user.username[0].toUpperCase() }}</div>
+                      <div>
+                        <div class="fr-sugg-name">{{ user.username }}</div>
+                        <div class="fr-sugg-reason muted">{{ user.email }}</div>
+                      </div>
+                    </div>
+                    <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.username)">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Suggested -->
+              <div v-if="suggestedFriends.length > 0" style="margin-top:18px">
+                <div class="fr-eyebrow-mini">Suggested</div>
+                <div class="fr-suggested">
+                  <div v-for="user in suggestedFriends" :key="user.id" class="fr-sugg">
+                    <div class="fr-sugg-who">
+                      <div class="fr-avatar">{{ user.name[0].toUpperCase() }}</div>
+                      <div>
+                        <div class="fr-sugg-name">{{ user.name }}</div>
+                        <div class="fr-sugg-reason muted">{{ user.reason }}</div>
+                      </div>
+                    </div>
+                    <button class="btn btn--soft btn--sm" @click="sendRequest(user.id, user.name)">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invite link -->
+            <div class="card fr-add-card fr-add-card--invite">
+              <div class="page-eyebrow">02 · Invite</div>
+              <h3 class="fr-add-title">Share your link</h3>
+              <p class="muted" style="font-size:13px; margin:0 0 14px">
+                Anyone with this link can send you a friend request directly.
+              </p>
+              <div class="fr-link-box">
+                <span class="mono">anagrams.ru/u/{{ userStore.username || 'user' }}</span>
+                <button class="btn btn--primary btn--sm" @click="copyInviteLink">
+                  <svg v-if="!inviteCopied" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                  {{ inviteCopied ? 'Copied' : 'Copy' }}
+                </button>
+              </div>
+              <div class="fr-share-row">
+                <button class="btn btn--ghost btn--sm">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3"/>
+                    <circle cx="6" cy="12" r="3"/>
+                    <circle cx="18" cy="19" r="3"/>
+                    <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                  </svg>
+                  Share
+                </button>
+                <span class="muted" style="font-size:12px">Link works for 30 days.</span>
+              </div>
+              <div class="fr-qr">
+                <div class="fr-qr-grid">
+                  <span v-for="i in 49" :key="i" class="fr-qr-cell" :data-on="(i * 7 + 3) % 5 < 2 ? 'true' : 'false'" />
+                </div>
+                <div class="fr-qr-text muted">QR placeholder</div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
+      <AuthPrompt
+          v-if="!userStore.isAuthenticated"
+          :text="$t('friends.loginToSee')"
+      />
     </div>
 
     <!-- Profile Modal -->

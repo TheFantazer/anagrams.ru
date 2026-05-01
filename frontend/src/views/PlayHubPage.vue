@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 import Modal from '../components/Modal.vue'
+import AuthPrompt from '@/components/AuthPrompt.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -330,7 +331,11 @@ onMounted(() => {
           </div>
           <h3 class="ph-card-title">{{ $t('playHub.challengeFriend.title') }}</h3>
           <p class="ph-card-sub">{{ $t('playHub.challengeFriend.subtitle') }}</p>
-          <div class="ph-card-actions">
+          <AuthPrompt
+              v-if="!userStore.isAuthenticated"
+              :text="$t('playHub.challengeFriend.loginToPlay')"
+          />
+          <div v-if="userStore.isAuthenticated" class="ph-card-actions">
             <button class="btn btn--accent" @click="openNewChallengeModal">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 5v14M5 12h14"/>
@@ -474,16 +479,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="!userStore.isAuthenticated" class="ph-empty">
-          <div class="ph-empty-illo">⌒</div>
-          <div class="ph-empty-text">
-            <strong>Sign in to see your challenges</strong>
-            <span class="muted">Track your games and compete with friends.</span>
-          </div>
-          <button class="btn btn--accent btn--sm" @click="router.push('/auth')">
-            Sign in
-          </button>
-        </div>
+        <AuthPrompt
+            v-if="!userStore.isAuthenticated"
+            :text="$t('playHub.activeChallenges.loginToSee')"
+        />
 
         <div v-else-if="activeChallenges.length === 0" class="ph-empty">
           <div class="ph-empty-illo">⌒</div>
@@ -1310,6 +1309,20 @@ onMounted(() => {
   gap: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-hairline);
+}
+
+.icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 10px;
+}
+
+.icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Responsive */
