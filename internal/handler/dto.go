@@ -87,6 +87,10 @@ type UpdateSettingsRequest struct {
 	TimeLimit   int    `json:"time_limit"`
 }
 
+type UpdateUsernameRequest struct {
+	NewUsername string `json:"new_username"`
+}
+
 type UserStatsResponse struct {
 	GamesPlayed  int     `json:"games_played"`
 	BestScore    int     `json:"best_score"`

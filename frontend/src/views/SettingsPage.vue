@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
+import UsernameChangeModal from '../components/UsernameChangeModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -24,6 +25,8 @@ const stats = ref({
   average_score: 0
 })
 const loadingStats = ref(false)
+const showUsernameModal = ref(false)
+const usernameChanging = ref(false)
 let saveMessageTimeout = null
 
 watch([() => userStore.soloLang, () => userStore.soloLetters, () => userStore.soloTime], async () => {
@@ -117,6 +120,49 @@ const languageOptions = computed(() => [
   { id: 'en', label: t('settings.gameDefaults.languages.en') },
   { id: 'ru', label: t('settings.gameDefaults.languages.ru') }
 ])
+
+function openUsernameModal() {
+  showUsernameModal.value = true
+}
+
+async function handleUsernameChange(newUsername) {
+  usernameChanging.value = true
+
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const response = await fetch(`${apiUrl}/api/v1/auth/username?user_id=${userStore.userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        new_username: newUsername
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      if (data.code === 'username_change_cooldown') {
+        userStore.showToast(t('settings.usernameChange.cooldown'), 'error', null, 5000)
+      } else if (data.code === 'username_taken') {
+        userStore.showToast(t('settings.usernameChange.taken'), 'error')
+      } else {
+        userStore.showToast(data.message || t('settings.usernameChange.failed'), 'error')
+      }
+      return
+    }
+
+    userStore.setUser(data)
+    showUsernameModal.value = false
+    userStore.showToast(t('settings.usernameChange.success'), 'success')
+  } catch (error) {
+    console.error('Failed to change username:', error)
+    userStore.showToast(t('settings.usernameChange.failed'), 'error')
+  } finally {
+    usernameChanging.value = false
+  }
+}
 </script>
 
 <template>
@@ -141,7 +187,16 @@ const languageOptions = computed(() => [
           <h3 style="margin:0 0 16px">{{ $t('settings.account.title') }}</h3>
           <div class="kv">
             <span class="kv-k">{{ $t('settings.account.username') }}</span>
-            <span class="kv-v">{{ userStore.username }}</span>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <span class="kv-v">{{ userStore.username }}</span>
+              <button
+                class="btn btn--soft btn--sm"
+                @click="openUsernameModal"
+                style="font-size: 12px"
+              >
+                {{ $t('settings.usernameChange.changeButton') }}
+              </button>
+            </div>
           </div>
           <div class="kv">
             <span class="kv-k">{{ $t('settings.account.email') }}</span>
@@ -247,6 +302,15 @@ const languageOptions = computed(() => [
         </button>
       </div>
     </div>
+
+    <!-- Username Change Modal -->
+    <UsernameChangeModal
+      :show="showUsernameModal"
+      :current-username="userStore.username"
+      :loading="usernameChanging"
+      @close="showUsernameModal = false"
+      @confirm="handleUsernameChange"
+    />
   </div>
 </template>
 

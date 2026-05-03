@@ -65,7 +65,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Use
 	query := `
 		SELECT id, username, email, password, oauth_provider, oauth_id,
 		       default_letter_count, default_language, default_time_limit,
-		       created_at, updated_at
+		       username_changed_at, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -81,6 +81,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Use
 		&user.DefaultLetterCount,
 		&user.DefaultLanguage,
 		&user.DefaultTimeLimit,
+		&user.UsernameChangedAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -99,7 +100,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 	query := `
 		SELECT id, username, email, password, oauth_provider, oauth_id,
 		       default_letter_count, default_language, default_time_limit,
-		       created_at, updated_at
+		       username_changed_at, created_at, updated_at
 		FROM users
 		WHERE username = $1
 	`
@@ -115,6 +116,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 		&user.DefaultLetterCount,
 		&user.DefaultLanguage,
 		&user.DefaultTimeLimit,
+		&user.UsernameChangedAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -133,7 +135,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	query := `
 		SELECT id, username, email, password, oauth_provider, oauth_id,
 		       default_letter_count, default_language, default_time_limit,
-		       created_at, updated_at
+		       username_changed_at, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -149,6 +151,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 		&user.DefaultLetterCount,
 		&user.DefaultLanguage,
 		&user.DefaultTimeLimit,
+		&user.UsernameChangedAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -167,7 +170,7 @@ func (r *userRepository) GetByOAuthID(ctx context.Context, provider, oauthID str
 	query := `
 		SELECT id, username, email, password, oauth_provider, oauth_id,
 		       default_letter_count, default_language, default_time_limit,
-		       created_at, updated_at
+		       username_changed_at, created_at, updated_at
 		FROM users
 		WHERE oauth_provider = $1 AND oauth_id = $2
 	`
@@ -183,6 +186,7 @@ func (r *userRepository) GetByOAuthID(ctx context.Context, provider, oauthID str
 		&user.DefaultLetterCount,
 		&user.DefaultLanguage,
 		&user.DefaultTimeLimit,
+		&user.UsernameChangedAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -280,6 +284,37 @@ func (r *userRepository) UpdateSettings(ctx context.Context, userID uuid.UUID, l
 	result, err := r.db.ExecContext(ctx, query, letterCount, language, timeLimit, time.Now().UTC(), userID)
 	if err != nil {
 		return fmt.Errorf("failed to update settings: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return repository.ErrNotFound
+	}
+
+	return nil
+}
+
+func (r *userRepository) UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error {
+	query := `
+		UPDATE users
+		SET username = $1, username_changed_at = $2, updated_at = $3
+		WHERE id = $4
+	`
+
+	now := time.Now().UTC()
+	result, err := r.db.ExecContext(ctx, query, username, now, now, userID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" && pgErr.ConstraintName == "users_username_key" {
+				return domain.ErrUsernameTaken
+			}
+		}
+		return fmt.Errorf("failed to update username: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()

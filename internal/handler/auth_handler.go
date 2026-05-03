@@ -188,6 +188,57 @@ func (h *AuthHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, response)
 }
 
+func (h *AuthHandler) UpdateUsername(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	var req UpdateUsernameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_request", "Invalid JSON format")
+		return
+	}
+
+	if req.NewUsername == "" {
+		respondError(w, http.StatusBadRequest, "missing_username", "New username is required")
+		return
+	}
+
+	err = h.authService.UpdateUsername(r.Context(), userID, req.NewUsername)
+	if err != nil {
+		status, errCode, message := mapAuthError(err)
+		h.logger.Error("Failed to update username", slog.String("error", err.Error()))
+		respondError(w, status, errCode, message)
+		return
+	}
+
+	user, err := h.authService.GetUserByID(r.Context(), userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to fetch updated user")
+		return
+	}
+
+	response := UserResponse{
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
 func (h *AuthHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Query().Get("user_id")
 	if userIDStr == "" {
@@ -270,6 +321,8 @@ func mapAuthError(err error) (int, string, string) {
 		return http.StatusUnauthorized, "invalid_credentials", "Invalid username or password"
 	case errors.Is(err, domain.ErrPrivacyPolicyNotAccepted):
 		return http.StatusBadRequest, "privacy_policy_required", "You must accept the privacy policy"
+	case errors.Is(err, domain.ErrUsernameChangeCooldown):
+		return http.StatusTooManyRequests, "username_change_cooldown", "Username can only be changed once every 2 weeks"
 	case errors.Is(err, repository.ErrNotFound):
 		return http.StatusNotFound, "not_found", "User not found"
 	default:

@@ -31,6 +31,10 @@ func (m *MockAuthService) UpdateSettings(ctx context.Context, userID uuid.UUID, 
 	return nil
 }
 
+func (m *MockAuthService) UpdateUsername(ctx context.Context, userID uuid.UUID, newUsername string) error {
+	return nil
+}
+
 func (m *MockAuthService) GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error) {
 	return nil, nil
 }

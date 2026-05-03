@@ -36,6 +36,7 @@ var (
 	ErrInvalidCredentials       = errors.New("invalid username or password")
 	ErrUserNotFound             = errors.New("user not found")
 	ErrPrivacyPolicyNotAccepted = errors.New("privacy policy must be accepted")
+	ErrUsernameChangeCooldown   = errors.New("username can only be changed once every 2 weeks")
 )
 
 // Friend errors

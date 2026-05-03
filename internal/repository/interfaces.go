@@ -47,6 +47,7 @@ type UserRepository interface {
 	GetByOAuthID(ctx context.Context, provider, oauthID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
+	UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error
 	LinkOAuth(ctx context.Context, userID uuid.UUID, provider, oauthID string) error
 }
 

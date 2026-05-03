@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/TheFantazer/anagrams.ru/internal/domain"
 	"github.com/TheFantazer/anagrams.ru/internal/repository"
@@ -15,6 +16,7 @@ type AuthService interface {
 	Login(ctx context.Context, username, password string) (*domain.User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error
+	UpdateUsername(ctx context.Context, userID uuid.UUID, newUsername string) error
 	GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error)
 	GetLeaderboard(ctx context.Context, period string, limit int) ([]*repository.LeaderboardEntry, error)
 	LoginOrRegisterWithOAuth(ctx context.Context, provider, oauthID, email, username string) (*domain.User, error)
@@ -88,6 +90,36 @@ func (s *authService) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.Us
 
 func (s *authService) UpdateSettings(ctx context.Context, userID uuid.UUID, letterCount int, language string, timeLimit int) error {
 	return s.userRepo.UpdateSettings(ctx, userID, letterCount, language, timeLimit)
+}
+
+func (s *authService) UpdateUsername(ctx context.Context, userID uuid.UUID, newUsername string) error {
+	// Validate username
+	if len(newUsername) < 3 || len(newUsername) > 30 {
+		return domain.ErrInvalidUsername
+	}
+
+	// Get current user
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Check if username is the same
+	if user.Username == newUsername {
+		return fmt.Errorf("new username is the same as current username")
+	}
+
+	// Check cooldown period (2 weeks = 14 days)
+	if user.UsernameChangedAt != nil {
+		timeSinceLastChange := time.Since(*user.UsernameChangedAt)
+		cooldownPeriod := 14 * 24 * time.Hour
+		if timeSinceLastChange < cooldownPeriod {
+			return domain.ErrUsernameChangeCooldown
+		}
+	}
+
+	// Update username
+	return s.userRepo.UpdateUsername(ctx, userID, newUsername)
 }
 
 func (s *authService) GetUserStats(ctx context.Context, userID uuid.UUID) (*repository.UserStats, error) {

@@ -179,7 +179,21 @@
     },
     "saved": "Settings saved!",
     "failed": "Failed to save settings",
-    "startNewGame": "Start a new game"
+    "startNewGame": "Start a new game",
+    "usernameChange": {
+      "title": "Change Username",
+      "warning": "You can only change your username once every 2 weeks. Choose carefully!",
+      "currentUsername": "Current username",
+      "newUsername": "New username",
+      "placeholder": "Enter new username",
+      "changeButton": "Change",
+      "confirm": "Confirm Change",
+      "success": "Username changed successfully",
+      "failed": "Failed to change username",
+      "cooldown": "You can only change your username once every 2 weeks",
+      "taken": "This username is already taken",
+      "invalidLength": "Username must be 3-30 characters"
+    }
   },
   "auth": {
     "welcomeBack": "Welcome back",
