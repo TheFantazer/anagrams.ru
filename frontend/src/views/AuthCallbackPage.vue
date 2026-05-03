@@ -35,7 +35,7 @@ onMounted(async () => {
 <template>
   <div class="callback-page">
     <div class="spinner"></div>
-    <p>2B>@870F8O...</p>
+    <p>{{ $t('auth.authorizing') }}</p>
   </div>
 </template>
 

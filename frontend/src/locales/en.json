@@ -221,7 +221,8 @@
     },
     "acceptPrivacy": "I agree to the",
     "privacyPolicy": "privacy policy",
-    "privacyRequired": "You must accept the privacy policy"
+    "privacyRequired": "You must accept the privacy policy",
+    "authorizing": "Authorizing..."
   },
   "leaderboard": {
     "title": "Who's hunting words best",
