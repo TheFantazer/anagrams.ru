@@ -83,10 +83,10 @@ func (s *UserDailyStats) UpdateStreak(playedDate time.Time) {
 
 		daysDiff := int(now.Sub(lastDate).Hours() / 24)
 
-		switch {
-		case daysDiff == 0:
+		switch daysDiff {
+		case 0:
 			return
-		case daysDiff == 1:
+		case 1:
 			s.CurrentStreak++
 			if s.CurrentStreak > s.LongestStreak {
 				s.LongestStreak = s.CurrentStreak

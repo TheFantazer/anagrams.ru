@@ -47,14 +47,15 @@ func setupTestLetterGenerator() *dictionary.LetterGenerator {
 func TestGameService_CreateSession(t *testing.T) {
 	sessionRepo := mocks.NewMockSessionRepository()
 	resultRepo := mocks.NewMockResultRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 	dictionaries := setupTestDictionaries()
 	letterGen := setupTestLetterGenerator()
 
-	service := NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	service := NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	ctx := context.Background()
 
 	t.Run("success - creates session with valid words", func(t *testing.T) {
-		session, err := service.CreateSession(ctx, "ru", 7, 60)
+		session, err := service.CreateSession(ctx, "ru", 7, 60, nil)
 		require.NoError(t, err)
 		require.NotNil(t, session)
 
@@ -68,7 +69,7 @@ func TestGameService_CreateSession(t *testing.T) {
 	})
 
 	t.Run("success - english dictionary", func(t *testing.T) {
-		session, err := service.CreateSession(ctx, "en", 5, 120)
+		session, err := service.CreateSession(ctx, "en", 5, 120, nil)
 		require.NoError(t, err)
 		require.NotNil(t, session)
 
@@ -78,7 +79,7 @@ func TestGameService_CreateSession(t *testing.T) {
 	})
 
 	t.Run("error - unsupported language", func(t *testing.T) {
-		session, err := service.CreateSession(ctx, "fr", 7, 60)
+		session, err := service.CreateSession(ctx, "fr", 7, 60, nil)
 		assert.ErrorIs(t, err, domain.ErrUnsupportedLanguage)
 		assert.Nil(t, session)
 	})
@@ -89,8 +90,8 @@ func TestGameService_CreateSession(t *testing.T) {
 			return assert.AnError
 		}
 
-		serviceWithError := NewGameService(repoWithError, resultRepo, dictionaries, letterGen)
-		session, err := serviceWithError.CreateSession(ctx, "ru", 7, 60)
+		serviceWithError := NewGameService(repoWithError, resultRepo, participantRepo, dictionaries, letterGen)
+		session, err := serviceWithError.CreateSession(ctx, "ru", 7, 60, nil)
 
 		assert.Error(t, err)
 		assert.Nil(t, session)
@@ -101,15 +102,16 @@ func TestGameService_CreateSession(t *testing.T) {
 func TestGameService_GetSession(t *testing.T) {
 	sessionRepo := mocks.NewMockSessionRepository()
 	resultRepo := mocks.NewMockResultRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 	dictionaries := setupTestDictionaries()
 	letterGen := setupTestLetterGenerator()
 
-	service := NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	service := NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	ctx := context.Background()
 
 	t.Run("success - get existing session", func(t *testing.T) {
 		// Создаем сессию
-		created, err := service.CreateSession(ctx, "ru", 7, 60)
+		created, err := service.CreateSession(ctx, "ru", 7, 60, nil)
 		require.NoError(t, err)
 
 		// Получаем её
@@ -136,7 +138,7 @@ func TestGameService_GetSession(t *testing.T) {
 			return nil, assert.AnError
 		}
 
-		serviceWithError := NewGameService(repoWithError, resultRepo, dictionaries, letterGen)
+		serviceWithError := NewGameService(repoWithError, resultRepo, participantRepo, dictionaries, letterGen)
 		session, err := serviceWithError.GetSession(ctx, uuid.New())
 
 		assert.Error(t, err)
@@ -147,10 +149,11 @@ func TestGameService_GetSession(t *testing.T) {
 func TestGameService_SubmitResult(t *testing.T) {
 	sessionRepo := mocks.NewMockSessionRepository()
 	resultRepo := mocks.NewMockResultRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 	dictionaries := setupTestDictionaries()
 	letterGen := setupTestLetterGenerator()
 
-	service := NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	service := NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	ctx := context.Background()
 
 	t.Run("success - valid result", func(t *testing.T) {
@@ -208,7 +211,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 	})
 
 	t.Run("error - session expired", func(t *testing.T) {
-		// Создаем просроченную сессию (создана 2 часа назад, время игры 60 секунд)
+		// Создаем просроченную сессию (создана 8 дней назад, срок хранения 7 дней)
 		expiredSession := &domain.Session{
 			ID:          uuid.New(),
 			Letters:     "абвгдеж",
@@ -217,7 +220,7 @@ func TestGameService_SubmitResult(t *testing.T) {
 			LetterCount: 7,
 			ValidWords:  []string{"еда"},
 			MaxScore:    100,
-			CreatedAt:   time.Now().Add(-2 * time.Hour),
+			CreatedAt:   time.Now().Add(-8 * 24 * time.Hour),
 		}
 		err := sessionRepo.Create(ctx, expiredSession)
 		require.NoError(t, err)
@@ -315,10 +318,11 @@ func TestGameService_SubmitResult(t *testing.T) {
 func TestGameService_GetSessionResults(t *testing.T) {
 	sessionRepo := mocks.NewMockSessionRepository()
 	resultRepo := mocks.NewMockResultRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 	dictionaries := setupTestDictionaries()
 	letterGen := setupTestLetterGenerator()
 
-	service := NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	service := NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	ctx := context.Background()
 
 	t.Run("success - get all results", func(t *testing.T) {
@@ -418,7 +422,7 @@ func TestGameService_GetSessionResults(t *testing.T) {
 			return nil, assert.AnError
 		}
 
-		serviceWithError := NewGameService(sessionRepo, repoWithError, dictionaries, letterGen)
+		serviceWithError := NewGameService(sessionRepo, repoWithError, participantRepo, dictionaries, letterGen)
 		results, err := serviceWithError.GetSessionResults(ctx, uuid.New(), 0)
 
 		assert.Error(t, err)
@@ -429,6 +433,7 @@ func TestGameService_GetSessionResults(t *testing.T) {
 func TestGameService_CreateSession_WithShortWords(t *testing.T) {
 	sessionRepo := mocks.NewMockSessionRepository()
 	resultRepo := mocks.NewMockResultRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 
 	// Словарь с короткими словами - высокая вероятность найти что-то
 	dictionaries := make(map[string]*dictionary.Trie)
@@ -448,11 +453,11 @@ func TestGameService_CreateSession_WithShortWords(t *testing.T) {
 
 	letterGen := setupTestLetterGenerator()
 
-	service := NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	service := NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	ctx := context.Background()
 
 	// С таким богатым словарем должен найти валидные слова
-	session, err := service.CreateSession(ctx, "ru", 7, 60)
+	session, err := service.CreateSession(ctx, "ru", 7, 60, nil)
 	require.NoError(t, err)
 	require.NotNil(t, session)
 

@@ -14,10 +14,13 @@ type MockSessionRepository struct {
 	mu       sync.RWMutex
 	sessions map[uuid.UUID]*domain.Session
 
-	CreateFunc        func(ctx context.Context, session *domain.Session) error
-	GetByIDFunc       func(ctx context.Context, id uuid.UUID) (*domain.Session, error)
-	DeleteFunc        func(ctx context.Context, id uuid.UUID) error
-	DeleteExpiredFunc func(ctx context.Context, before time.Time) (int64, error)
+	CreateFunc             func(ctx context.Context, session *domain.Session) error
+	GetByIDFunc            func(ctx context.Context, id uuid.UUID) (*domain.Session, error)
+	GetByCreatorIDFunc     func(ctx context.Context, creatorID uuid.UUID, limit int) ([]*domain.Session, error)
+	GetByParticipantFunc   func(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error)
+	GetAllUserSessionsFunc func(ctx context.Context, userID uuid.UUID, page int, perPage int) (*repository.PaginatedSessions, error)
+	DeleteFunc             func(ctx context.Context, id uuid.UUID) error
+	DeleteExpiredFunc      func(ctx context.Context, before time.Time) (int64, error)
 }
 
 func NewMockSessionRepository() *MockSessionRepository {
@@ -51,6 +54,48 @@ func (m *MockSessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 		return nil, repository.ErrNotFound
 	}
 	return session, nil
+}
+
+func (m *MockSessionRepository) GetByCreatorID(ctx context.Context, creatorID uuid.UUID, limit int) ([]*domain.Session, error) {
+	if m.GetByCreatorIDFunc != nil {
+		return m.GetByCreatorIDFunc(ctx, creatorID, limit)
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Simple mock implementation - returns empty result
+	return []*domain.Session{}, nil
+}
+
+func (m *MockSessionRepository) GetByParticipant(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Session, error) {
+	if m.GetByParticipantFunc != nil {
+		return m.GetByParticipantFunc(ctx, userID, limit)
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Simple mock implementation - returns empty result
+	return []*domain.Session{}, nil
+}
+
+func (m *MockSessionRepository) GetAllUserSessions(ctx context.Context, userID uuid.UUID, page int, perPage int) (*repository.PaginatedSessions, error) {
+	if m.GetAllUserSessionsFunc != nil {
+		return m.GetAllUserSessionsFunc(ctx, userID, page, perPage)
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Simple mock implementation - returns empty paginated result
+	return &repository.PaginatedSessions{
+		Sessions:   []*repository.SessionWithResults{},
+		Total:      0,
+		Page:       page,
+		PerPage:    perPage,
+		TotalPages: 0,
+	}, nil
 }
 
 func (m *MockSessionRepository) Delete(ctx context.Context, id uuid.UUID) error {

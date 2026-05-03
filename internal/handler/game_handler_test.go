@@ -21,6 +21,76 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// MockFriendService is a mock implementation of FriendService
+type MockFriendService struct{}
+
+func (m *MockFriendService) SendFriendRequest(ctx context.Context, fromUserID, toUserID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockFriendService) GetPendingRequests(ctx context.Context, userID uuid.UUID) ([]*domain.FriendRequest, error) {
+	return nil, nil
+}
+
+func (m *MockFriendService) GetSentRequests(ctx context.Context, userID uuid.UUID) ([]*domain.FriendRequest, error) {
+	return nil, nil
+}
+
+func (m *MockFriendService) AcceptFriendRequest(ctx context.Context, userID, requestID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockFriendService) RejectFriendRequest(ctx context.Context, userID, requestID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockFriendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]*domain.User, error) {
+	return nil, nil
+}
+
+func (m *MockFriendService) RemoveFriend(ctx context.Context, userID, friendID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockFriendService) SearchUsers(ctx context.Context, query string) ([]*domain.User, error) {
+	return nil, nil
+}
+
+func (m *MockFriendService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+	return nil, nil
+}
+
+func (m *MockFriendService) AreFriends(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+// MockDailyPuzzleService is a mock implementation of DailyPuzzleService
+type MockDailyPuzzleService struct{}
+
+func (m *MockDailyPuzzleService) GetTodaysPuzzle(ctx context.Context) (*domain.DailyPuzzle, error) {
+	return nil, nil
+}
+
+func (m *MockDailyPuzzleService) GetOrCreateTodaysPuzzle(ctx context.Context, language string) (*domain.DailyPuzzle, error) {
+	return nil, nil
+}
+
+func (m *MockDailyPuzzleService) GetTodaysSession(ctx context.Context, language string) (*domain.Session, error) {
+	return nil, nil
+}
+
+func (m *MockDailyPuzzleService) GetUserDailyStats(ctx context.Context, userID uuid.UUID) (*domain.UserDailyStats, error) {
+	return nil, nil
+}
+
+func (m *MockDailyPuzzleService) HasPlayedToday(ctx context.Context, userID uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (m *MockDailyPuzzleService) SubmitDailyResult(ctx context.Context, puzzleID, userID uuid.UUID, playerName, fingerprint string, words []string, durationMs int) (*domain.Result, error) {
+	return nil, nil
+}
+
 // setupTestService создает тестовый сервис с моками
 func setupTestService() service.GameService {
 	sessionRepo := mocks.NewMockSessionRepository()
@@ -40,26 +110,29 @@ func setupTestService() service.GameService {
 	dictionaries["en"] = enTrie
 
 	letterGen := dictionary.NewLetterGenerator()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 
-	return service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	return service.NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 }
 
 func setupTestRouter() http.Handler {
 	gameService := setupTestService()
 	authService := newMockAuthService()
 	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	friendService := &MockFriendService{}
+	dailyPuzzleService := &MockDailyPuzzleService{}
+	sessionInviteRepo := mocks.NewMockSessionInviteRepository()
+	participantRepo := mocks.NewMockSessionParticipantRepository()
 	cfg := &config.Config{
-		GoogleOAuth: config.GoogleOAuthConfig{
-			ClientID:     "test_client_id",
-			ClientSecret: "test_client_secret",
-			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		Telegram: config.TelegramConfig{
+			BotToken: "test_bot_token",
 		},
 		App: config.AppConfig{
 			FrontendURL: "http://localhost:3000",
 		},
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	return NewRouter(gameService, authService, jwtService, cfg, logger)
+	return NewRouter(gameService, authService, jwtService, friendService, dailyPuzzleService, sessionInviteRepo, participantRepo, cfg, logger)
 }
 
 func TestCreateSession_Success(t *testing.T) {
@@ -281,21 +354,23 @@ func TestSubmitResult_Success(t *testing.T) {
 	dictionaries["ru"] = ruTrie
 
 	letterGen := dictionary.NewLetterGenerator()
-	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	participantRepo := mocks.NewMockSessionParticipantRepository()
+	gameService := service.NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	authService := newMockAuthService()
 	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	friendService := &MockFriendService{}
+	dailyPuzzleService := &MockDailyPuzzleService{}
+	sessionInviteRepo := mocks.NewMockSessionInviteRepository()
 	cfg := &config.Config{
-		GoogleOAuth: config.GoogleOAuthConfig{
-			ClientID:     "test_client_id",
-			ClientSecret: "test_client_secret",
-			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		Telegram: config.TelegramConfig{
+			BotToken: "test_bot_token",
 		},
 		App: config.AppConfig{
 			FrontendURL: "http://localhost:3000",
 		},
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, authService, jwtService, cfg, logger)
+	router := NewRouter(gameService, authService, jwtService, friendService, dailyPuzzleService, sessionInviteRepo, participantRepo, cfg, logger)
 
 	// Создаем сессию с известными буквами напрямую в репозитории
 	knownSession := &domain.Session{
@@ -432,21 +507,23 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 	dictionaries["ru"] = ruTrie
 
 	letterGen := dictionary.NewLetterGenerator()
-	gameService := service.NewGameService(sessionRepo, resultRepo, dictionaries, letterGen)
+	participantRepo := mocks.NewMockSessionParticipantRepository()
+	gameService := service.NewGameService(sessionRepo, resultRepo, participantRepo, dictionaries, letterGen)
 	authService := newMockAuthService()
 	jwtService := service.NewJWTService("test_secret", 15*time.Minute, 168*time.Hour)
+	friendService := &MockFriendService{}
+	dailyPuzzleService := &MockDailyPuzzleService{}
+	sessionInviteRepo := mocks.NewMockSessionInviteRepository()
 	cfg := &config.Config{
-		GoogleOAuth: config.GoogleOAuthConfig{
-			ClientID:     "test_client_id",
-			ClientSecret: "test_client_secret",
-			RedirectURI:  "http://localhost:8080/api/v1/auth/google/callback",
+		Telegram: config.TelegramConfig{
+			BotToken: "test_bot_token",
 		},
 		App: config.AppConfig{
 			FrontendURL: "http://localhost:3000",
 		},
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(gameService, authService, jwtService, cfg, logger)
+	router := NewRouter(gameService, authService, jwtService, friendService, dailyPuzzleService, sessionInviteRepo, participantRepo, cfg, logger)
 
 	// Создаем просроченную сессию напрямую в репозитории
 	expiredSession := &domain.Session{
@@ -457,7 +534,7 @@ func TestSubmitResult_SessionExpired(t *testing.T) {
 		LetterCount: 7,
 		ValidWords:  []string{"еда"},
 		MaxScore:    100,
-		CreatedAt:   time.Now().Add(-2 * time.Hour), // Сессия создана 2 часа назад
+		CreatedAt:   time.Now().Add(-8 * 24 * time.Hour), // Сессия создана 8 дней назад (срок хранения 7 дней)
 	}
 	err := sessionRepo.Create(context.Background(), expiredSession)
 	require.NoError(t, err)

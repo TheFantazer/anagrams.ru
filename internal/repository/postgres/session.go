@@ -270,7 +270,7 @@ func (r *postgresSessionRepo) GetAllUserSessions(ctx context.Context, userID uui
 
 	for _, row := range rows {
 		if _, exists := sessionsMap[row.ID]; !exists {
-			session, err := row.sessionDB.toDomain()
+			session, err := row.toDomain()
 			if err != nil {
 				return nil, err
 			}
