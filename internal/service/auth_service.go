@@ -147,11 +147,17 @@ func (s *authService) LoginOrRegisterWithOAuth(ctx context.Context, provider str
 		}
 	}
 
+	defaultLang := "en"
+	if username == "" {
+		username = "user_" + oauthID
+	}
+
 	newUser := &domain.User{
-		Username:      username,
-		Email:         &email,
-		OAuthProvider: &provider,
-		OAuthID:       &oauthID,
+		Username:        username,
+		Email:           &email,
+		OAuthProvider:   &provider,
+		OAuthID:         &oauthID,
+		DefaultLanguage: defaultLang,
 	}
 
 	err = s.userRepo.Create(ctx, newUser)
