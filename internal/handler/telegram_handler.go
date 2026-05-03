@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -122,14 +123,22 @@ func (h *TelegramHandler) TelegramCallback(w http.ResponseWriter, r *http.Reques
 }
 
 // verifyTelegramAuth verifies the authenticity of Telegram Login Widget data
-func (h *TelegramHandler) verifyTelegramAuth(query map[string][]string, receivedHash string) bool {
-	dataCheckString := make([]string, 0)
-	for key, values := range query {
-		if key == "hash" {
-			continue
-		}
-		if len(values) > 0 {
-			dataCheckString = append(dataCheckString, fmt.Sprintf("%s=%s", key, values[0]))
+func (h *TelegramHandler) verifyTelegramAuth(query url.Values, receivedHash string) bool {
+	fields := []string{
+		"id",
+		"first_name",
+		"last_name",
+		"username",
+		"photo_url",
+		"auth_date",
+	}
+
+	var dataCheckString []string
+
+	for _, key := range fields {
+		value := query.Get(key)
+		if value != "" {
+			dataCheckString = append(dataCheckString, key+"="+value)
 		}
 	}
 
@@ -137,12 +146,11 @@ func (h *TelegramHandler) verifyTelegramAuth(query map[string][]string, received
 
 	dataCheckStr := strings.Join(dataCheckString, "\n")
 
-	secretKeyHash := sha256.Sum256([]byte(h.botToken))
+	secretKey := sha256.Sum256([]byte(h.botToken))
 
-	mac := hmac.New(sha256.New, secretKeyHash[:])
+	mac := hmac.New(sha256.New, secretKey[:])
 	mac.Write([]byte(dataCheckStr))
 	expectedHash := hex.EncodeToString(mac.Sum(nil))
 
-	// Compare hashes
 	return hmac.Equal([]byte(expectedHash), []byte(receivedHash))
 }
