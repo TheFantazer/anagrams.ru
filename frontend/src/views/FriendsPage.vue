@@ -671,7 +671,7 @@ function getH2HStats(friendName) {
     </div>
 
     <!-- Profile Modal -->
-    <Modal :open="!!openProfile" :on-close="() => openProfile = null" :title="openProfile?.username" wide>
+    <Modal :show="!!openProfile" @close="openProfile = null" :title="openProfile?.username" :wide="true">
       <div v-if="openProfile">
         <div class="fr-prof-head">
           <div class="fr-prof-avatar">

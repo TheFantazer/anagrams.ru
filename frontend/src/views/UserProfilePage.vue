@@ -136,7 +136,8 @@ async function checkFriendshipStatus() {
 }
 
 async function loadMatches() {
-  // Mock matches for now - TODO: implement real endpoint
+  // Mock data - head-to-head match history endpoint not yet implemented
+  // This will be replaced with real API call to /api/v1/matches/head-to-head/:userId
   matches.value = [
     { id: 1, letters: 'BEAUTY', yourScore: 8420, theirScore: 7100, result: 'won', date: 'Yesterday' },
     { id: 2, letters: 'SHELTER', yourScore: 5240, theirScore: 6820, result: 'lost', date: '2 days ago' },
@@ -224,9 +225,50 @@ async function handleDecline() {
   }
 }
 
-function handleChallenge() {
-  // TODO: Implement challenge functionality
-  userStore.showToast(t('profile.challengeSent', { name: user.value.username }), 'success')
+async function handleChallenge() {
+  if (!userStore.userId) return
+
+  try {
+    // Create a new game session
+    const sessionResponse = await fetch(`${apiUrl}/api/v1/sessions?user_id=${userStore.userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        language: userStore.soloLang,
+        letter_count: userStore.soloLetters,
+        time_limit: userStore.soloTime
+      })
+    })
+
+    if (!sessionResponse.ok) {
+      throw new Error('Failed to create session')
+    }
+
+    const session = await sessionResponse.json()
+
+    // Create invite for the user
+    const inviteResponse = await fetch(`${apiUrl}/api/v1/sessions/${session.id}/invites?user_id=${userStore.userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        invited_user_id: user.value.id
+      })
+    })
+
+    if (!inviteResponse.ok) {
+      throw new Error('Failed to create invite')
+    }
+
+    userStore.showToast(t('profile.challengeSent', { name: user.value.username }), 'success')
+
+    // Redirect to game page
+    router.push(`/game?session_id=${session.id}`)
+  } catch (error) {
+    console.error('Failed to create challenge:', error)
+    userStore.showToast(t('profile.challengeFailed'), 'error')
+  }
 }
 
 function copyLink() {

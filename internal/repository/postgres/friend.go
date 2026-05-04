@@ -53,6 +53,10 @@ func (r *friendRepository) CreateRequest(ctx context.Context, fromUserID uuid.UU
 	query := `
 		INSERT INTO friend_requests (id, from_user_id, to_user_id, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (from_user_id, to_user_id)
+		DO UPDATE SET
+			status = 'pending',
+			updated_at = NOW()
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -67,11 +71,6 @@ func (r *friendRepository) CreateRequest(ctx context.Context, fromUserID uuid.UU
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" { // Unique violation
-				if pgErr.ConstraintName == "friend_request_unique" {
-					return domain.ErrFriendRequestAlreadyExists
-				}
-			}
 			if pgErr.Code == "23503" { // Foreign key violation
 				return domain.ErrUserNotFound
 			}

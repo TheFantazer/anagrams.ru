@@ -605,6 +605,7 @@
     "friendRequestAccepted": "{name} добавлен в друзья",
     "requestDeclined": "Запрос от {name} отклонён",
     "challengeSent": "Вызов отправлен {name}",
+    "challengeFailed": "Не удалось отправить вызов",
     "linkCopied": "Ссылка на профиль скопирована"
   }
 }

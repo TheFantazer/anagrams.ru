@@ -25,8 +25,7 @@ import (
 type MockFriendService struct{}
 
 func (m *MockFriendService) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, nil
 }
 
 func (m *MockFriendService) GetSuggestedFriends(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.User, error) {

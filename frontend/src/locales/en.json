@@ -604,6 +604,7 @@
     "friendRequestAccepted": "{name} added to friends",
     "requestDeclined": "Request from {name} declined",
     "challengeSent": "Challenge sent to {name}",
+    "challengeFailed": "Failed to send challenge",
     "linkCopied": "Profile link copied"
   }
 }

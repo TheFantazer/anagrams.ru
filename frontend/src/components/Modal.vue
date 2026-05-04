@@ -4,7 +4,7 @@ import { defineProps, defineEmits, onMounted, onUnmounted } from 'vue'
 const props = defineProps({
   show: {
     type: Boolean,
-    required: true
+    default: false
   },
   title: {
     type: String,
@@ -17,6 +17,10 @@ const props = defineProps({
   maxWidth: {
     type: String,
     default: '440px'
+  },
+  wide: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -53,7 +57,7 @@ const handleOverlayClick = (e) => {
       >
         <div
           class="modal"
-          :style="{ maxWidth }"
+          :style="{ maxWidth: wide ? '720px' : maxWidth }"
           @click.stop
         >
           <button
