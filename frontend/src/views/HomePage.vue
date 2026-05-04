@@ -29,9 +29,9 @@ async function loadAlerts() {
     const sessionsRes = await fetch(`${apiUrl}/api/v1/sessions/my?user_id=${userStore.userId}`)
     if (sessionsRes.ok) {
       const sessions = await sessionsRes.json()
-      // Filter sessions where user hasn't played yet
+      // Filter sessions where user hasn't played yet AND user is not the creator
       yourTurnChallenges.value = sessions
-        .filter(s => !s.played)
+        .filter(s => !s.played && s.creator_id !== userStore.userId)
         .map(s => ({
           id: s.id,
           from: s.creator_username || 'Unknown',

@@ -15,6 +15,7 @@ const loading = ref(true)
 const error = ref(null)
 const session = ref(null)
 const results = ref([])
+const invites = ref([])
 const tab = ref('you') // mobile tab toggle
 const revealed = ref(false)
 
@@ -56,7 +57,22 @@ const verdictClass = computed(() => {
 })
 
 const opponentName = computed(() => {
-  return opponentResult.value?.player_name || session.value?.creator_username || 'Opponent'
+  // If opponent has played, use their player name
+  if (opponentResult.value?.player_name) {
+    return opponentResult.value.player_name
+  }
+
+  // If I'm the creator, find the invited user's name
+  if (session.value?.creator_id === userStore.userId && invites.value.length > 0) {
+    return invites.value[0].invited_username || 'Opponent'
+  }
+
+  // If I'm invited, use creator's name
+  if (session.value?.creator_username && session.value?.creator_id !== userStore.userId) {
+    return session.value.creator_username
+  }
+
+  return 'Opponent'
 })
 
 const allWords = computed(() => {
@@ -110,6 +126,18 @@ async function loadResults() {
     const resultsResponse = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/results`)
     if (!resultsResponse.ok) throw new Error('Failed to load results')
     results.value = await resultsResponse.json()
+
+    // Load invites to get opponent username if they haven't played yet
+    if (userStore.userId) {
+      try {
+        const invitesResponse = await fetch(`${apiUrl}/api/v1/sessions/${sessionId.value}/invites?user_id=${userStore.userId}`)
+        if (invitesResponse.ok) {
+          invites.value = await invitesResponse.json()
+        }
+      } catch (err) {
+        console.log('Could not load invites:', err)
+      }
+    }
 
   } catch (err) {
     console.error('Failed to load results:', err)

@@ -206,8 +206,12 @@ function hasUserPlayed(challenge) {
 }
 
 function isYourTurn(challenge) {
+  // It's your turn if:
+  // 1. You haven't played yet
+  // 2. You were invited (type === 'invited') OR someone else created it
   const userResult = challenge.results?.find(r => r.user_id === userStore.userId)
-  return !userResult && challenge.type === 'invited'
+  const isCreator = challenge.creator_id === userStore.userId
+  return !userResult && (challenge.type === 'invited' || !isCreator)
 }
 
 async function loadDailyPuzzle() {
@@ -503,7 +507,7 @@ onMounted(() => {
             v-for="challenge in activeChallenges"
             :key="challenge.id"
             :class="['ph-ch', { 'is-yours': isYourTurn(challenge), 'is-waiting': !isYourTurn(challenge) }]"
-            @click="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/challenge/${challenge.id}`)"
+            @click="router.push(hasUserPlayed(challenge) ? `/results/${challenge.id}` : `/game?session_id=${challenge.id}`)"
           >
             <div class="ph-ch-side">
               <span :class="['ph-dot', isYourTurn(challenge) ? 'ph-dot--turn' : 'ph-dot--wait']" />
@@ -546,7 +550,7 @@ onMounted(() => {
               </template>
             </div>
             <div class="ph-ch-cta">
-              <button v-if="isYourTurn(challenge)" class="btn btn--accent btn--sm" @click.stop="router.push(`/challenge/${challenge.id}`)">
+              <button v-if="!hasUserPlayed(challenge)" class="btn btn--accent btn--sm" @click.stop="router.push(`/game?session_id=${challenge.id}`)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M6 4l14 8-14 8z"/>
                 </svg>

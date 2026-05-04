@@ -98,12 +98,12 @@ async function loadRequests() {
     const incomingRes = await fetch(`${apiUrl}/api/v1/friends/requests/pending?user_id=${userStore.userId}`)
     if (incomingRes.ok) {
       const incoming = await incomingRes.json()
-      incomingRequests.value = incoming.map((r, i) => ({
+      incomingRequests.value = incoming.map((r) => ({
         ...r,
-        name: r.from_username || 'User',
-        mutual: i % 2, // Mock mutual friends
-        sent: '2 days ago', // Mock sent time
-        msg: i === 0 ? 'Let\'s play!' : null // Mock message
+        name: r.from_username,
+        mutual: 0, // Mock mutual friends
+        sent: formatRelativeTime(r.created_at), // Format sent time
+        msg: null // Mock message
       }))
     }
 
@@ -111,11 +111,11 @@ async function loadRequests() {
     const outgoingRes = await fetch(`${apiUrl}/api/v1/friends/requests/sent?user_id=${userStore.userId}`)
     if (outgoingRes.ok) {
       const outgoing = await outgoingRes.json()
-      outgoingRequests.value = outgoing.map((r, i) => ({
+      outgoingRequests.value = outgoing.map((r) => ({
         ...r,
-        name: r.to_username || 'User',
-        mutual: i % 3, // Mock mutual friends
-        sent: '1 day ago' // Mock sent time
+        name: r.to_username,
+        mutual: 0, // Mock mutual friends
+        sent: formatRelativeTime(r.created_at) // Format sent time
       }))
     }
   } catch (error) {
@@ -286,9 +286,50 @@ async function shareLink() {
   }
 }
 
-function challengeFriend(name) {
-  userStore.showToast(`Challenge sent to ${name}!`, 'success')
-  router.push('/play')
+async function challengeFriend(friend) {
+  if (!userStore.userId) return
+
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+    // Create a new game session
+    const sessionResponse = await fetch(`${apiUrl}/api/v1/sessions?user_id=${userStore.userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language: userStore.soloLang,
+        letter_count: userStore.soloLetters,
+        time_limit: userStore.soloTime
+      })
+    })
+
+    if (!sessionResponse.ok) {
+      throw new Error('Failed to create session')
+    }
+
+    const session = await sessionResponse.json()
+
+    // Create invite for the user
+    const inviteResponse = await fetch(`${apiUrl}/api/v1/sessions/${session.id}/invites?user_id=${userStore.userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invited_user_id: friend.id
+      })
+    })
+
+    if (!inviteResponse.ok) {
+      throw new Error('Failed to create invite')
+    }
+
+    userStore.showToast(t('friends.challengeSent', { name: friend.username }), 'success')
+
+    // Redirect to PlayHub to see the challenge
+    router.push('/play')
+  } catch (error) {
+    console.error('Failed to create challenge:', error)
+    userStore.showToast(t('friends.challengeFailed'), 'error')
+  }
 }
 
 // Load matches against a specific friend
@@ -417,7 +458,7 @@ function getH2HStats(friendName) {
             <input
                 v-model="searchQuery"
                 class="input"
-                placeholder="Search by username…"
+                :placeholder="$t('friends.searchByUsername')"
             />
             <span class="fr-online-count muted">
             <span class="online-dot" /> {{ onlineFriendsCount }} {{$t('friends.online')}}
@@ -433,31 +474,31 @@ function getH2HStats(friendName) {
                 <div class="fr-card-meta">
                   <div class="fr-card-name">{{ friend.username }}</div>
                   <div class="fr-card-sub muted">
-                    {{ friend.online ? 'Online now' : `Joined ${friend.joined}` }}
+                    {{ friend.online ? $t('friends.onlineNow') : $t('friends.joinedAgo', { time: friend.joined }) }}
                   </div>
                 </div>
               </button>
               <div class="fr-card-stats">
                 <div>
                   <span class="mono">{{ friend.score?.toLocaleString() || '0' }}</span>
-                  <span class="lbl">pts</span>
+                  <span class="lbl">{{ $t('friends.points') }}</span>
                 </div>
                 <div class="fr-card-sep" />
                 <div>
                   <span class="mono">{{ friend.streak || 0 }}d</span>
-                  <span class="lbl">streak</span>
+                  <span class="lbl">{{ $t('friends.dayStreak') }}</span>
                 </div>
               </div>
-              <button class="btn btn--accent btn--sm btn--block" @click="challengeFriend(friend.username)">
+              <button class="btn btn--accent btn--sm btn--block" @click="challengeFriend(friend)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
                 </svg>
-                Challenge
+                {{ $t('friends.challengeButton') }}
               </button>
             </div>
             <div v-if="filteredFriends.length === 0" class="fr-empty">
               <div class="muted" style="text-align:center; padding:40px 20px; grid-column:1 / -1">
-                {{ searchQuery ? `No friends match "${searchQuery}".` : $t('friends.noFriends') }}
+                {{ searchQuery ? $t('friends.noMatchesFound', { query: searchQuery }) : $t('friends.noFriends') }}
               </div>
             </div>
           </div>
@@ -468,13 +509,13 @@ function getH2HStats(friendName) {
           <!-- Incoming -->
           <div class="fr-req-block">
             <div class="fr-req-head">
-              <div class="page-eyebrow">Incoming</div>
+              <div class="page-eyebrow">{{ $t('friends.incoming') }}</div>
               <h3 class="fr-req-title">
-                {{ incomingRequests.length }} {{ incomingRequests.length === 1 ? 'person wants' : 'people want' }} to play
+                {{ incomingRequests.length === 1 ? $t('friends.personWants', { count: incomingRequests.length }) : $t('friends.peopleWant', { count: incomingRequests.length }) }}
               </h3>
             </div>
             <div v-if="incomingRequests.length === 0" class="fr-empty-soft muted">
-              No incoming requests.
+              {{ $t('friends.noIncomingRequests') }}
             </div>
             <div v-else class="fr-req-list">
               <div v-for="request in incomingRequests" :key="request.id" class="fr-req fr-req--in">
@@ -491,22 +532,22 @@ function getH2HStats(friendName) {
                           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
-                        {{ request.mutual }} mutual
+                        {{ request.mutual }} {{ $t('friends.mutual') }}
                       </span>
                         <span class="dot-sep">·</span>
                       </template>
-                      <span>sent {{ request.sent }}</span>
+                      <span>{{ $t('friends.sentAgo', { time: request.sent }) }}</span>
                     </div>
                     <div v-if="request.msg" class="fr-req-msg">&ldquo;{{ request.msg }}&rdquo;</div>
                   </div>
                 </div>
                 <div class="fr-req-actions">
-                  <button class="btn btn--ghost btn--sm" @click="declineRequest(request.id, request.name)">Decline</button>
+                  <button class="btn btn--ghost btn--sm" @click="declineRequest(request.id, request.name)">{{ $t('friends.declineButton') }}</button>
                   <button class="btn btn--accent btn--sm" @click="acceptRequest(request.id, request.name)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20 6L9 17l-5-5"/>
                     </svg>
-                    Accept
+                    {{ $t('friends.acceptButton') }}
                   </button>
                 </div>
               </div>
@@ -516,11 +557,11 @@ function getH2HStats(friendName) {
           <!-- Outgoing -->
           <div class="fr-req-block">
             <div class="fr-req-head">
-              <div class="page-eyebrow">Outgoing</div>
-              <h3 class="fr-req-title">{{ outgoingRequests.length }} pending</h3>
+              <div class="page-eyebrow">{{ $t('friends.outgoing') }}</div>
+              <h3 class="fr-req-title">{{ $t('friends.pending', { count: outgoingRequests.length }) }}</h3>
             </div>
             <div v-if="outgoingRequests.length === 0" class="fr-empty-soft muted">
-              No pending invites.
+              {{ $t('friends.noPendingInvites') }}
             </div>
             <div v-else class="fr-req-list">
               <div v-for="request in outgoingRequests" :key="request.id" class="fr-req fr-req--out">
@@ -537,19 +578,19 @@ function getH2HStats(friendName) {
                           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
-                        {{ request.mutual }} mutual
+                        {{ request.mutual }} {{ $t('friends.mutual') }}
                       </span>
                         <span class="dot-sep">·</span>
                       </template>
-                      <span>sent {{ request.sent }}</span>
+                      <span>{{ $t('friends.sentAgo', { time: request.sent }) }}</span>
                     </div>
                   </div>
                 </div>
                 <div class="fr-req-actions">
                 <span class="fr-req-pending">
-                  <span class="pulse-dot" /> Awaiting
+                  <span class="pulse-dot" /> {{ $t('friends.awaitingButton') }}
                 </span>
-                  <button class="btn btn--ghost btn--sm" @click="cancelRequest(request.id, request.name)">Cancel</button>
+                  <button class="btn btn--ghost btn--sm" @click="cancelRequest(request.id, request.name)">{{ $t('friends.cancelButton') }}</button>
                 </div>
               </div>
             </div>
@@ -561,10 +602,10 @@ function getH2HStats(friendName) {
           <div class="fr-add-grid">
             <!-- Search -->
             <div class="card fr-add-card">
-              <div class="page-eyebrow">01 · Search</div>
-              <h3 class="fr-add-title">Find by username</h3>
+              <div class="page-eyebrow">{{ $t('friends.searchSection') }}</div>
+              <h3 class="fr-add-title">{{ $t('friends.findByUsername') }}</h3>
               <p class="muted" style="font-size:13px; margin:0 0 14px">
-                Exact match or partial — three letters minimum.
+                {{ $t('friends.exactMatchHint') }}
               </p>
               <div class="fr-search-input-wrap">
                 <input
@@ -573,12 +614,12 @@ function getH2HStats(friendName) {
                     class="input"
                     placeholder="@username"
                 />
-                <button class="btn btn--accent btn--sm" @click="searchUsers">Search</button>
+                <button class="btn btn--accent btn--sm" @click="searchUsers">{{ $t('friends.searchButton') }}</button>
               </div>
 
               <!-- Search Results -->
               <div v-if="searchResults.length > 0" style="margin-top:18px">
-                <div class="fr-eyebrow-mini">Results</div>
+                <div class="fr-eyebrow-mini">{{ $t('friends.resultsLabel') }}</div>
                 <div class="fr-suggested">
                   <div v-for="user in searchResults" :key="user.id" class="fr-sugg">
                     <div class="fr-sugg-who">
@@ -592,7 +633,7 @@ function getH2HStats(friendName) {
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 5v14M5 12h14"/>
                       </svg>
-                      Add
+                      {{ $t('friends.addButton') }}
                     </button>
                   </div>
                 </div>
@@ -600,7 +641,7 @@ function getH2HStats(friendName) {
 
               <!-- Suggested -->
               <div v-if="suggestedFriends.length > 0" style="margin-top:18px">
-                <div class="fr-eyebrow-mini">Suggested</div>
+                <div class="fr-eyebrow-mini">{{ $t('friends.suggestedLabel') }}</div>
                 <div class="fr-suggested">
                   <div v-for="user in suggestedFriends" :key="user.id" class="fr-sugg">
                     <div class="fr-sugg-who" @click="router.push(`/u/${user.name}`)" style="cursor: pointer;">
@@ -614,7 +655,7 @@ function getH2HStats(friendName) {
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 5v14M5 12h14"/>
                       </svg>
-                      Add
+                      {{ $t('friends.addButton') }}
                     </button>
                   </div>
                 </div>
@@ -623,10 +664,10 @@ function getH2HStats(friendName) {
 
             <!-- Invite link -->
             <div class="card fr-add-card fr-add-card--invite">
-              <div class="page-eyebrow">02 · Invite</div>
-              <h3 class="fr-add-title">Share your link</h3>
+              <div class="page-eyebrow">{{ $t('friends.inviteSection') }}</div>
+              <h3 class="fr-add-title">{{ $t('friends.shareYourLink') }}</h3>
               <p class="muted" style="font-size:13px; margin:0 0 14px">
-                Anyone with this link can send you a friend request directly.
+                {{ $t('friends.inviteLinkHint') }}
               </p>
               <div class="fr-link-box">
                 <span class="mono">anagrams.ru/u/{{ userStore.username || 'user' }}</span>
@@ -638,7 +679,7 @@ function getH2HStats(friendName) {
                   <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 6L9 17l-5-5"/>
                   </svg>
-                  {{ inviteCopied ? 'Copied' : 'Copy' }}
+                  {{ inviteCopied ? $t('friends.copiedButton') : $t('friends.copyButton') }}
                 </button>
               </div>
               <div class="fr-share-row">
@@ -649,16 +690,16 @@ function getH2HStats(friendName) {
                     <circle cx="18" cy="19" r="3"/>
                     <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
                   </svg>
-                  Share
+                  {{ $t('friends.shareButton') }}
                 </button>
-                <span class="muted" style="font-size:12px">Share your profile link.</span>
+                <span class="muted" style="font-size:12px">{{ $t('friends.shareProfileHint') }}</span>
               </div>
               <div class="fr-qr">
                 <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="QR Code" style="width: 140px; height: 140px; border-radius: 8px;" />
                 <div v-else class="fr-qr-grid">
                   <span v-for="i in 49" :key="i" class="fr-qr-cell" :data-on="(i * 7 + 3) % 5 < 2 ? 'true' : 'false'" />
                 </div>
-                <div class="fr-qr-text muted">{{ qrCodeDataUrl ? 'Scan to add me' : 'QR loading...' }}</div>
+                <div class="fr-qr-text muted">{{ qrCodeDataUrl ? $t('friends.scanToAdd') : $t('friends.qrLoading') }}</div>
               </div>
             </div>
           </div>
@@ -681,7 +722,7 @@ function getH2HStats(friendName) {
           <div>
             <div class="fr-prof-name">{{ openProfile.username }}</div>
             <div class="muted" style="font-size:13px">
-              {{ openProfile.online ? 'Online now' : `Joined ${openProfile.joined}` }} · {{ openProfile.streak }}d streak
+              {{ openProfile.online ? $t('friends.onlineNow') : $t('friends.joinedAgo', { time: openProfile.joined }) }} · {{ openProfile.streak }}d {{ $t('friends.dayStreak') }}
             </div>
           </div>
         </div>
@@ -689,26 +730,26 @@ function getH2HStats(friendName) {
         <div class="fr-prof-stats">
           <div class="fr-prof-stat">
             <div class="fr-prof-stat-v mono">{{ openProfile.score?.toLocaleString() }}</div>
-            <div class="fr-prof-stat-k">leaderboard score</div>
+            <div class="fr-prof-stat-k">{{ $t('friends.leaderboardScore') }}</div>
           </div>
           <div class="fr-prof-stat">
             <div class="fr-prof-stat-v mono">{{ openProfile.bestWord?.toLowerCase() }}</div>
-            <div class="fr-prof-stat-k">best word</div>
+            <div class="fr-prof-stat-k">{{ $t('friends.bestWordLabel') }}</div>
           </div>
           <div class="fr-prof-stat">
             <div class="fr-prof-stat-v mono">
               {{ loadingFriendMatches ? '...' : friendMatches.length }}
             </div>
-            <div class="fr-prof-stat-k">matches with you</div>
+            <div class="fr-prof-stat-k">{{ $t('friends.matchesWithYou') }}</div>
           </div>
         </div>
 
         <!-- Head-to-head Record -->
         <div v-if="loadingFriendMatches" class="fr-prof-loading">
-          <span class="muted">Loading match history...</span>
+          <span class="muted">{{ $t('friends.loadingMatches') }}</span>
         </div>
         <div v-else-if="friendMatches.length > 0" class="fr-prof-record">
-          <div class="page-eyebrow" style="margin-bottom:8px">Head-to-head</div>
+          <div class="page-eyebrow" style="margin-bottom:8px">{{ $t('friends.headToHeadLabel') }}</div>
           <div class="fr-prof-bar">
             <div class="fr-prof-bar-w" :style="{ flex: getH2HStats().wins || 0.001 }">
               <span v-if="getH2HStats().wins > 0">{{ getH2HStats().wins }} W</span>
@@ -721,7 +762,7 @@ function getH2HStats(friendName) {
             </div>
           </div>
           <div class="fr-prof-recent">
-            <div class="fr-eyebrow-mini">Recent</div>
+            <div class="fr-eyebrow-mini">{{ $t('friends.recentLabel') }}</div>
             <div v-for="match in friendMatches.slice(0, 3)" :key="match.id" :class="['fr-prof-recent-row', `rm-${match.result}`]">
               <span :class="['fr-prof-recent-tag', `rm-${match.result}`]">
                 {{ match.result === 'won' ? 'W' : match.result === 'lost' ? 'L' : 'T' }}
@@ -733,16 +774,16 @@ function getH2HStats(friendName) {
           </div>
         </div>
         <div v-else class="fr-prof-empty muted" style="padding:20px; text-align:center; font-size:13px">
-          No matches played yet
+          {{ $t('friends.noMatchesYet') }}
         </div>
 
         <div class="fr-prof-actions">
-          <button class="btn btn--ghost" @click="openProfile = null">Close</button>
-          <button class="btn btn--accent" @click="challengeFriend(openProfile.username); openProfile = null">
+          <button class="btn btn--ghost" @click="openProfile = null">{{ $t('friends.closeButton') }}</button>
+          <button class="btn btn--accent" @click="challengeFriend(openProfile); openProfile = null">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
             </svg>
-            Challenge to a round
+            {{ $t('friends.challengeToRound') }}
           </button>
         </div>
       </div>

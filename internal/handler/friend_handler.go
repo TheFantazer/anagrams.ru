@@ -78,13 +78,28 @@ func (h *FriendHandler) GetPendingRequests(w http.ResponseWriter, r *http.Reques
 
 	response := make([]FriendRequestResponse, 0)
 	for _, req := range requests {
+		// Get usernames
+		fromUser, err := h.friendService.GetUserByID(r.Context(), req.FromUserID)
+		if err != nil {
+			h.logger.Warn("Failed to get from user", slog.String("error", err.Error()))
+			continue
+		}
+
+		toUser, err := h.friendService.GetUserByID(r.Context(), req.ToUserID)
+		if err != nil {
+			h.logger.Warn("Failed to get to user", slog.String("error", err.Error()))
+			continue
+		}
+
 		response = append(response, FriendRequestResponse{
-			ID:         req.ID,
-			FromUserID: req.FromUserID,
-			ToUserID:   req.ToUserID,
-			Status:     req.Status,
-			CreatedAt:  req.CreatedAt,
-			UpdatedAt:  req.UpdatedAt,
+			ID:           req.ID,
+			FromUserID:   req.FromUserID,
+			FromUsername: fromUser.Username,
+			ToUserID:     req.ToUserID,
+			ToUsername:   toUser.Username,
+			Status:       req.Status,
+			CreatedAt:    req.CreatedAt,
+			UpdatedAt:    req.UpdatedAt,
 		})
 	}
 
@@ -114,13 +129,28 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 
 	response := make([]FriendRequestResponse, 0)
 	for _, req := range requests {
+		// Get usernames
+		fromUser, err := h.friendService.GetUserByID(r.Context(), req.FromUserID)
+		if err != nil {
+			h.logger.Warn("Failed to get from user", slog.String("error", err.Error()))
+			continue
+		}
+
+		toUser, err := h.friendService.GetUserByID(r.Context(), req.ToUserID)
+		if err != nil {
+			h.logger.Warn("Failed to get to user", slog.String("error", err.Error()))
+			continue
+		}
+
 		response = append(response, FriendRequestResponse{
-			ID:         req.ID,
-			FromUserID: req.FromUserID,
-			ToUserID:   req.ToUserID,
-			Status:     req.Status,
-			CreatedAt:  req.CreatedAt,
-			UpdatedAt:  req.UpdatedAt,
+			ID:           req.ID,
+			FromUserID:   req.FromUserID,
+			FromUsername: fromUser.Username,
+			ToUserID:     req.ToUserID,
+			ToUsername:   toUser.Username,
+			Status:       req.Status,
+			CreatedAt:    req.CreatedAt,
+			UpdatedAt:    req.UpdatedAt,
 		})
 	}
 
