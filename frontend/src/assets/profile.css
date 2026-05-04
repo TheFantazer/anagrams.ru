@@ -1,0 +1,404 @@
+/* =========================================================================
+   Profile page styles
+   ========================================================================= */
+
+.pf-wrap {
+  padding-top: var(--sp-5);
+  padding-bottom: var(--sp-12);
+}
+
+.pf-back { margin-bottom: var(--sp-3); }
+
+/* ===== Header ========================================================== */
+.pf-head {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-2xl);
+  padding: var(--sp-7);
+  margin-bottom: var(--sp-6);
+  overflow: hidden;
+}
+@media (max-width: 720px) {
+  .pf-head { padding: var(--sp-5); }
+}
+
+.pf-head-deco {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  font-family: var(--font-display);
+  font-weight: 700;
+  user-select: none;
+}
+.pf-head-deco span {
+  position: absolute;
+  font-size: clamp(48px, 7vw, 92px);
+  color: var(--accent);
+  animation: pf-float 6s var(--ease-out) infinite;
+}
+@keyframes pf-float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+
+.pf-head-main {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-5);
+    padding: var(--sp-4);    /* ← added even spacing on all sides */
+    margin-bottom: 0;        /* ← removed old bottom‑only margin */
+}
+@media (max-width: 560px) {
+  .pf-head-main { flex-direction: column; gap: var(--sp-3); }
+}
+
+.pf-avatar-wrap { position: relative; flex-shrink: 0; }
+.pf-avatar {
+  width: 96px; height: 96px;
+  border-radius: 24px;
+  background: var(--navy);
+  color: var(--milk);
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.5px;
+  border: 1px solid var(--navy);
+}
+.pf-avatar-online {
+  position: absolute;
+  bottom: -2px; right: -2px;
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: var(--success);
+  border: 3px solid var(--bg-surface);
+}
+
+.pf-head-text { flex: 1; min-width: 0; }
+.pf-eyebrow {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.pf-rel-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--fg-muted);
+}
+.pf-rel-tag--self {
+  background: var(--accent);
+  color: var(--milk);
+}
+.pf-rel-tag--friend {
+  background: rgba(58, 116, 84, 0.12);
+  color: var(--success);
+}
+.pf-rel-tag--in {
+  background: rgba(212, 142, 47, 0.12);
+  color: var(--warning);
+}
+.pf-rel-tag--out {
+  background: var(--bg-card);
+  color: var(--fg-secondary);
+}
+.pf-online-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+}
+
+.pf-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(36px, 6vw, 56px);
+  letter-spacing: -1.2px;
+  line-height: 1;
+  margin: 0 0 10px;
+  color: var(--fg-primary);
+}
+
+.pf-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--fg-secondary);
+}
+.pf-meta > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pf-meta .dot-sep { color: var(--fg-faint); }
+
+.pf-bio {
+  margin: var(--sp-3) 0 0;
+  font-size: 14px;
+  color: var(--fg-secondary);
+  font-style: italic;
+  max-width: 540px;
+}
+
+/* ===== Action row ====================================================== */
+.pf-actions {
+  position: relative; z-index: 1;
+  display: flex; align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border-hairline);
+}
+.pf-action-hint {
+  font-size: 12px;
+}
+
+.pf-msg-from {
+  position: relative; z-index: 1;
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding: 12px var(--sp-3);
+  border-radius: var(--radius-md);
+  background: rgba(212, 142, 47, 0.08);
+  border: 1px solid rgba(212, 142, 47, 0.18);
+  font-size: 13px;
+  color: var(--fg-secondary);
+  line-height: 1.5;
+}
+.pf-msg-from svg { flex-shrink: 0; margin-top: 2px; color: var(--warning); }
+.pf-msg-from > span { line-height: 1.5; }
+.pf-msg-from strong { color: var(--fg-primary); font-weight: 600; }
+.pf-msg-from--soft {
+  background: var(--bg-card);
+  border-color: var(--border-subtle);
+}
+.pf-msg-from--soft svg { color: var(--fg-muted); }
+
+/* ===== Stats grid ====================================================== */
+.pf-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+.pf-stats-grid--own {
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 720px) {
+  .pf-stats-grid--own { grid-template-columns: repeat(2, 1fr); }
+}
+
+.pf-stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+.pf-stat-v {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.5px;
+  color: var(--fg-primary);
+  line-height: 1;
+}
+.pf-stat .mono.pf-stat-v {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0;
+}
+.pf-stat-k {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+/* ===== Section blocks ================================================= */
+.pf-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-4);
+}
+.pf-section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  margin: 4px 0 0;
+  color: var(--fg-primary);
+}
+
+/* ===== Head-to-head bar (from friends.css) ============================ */
+.fr-prof-bar {
+  display: flex;
+  height: 32px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  gap: 1px;
+  background: var(--border-hairline);
+}
+.fr-prof-bar > div {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  transition: flex var(--dur-base);
+}
+.fr-prof-bar-w {
+  background: var(--success);
+  color: white;
+}
+.fr-prof-bar-t {
+  background: var(--fg-muted);
+  color: white;
+}
+.fr-prof-bar-l {
+  background: var(--danger);
+  color: white;
+}
+
+/* ===== Recent rounds ==================================================== */
+.fr-prof-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fr-eyebrow-mini {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
+}
+.fr-prof-recent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 10px var(--sp-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  transition: background var(--dur-fast);
+}
+.fr-prof-recent-row:hover {
+  background: var(--bg-hover);
+}
+.fr-prof-recent-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.fr-prof-recent-tag.rm-won {
+  background: rgba(58, 116, 84, 0.15);
+  color: var(--success);
+}
+.fr-prof-recent-tag.rm-lost {
+  background: rgba(176, 58, 46, 0.15);
+  color: var(--danger);
+}
+.fr-prof-recent-tag.rm-tie {
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  border: 1px solid var(--border-hairline);
+}
+.fr-prof-recent-letters {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ===== Mutual friends row ============================================== */
+.pf-mutuals {
+  display: flex; gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-3);
+}
+.pf-mutual {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px 8px 8px;
+  background: var(--bg-card);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+.pf-mutual:hover {
+  background: var(--bg-hover);
+}
+.pf-mutual-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+/* Avatar from friends page */
+.fr-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--milk);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ===== Invite footer (for strangers from invite link) ================= */
+.pf-invite-footer {
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  background: linear-gradient(135deg, rgba(122,74,43,0.06), transparent 70%);
+  border: 1px dashed var(--accent-soft-hover);
+  border-radius: var(--radius-xl);
+  margin-top: var(--sp-3);
+}
+.pf-invite-footer > div { flex: 1; }
+@media (max-width: 560px) {
+  .pf-invite-footer { flex-direction: column; align-items: flex-start; }
+}
+
+/* Pulse dot for "Awaiting reply" button */
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+  margin-right: 6px;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Online dot */
+.online-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}

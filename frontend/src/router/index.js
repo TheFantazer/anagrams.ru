@@ -54,6 +54,11 @@ const router = createRouter({
             component: () => import('../views/FriendsPage.vue')
         },
         {
+            path: '/u/:username',
+            name: 'user-profile',
+            component: () => import('../views/UserProfilePage.vue')
+        },
+        {
             path: '/match-history',
             name: 'match-history',
             component: () => import('../views/MatchHistoryPage.vue')

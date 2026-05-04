@@ -58,7 +58,11 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 
 	// User search endpoint
 	mux.HandleFunc("GET /api/v1/users/search", friendHandler.SearchUsers)
+	mux.HandleFunc("GET /api/v1/users/username/{username}", friendHandler.GetUserByUsername)
 	mux.HandleFunc("GET /api/v1/users/{id}", friendHandler.GetUserByID)
+
+	// Friend suggestions endpoint
+	mux.HandleFunc("GET /api/v1/friends/suggestions", friendHandler.GetSuggestedFriends)
 
 	// Daily puzzle endpoints
 	mux.HandleFunc("GET /api/v1/daily-puzzle/today", dailyPuzzleHandler.GetTodaysPuzzle)

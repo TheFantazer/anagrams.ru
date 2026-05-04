@@ -19,6 +19,8 @@ type FriendService interface {
 	RemoveFriend(ctx context.Context, userID, friendID uuid.UUID) error
 	SearchUsers(ctx context.Context, query string) ([]*domain.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetSuggestedFriends(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.User, error)
 	AreFriends(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
 }
 
@@ -46,7 +48,6 @@ func NewFriendService(friendRepo repository.FriendRepository, userRepo repositor
 }
 
 func (s *friendService) SendFriendRequest(ctx context.Context, fromUserID, toUserID uuid.UUID) error {
-	// Проверяем что оба пользователя существуют
 	_, err := s.userRepo.GetByID(ctx, fromUserID)
 	if err != nil {
 		if err == repository.ErrNotFound {
@@ -63,7 +64,6 @@ func (s *friendService) SendFriendRequest(ctx context.Context, fromUserID, toUse
 		return fmt.Errorf("failed to get to user: %w", err)
 	}
 
-	// Проверяем что пользователи еще не друзья
 	areFriends, err := s.friendRepo.AreFriends(ctx, fromUserID, toUserID)
 	if err != nil {
 		return fmt.Errorf("failed to check friendship: %w", err)
@@ -73,18 +73,15 @@ func (s *friendService) SendFriendRequest(ctx context.Context, fromUserID, toUse
 		return domain.ErrAlreadyFriends
 	}
 
-	// Создаем запрос
 	return s.friendRepo.CreateRequest(ctx, fromUserID, toUserID)
 }
 
 func (s *friendService) AcceptFriendRequest(ctx context.Context, userID, requestID uuid.UUID) error {
-	// Получаем все pending requests для проверки прав
 	requests, err := s.friendRepo.GetPendingRequests(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get pending requests: %w", err)
 	}
 
-	// Проверяем что запрос адресован этому пользователю
 	var found bool
 	for _, req := range requests {
 		if req.ID == requestID {
@@ -101,13 +98,11 @@ func (s *friendService) AcceptFriendRequest(ctx context.Context, userID, request
 }
 
 func (s *friendService) RejectFriendRequest(ctx context.Context, userID, requestID uuid.UUID) error {
-	// Получаем все pending requests для проверки прав
 	requests, err := s.friendRepo.GetPendingRequests(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get pending requests: %w", err)
 	}
 
-	// Проверяем что запрос адресован этому пользователю
 	var found bool
 	for _, req := range requests {
 		if req.ID == requestID {
@@ -137,7 +132,6 @@ func (s *friendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]*do
 		return nil, err
 	}
 
-	// Очищаем пароли
 	for _, user := range users {
 		user.Password = ""
 	}
@@ -146,7 +140,6 @@ func (s *friendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]*do
 }
 
 func (s *friendService) RemoveFriend(ctx context.Context, userID, friendID uuid.UUID) error {
-	// Проверяем что они друзья
 	areFriends, err := s.friendRepo.AreFriends(ctx, userID, friendID)
 	if err != nil {
 		return fmt.Errorf("failed to check friendship: %w", err)
@@ -165,7 +158,6 @@ func (s *friendService) SearchUsers(ctx context.Context, query string) ([]*domai
 		return nil, err
 	}
 
-	// Очищаем пароли
 	for _, user := range users {
 		user.Password = ""
 	}
@@ -175,4 +167,60 @@ func (s *friendService) SearchUsers(ctx context.Context, query string) ([]*domai
 
 func (s *friendService) AreFriends(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error) {
 	return s.friendRepo.AreFriends(ctx, userID1, userID2)
+}
+
+func (s *friendService) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	user, err := s.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Password = ""
+
+	return user, nil
+}
+
+func (s *friendService) GetSuggestedFriends(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.User, error) {
+	friends, err := s.friendRepo.GetFriends(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get friends: %w", err)
+	}
+
+	friendIDs := make(map[uuid.UUID]bool)
+	friendIDs[userID] = true
+	for _, friend := range friends {
+		friendIDs[friend.ID] = true
+	}
+
+	pendingRequests, err := s.friendRepo.GetPendingRequests(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pending requests: %w", err)
+	}
+	for _, req := range pendingRequests {
+		friendIDs[req.FromUserID] = true
+	}
+
+	sentRequests, err := s.friendRepo.GetSendingRequests(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sent requests: %w", err)
+	}
+	for _, req := range sentRequests {
+		friendIDs[req.ToUserID] = true
+	}
+
+	// Получаем случайных пользователей (можно улучшить запросом к БД)
+	allUsers, err := s.friendRepo.SearchUsers(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	var suggested []*domain.User
+	for _, user := range allUsers {
+		if !friendIDs[user.ID] && len(suggested) < limit {
+			user.Password = ""
+			suggested = append(suggested, user)
+		}
+	}
+
+	return suggested, nil
 }

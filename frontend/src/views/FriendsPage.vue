@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../stores/userStore'
 import Modal from '../components/Modal.vue'
 import AuthPrompt from '@/components/AuthPrompt.vue'
+import QRCode from 'qrcode'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -20,6 +21,7 @@ const searchResults = ref([])
 const openProfile = ref(null)
 const loading = ref(false)
 const inviteCopied = ref(false)
+const qrCodeDataUrl = ref('')
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -37,20 +39,20 @@ const onlineFriendsCount = computed(() => {
   return filteredFriends.value.filter(f => f.online).length
 })
 
-// Mock suggested friends - TODO: Replace with real API
-const suggestedFriends = ref([
-  { name: 'alex_word', reason: 'Plays often', id: 999 },
-  { name: 'maria_fast', reason: 'Top 100 player', id: 998 },
-])
+// Suggested friends - loaded from API
+const suggestedFriends = ref([])
+const loadingSuggested = ref(false)
 
 // Match history for friend profile
 const friendMatches = ref([])
 const loadingFriendMatches = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   if (userStore.isAuthenticated) {
     loadFriends()
     loadRequests()
+    loadSuggestedFriends()
+    await generateQRCode()
   }
 })
 
@@ -118,6 +120,27 @@ async function loadRequests() {
     }
   } catch (error) {
     console.error('Failed to load requests:', error)
+  }
+}
+
+async function loadSuggestedFriends() {
+  if (!userStore.userId) return
+
+  loadingSuggested.value = true
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/friends/suggestions?user_id=${userStore.userId}&limit=5`)
+    if (response.ok) {
+      const data = await response.json()
+      suggestedFriends.value = data.map(user => ({
+        ...user,
+        name: user.username,
+        reason: 'Suggested for you'
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to load suggested friends:', error)
+  } finally {
+    loadingSuggested.value = false
   }
 }
 
@@ -213,12 +236,54 @@ async function cancelRequest(requestId, name) {
   }
 }
 
+async function generateQRCode() {
+  if (!userStore.username) return
+
+  const link = `${window.location.origin}/u/${userStore.username}`
+  try {
+    qrCodeDataUrl.value = await QRCode.toDataURL(link, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#1e2a46', // --navy
+        light: '#fbf6ec'  // --milk
+      }
+    })
+  } catch (error) {
+    console.error('Failed to generate QR code:', error)
+  }
+}
+
 function copyInviteLink() {
-  const link = `anagrams.ru/u/${userStore.username}`
+  const link = `${window.location.origin}/u/${userStore.username}`
   navigator.clipboard?.writeText(link)
   inviteCopied.value = true
   userStore.showToast('Invite link copied', 'success')
   setTimeout(() => { inviteCopied.value = false }, 2200)
+}
+
+async function shareLink() {
+  const link = `${window.location.origin}/u/${userStore.username}`
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Add me as a friend on Anagrams!',
+        text: `Let's play Anagrams together! Add me as a friend:`,
+        url: link
+      })
+      userStore.showToast('Link shared successfully', 'success')
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Share failed:', error)
+        // Fallback to copy
+        copyInviteLink()
+      }
+    }
+  } else {
+    // Fallback to copy if Web Share API is not supported
+    copyInviteLink()
+  }
 }
 
 function challengeFriend(name) {
@@ -538,7 +603,7 @@ function getH2HStats(friendName) {
                 <div class="fr-eyebrow-mini">Suggested</div>
                 <div class="fr-suggested">
                   <div v-for="user in suggestedFriends" :key="user.id" class="fr-sugg">
-                    <div class="fr-sugg-who">
+                    <div class="fr-sugg-who" @click="router.push(`/u/${user.name}`)" style="cursor: pointer;">
                       <div class="fr-avatar">{{ user.name[0].toUpperCase() }}</div>
                       <div>
                         <div class="fr-sugg-name">{{ user.name }}</div>
@@ -577,7 +642,7 @@ function getH2HStats(friendName) {
                 </button>
               </div>
               <div class="fr-share-row">
-                <button class="btn btn--ghost btn--sm">
+                <button class="btn btn--ghost btn--sm" @click="shareLink">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="18" cy="5" r="3"/>
                     <circle cx="6" cy="12" r="3"/>
@@ -586,13 +651,14 @@ function getH2HStats(friendName) {
                   </svg>
                   Share
                 </button>
-                <span class="muted" style="font-size:12px">Link works for 30 days.</span>
+                <span class="muted" style="font-size:12px">Share your profile link.</span>
               </div>
               <div class="fr-qr">
-                <div class="fr-qr-grid">
+                <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="QR Code" style="width: 140px; height: 140px; border-radius: 8px;" />
+                <div v-else class="fr-qr-grid">
                   <span v-for="i in 49" :key="i" class="fr-qr-cell" :data-on="(i * 7 + 3) % 5 < 2 ? 'true' : 'false'" />
                 </div>
-                <div class="fr-qr-text muted">QR placeholder</div>
+                <div class="fr-qr-text muted">{{ qrCodeDataUrl ? 'Scan to add me' : 'QR loading...' }}</div>
               </div>
             </div>
           </div>
@@ -806,8 +872,8 @@ function getH2HStats(friendName) {
   padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  transition: all var(--dur-base) var(--ease-std);
+  justify-content: space-between;
+  min-height: 160px;
 }
 
 .fr-card:hover {
@@ -820,27 +886,21 @@ function getH2HStats(friendName) {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  padding: 4px 0;
   background: transparent;
   border: 0;
-  padding: 0;
   text-align: left;
   cursor: pointer;
   font-family: var(--font-body);
 }
 
-.fr-card-avatar {
-  width: 44px;
-  height: 44px;
-  position: relative;
-  border-radius: 999px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+.fr-card-avatar,
+.fr-avatar {
+  border-radius: 50%;
   display: grid;
   place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
-  color: var(--fg-primary);
   flex-shrink: 0;
 }
 
@@ -852,13 +912,15 @@ function getH2HStats(friendName) {
 .fr-card-name {
   font-weight: 600;
   font-size: 14px;
+  line-height: 1.2;
   color: var(--fg-primary);
-  margin-bottom: 2px;
+  margin: 0;
 }
 
 .fr-card-sub {
   font-size: 11px;
   font-family: var(--font-mono);
+  line-height: 1.2;
 }
 
 .fr-card-stats {
@@ -866,6 +928,7 @@ function getH2HStats(friendName) {
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
+  margin: 2px 0;
   background: var(--bg-card);
   border-radius: var(--radius-md);
   font-size: 12px;
@@ -959,21 +1022,6 @@ function getH2HStats(friendName) {
   gap: var(--sp-3);
   flex: 1;
   min-width: 0;
-}
-
-.fr-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--fg-primary);
-  flex-shrink: 0;
 }
 
 .fr-avatar--lg {

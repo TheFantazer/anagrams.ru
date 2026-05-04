@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/TheFantazer/anagrams.ru/internal/domain"
 	"github.com/TheFantazer/anagrams.ru/internal/repository"
@@ -318,6 +319,81 @@ func (h *FriendHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		DefaultTimeLimit:   user.DefaultTimeLimit,
 		CreatedAt:          user.CreatedAt,
 	})
+}
+
+// GetUserByUsername - GET /api/v1/users/username/{username}
+func (h *FriendHandler) GetUserByUsername(w http.ResponseWriter, r *http.Request) {
+	username := r.PathValue("username")
+	if username == "" {
+		respondError(w, http.StatusBadRequest, "missing_username", "Username is required")
+		return
+	}
+
+	user, err := h.friendService.GetUserByUsername(r.Context(), username)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			respondError(w, http.StatusNotFound, "not_found", "User not found")
+			return
+		}
+
+		h.logger.Error("Failed to get user by username", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to get user")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, UserResponse{
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		DefaultLetterCount: user.DefaultLetterCount,
+		DefaultLanguage:    user.DefaultLanguage,
+		DefaultTimeLimit:   user.DefaultTimeLimit,
+		CreatedAt:          user.CreatedAt,
+	})
+}
+
+// GetSuggestedFriends - GET /api/v1/friends/suggestions
+func (h *FriendHandler) GetSuggestedFriends(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		respondError(w, http.StatusUnauthorized, "unauthorized", "User ID is required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_user_id", "Invalid user ID format")
+		return
+	}
+
+	limit := 5
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 20 {
+			limit = parsedLimit
+		}
+	}
+
+	users, err := h.friendService.GetSuggestedFriends(r.Context(), userID, limit)
+	if err != nil {
+		h.logger.Error("Failed to get suggested friends", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to get suggestions")
+		return
+	}
+
+	response := make([]UserResponse, 0)
+	for _, user := range users {
+		response = append(response, UserResponse{
+			ID:                 user.ID,
+			Username:           user.Username,
+			Email:              user.Email,
+			DefaultLetterCount: user.DefaultLetterCount,
+			DefaultLanguage:    user.DefaultLanguage,
+			DefaultTimeLimit:   user.DefaultTimeLimit,
+			CreatedAt:          user.CreatedAt,
+		})
+	}
+
+	respondJSON(w, http.StatusOK, response)
 }
 
 func mapFriendError(err error) (int, string, string) {
