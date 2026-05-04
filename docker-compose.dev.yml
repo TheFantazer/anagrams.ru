@@ -11,6 +11,8 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8080
       - VITE_TELEGRAM_BOT_USERNAME=${VITE_TELEGRAM_BOT_USERNAME}
+    networks:
+      - app
     restart: unless-stopped
 
   app:
@@ -29,6 +31,8 @@ services:
     volumes:
       - .:/app
       - /app/tmp
+    networks:
+      - app
     restart: unless-stopped
 
   postgres:
@@ -46,6 +50,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - app
     restart: unless-stopped
 
   redis:
@@ -60,6 +66,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - app
     restart: unless-stopped
 
   migrate:
@@ -71,6 +79,8 @@ services:
         condition: service_healthy
     volumes:
       - ./migrations:/migrations:ro
+    networks:
+      - app
     command:
       - "-path=/migrations"
       - "-database=postgres://${POSTGRES_USER:-anagram}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-anagram}?sslmode=disable"
@@ -79,3 +89,8 @@ services:
 volumes:
   pg_data:
   redis_data:
+
+networks:
+  app:
+    name: app
+    driver: bridge
