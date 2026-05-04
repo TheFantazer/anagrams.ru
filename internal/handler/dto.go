@@ -136,3 +136,14 @@ type DailyStatsResponse struct {
 	LastPlayedDate  *time.Time `json:"last_played_date,omitempty"`
 	TotalDailyGames int        `json:"total_daily_games"`
 }
+
+type SessionInviteResponse struct {
+	ID              uuid.UUID `json:"id"`
+	SessionID       uuid.UUID `json:"session_id"`
+	FromUserID      uuid.UUID `json:"from_user_id"`
+	ToUserID        uuid.UUID `json:"to_user_id"`
+	InvitedUsername string    `json:"invited_username"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}

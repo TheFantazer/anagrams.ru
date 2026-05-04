@@ -351,6 +351,7 @@ func (h *GameHandler) GetSessionResults(w http.ResponseWriter, r *http.Request) 
 			Score:      r.Score,
 			DurationMs: r.DurationMs,
 			PlayedAt:   r.PlayedAt,
+			FoundWords: r.FoundWords,
 		}
 	}
 
@@ -463,14 +464,12 @@ func (h *GameHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if you can join session (for link mode, checks max opponents)
 	canJoin, err := h.service.CanJoinSession(r.Context(), sessionID, userID)
 	if err != nil || !canJoin {
 		respondError(w, http.StatusForbidden, "link_already_used", "This challenge link has already been used")
 		return
 	}
 
-	// Start the game (will join if needed, then mark as started)
 	if err := h.service.StartGame(r.Context(), sessionID, userID); err != nil {
 		h.logger.Error("failed to start game", slog.String("error", err.Error()))
 		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to start game")
@@ -478,6 +477,50 @@ func (h *GameHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, map[string]bool{"started": true})
+}
+
+func (h *GameHandler) GetSessionInvites(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := r.PathValue("id")
+	if sessionIDStr == "" {
+		respondError(w, http.StatusBadRequest, "missing_id", "Session ID is required")
+		return
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid_uuid", "Invalid session ID format")
+		return
+	}
+
+	invites, err := h.sessionInviteRepo.GetBySessionID(r.Context(), sessionID)
+	if err != nil {
+		h.logger.Error("failed to get session invites", slog.String("error", err.Error()))
+		respondError(w, http.StatusInternalServerError, "internal_error", "Failed to fetch invites")
+		return
+	}
+
+	response := make([]SessionInviteResponse, len(invites))
+
+	for i, invite := range invites {
+		resp := SessionInviteResponse{
+			ID:         invite.ID,
+			SessionID:  invite.SessionID,
+			FromUserID: invite.FromUserID,
+			ToUserID:   invite.ToUserID,
+			Status:     invite.Status,
+			CreatedAt:  invite.CreatedAt,
+			UpdatedAt:  invite.UpdatedAt,
+		}
+
+		user, err := h.authService.GetUserByID(r.Context(), invite.ToUserID)
+		if err == nil && user != nil {
+			resp.InvitedUsername = user.Username
+		}
+
+		response[i] = resp
+	}
+
+	respondJSON(w, http.StatusOK, response)
 }
 
 func mapDomainError(err error) (int, string, string) {

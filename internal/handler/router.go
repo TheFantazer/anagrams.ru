@@ -34,7 +34,7 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	mux.HandleFunc("POST /api/v1/sessions/{id}/results", gameHandler.SubmitResult)
 	mux.HandleFunc("GET /api/v1/sessions/{id}/results", gameHandler.GetSessionResults)
 	mux.HandleFunc("POST /api/v1/sessions/{id}/invites", gameHandler.CreateSessionInvite)
-
+	mux.HandleFunc("GET /api/v1/sessions/{id}/invites", gameHandler.GetSessionInvites)
 	// Auth endpoints
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)

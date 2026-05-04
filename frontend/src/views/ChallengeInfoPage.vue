@@ -31,6 +31,12 @@ const timeLimitLabel = computed(() => {
   return remainingSeconds > 0 ? `${minutes}:${String(remainingSeconds).padStart(2, '0')}` : `${minutes}:00`
 })
 
+// Check if current user has played this challenge
+const hasUserPlayed = computed(() => {
+  if (!session.value || !userStore.userId) return false
+  return session.value.results?.some(r => r.user_id === userStore.userId) || false
+})
+
 async function loadSession() {
   loading.value = true
   error.value = null
@@ -110,7 +116,7 @@ onMounted(() => {
               :key="i"
               class="challenge-tile"
             >
-              {{ session.hide_letters ? '?' : letter }}
+              {{ hasUserPlayed ? letter : '?' }}
             </span>
           </div>
 
