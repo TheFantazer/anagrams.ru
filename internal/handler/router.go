@@ -44,8 +44,9 @@ func NewRouter(gameService service.GameService, authService service.AuthService,
 	mux.HandleFunc("GET /api/v1/auth/stats", authHandler.GetStats)
 	mux.HandleFunc("GET /api/v1/leaderboard", authHandler.GetLeaderboard)
 
-	// Telegram auth endpoint
+	// Telegram endpoints
 	mux.HandleFunc("GET /api/v1/auth/telegram/callback", telegramHandler.TelegramCallback)
+	mux.HandleFunc("POST /api/v1/bot-webhook", telegramHandler.BotWebhook)
 
 	// Friend endpoints
 	mux.HandleFunc("POST /api/v1/friends/requests", friendHandler.SendFriendRequest)

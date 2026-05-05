@@ -147,3 +147,87 @@ type SessionInviteResponse struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
+
+// TelegramUpdate represents an incoming update from Telegram Bot API
+type TelegramUpdate struct {
+	UpdateID           int64               `json:"update_id"`
+	Message            *TelegramMessage    `json:"message,omitempty"`
+	InlineQuery        *InlineQuery        `json:"inline_query,omitempty"`
+	ChosenInlineResult *ChosenInlineResult `json:"chosen_inline_result,omitempty"`
+}
+
+// TelegramMessage represents a message from Telegram
+type TelegramMessage struct {
+	MessageID int64         `json:"message_id"`
+	From      *TelegramUser `json:"from,omitempty"`
+	Chat      *TelegramChat `json:"chat,omitempty"`
+	Text      string        `json:"text,omitempty"`
+}
+
+// TelegramUser represents a Telegram user
+type TelegramUser struct {
+	ID        int64  `json:"id"`
+	IsBot     bool   `json:"is_bot"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name,omitempty"`
+	Username  string `json:"username,omitempty"`
+}
+
+// TelegramChat represents a Telegram chat
+type TelegramChat struct {
+	ID   int64  `json:"id"`
+	Type string `json:"type"`
+}
+
+// InlineQuery represents an inline query from Telegram
+type InlineQuery struct {
+	ID     string        `json:"id"`
+	From   *TelegramUser `json:"from"`
+	Query  string        `json:"query"`
+	Offset string        `json:"offset"`
+}
+
+// ChosenInlineResult represents when user chooses an inline result
+type ChosenInlineResult struct {
+	ResultID string        `json:"result_id"`
+	From     *TelegramUser `json:"from"`
+	Query    string        `json:"query"`
+}
+
+// InlineQueryResultArticle represents an article result for inline query
+type InlineQueryResultArticle struct {
+	Type                string                   `json:"type"`
+	ID                  string                   `json:"id"`
+	Title               string                   `json:"title"`
+	Description         string                   `json:"description,omitempty"`
+	InputMessageContent *InputTextMessageContent `json:"input_message_content"`
+	ReplyMarkup         *InlineKeyboardMarkup    `json:"reply_markup,omitempty"`
+}
+
+// InputTextMessageContent represents text message content
+type InputTextMessageContent struct {
+	MessageText string `json:"message_text"`
+}
+
+// InlineKeyboardMarkup represents an inline keyboard
+type InlineKeyboardMarkup struct {
+	InlineKeyboard [][]InlineKeyboardButton `json:"inline_keyboard"`
+}
+
+// InlineKeyboardButton represents a button in inline keyboard
+type InlineKeyboardButton struct {
+	Text   string      `json:"text"`
+	WebApp *WebAppInfo `json:"web_app,omitempty"`
+}
+
+// WebAppInfo represents a Web App
+type WebAppInfo struct {
+	URL string `json:"url"`
+}
+
+// AnswerInlineQueryRequest represents request to answerInlineQuery
+type AnswerInlineQueryRequest struct {
+	InlineQueryID string        `json:"inline_query_id"`
+	Results       []interface{} `json:"results"`
+	CacheTime     int           `json:"cache_time,omitempty"`
+}

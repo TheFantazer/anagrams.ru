@@ -72,6 +72,11 @@ const router = createRouter({
             path: '/privacy',
             name: 'privacy',
             component: () => import('../views/PrivacyPage.vue')
+        },
+        {
+            path: '/tg',
+            name: 'telegram-app',
+            component: () => import('../views/HomePage.vue') // Temporary: redirect to home
         }
     ]
 })
