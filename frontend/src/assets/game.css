@@ -131,21 +131,21 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   max-width: 560px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 }
 .letter-tile {
-  width: 64px; height: 72px;
+  width: 58px; height: 68px;
   border-radius: 14px;
   background: var(--navy);
   color: var(--milk);
   display: grid; place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: 24px;
   cursor: pointer;
   user-select: none;
   transition: transform 0.18s var(--ease-out), box-shadow 0.18s, background 0.18s;
@@ -379,10 +379,29 @@
     padding: 8px 12px;
   }
   .letters-grid {
-    gap: 8px;
-    padding: 0 8px;
+    display: grid !important;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    flex-wrap: nowrap;
   }
-  .letter-tile { width: 52px; height: 60px; font-size: 22px; }
+
+  /* Динамические колонки в зависимости от количества букв */
+  .letters-grid[data-letter-count="6"] { grid-template-columns: repeat(6, 1fr); gap: 7px; }
+  .letters-grid[data-letter-count="7"] { grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .letters-grid[data-letter-count="8"] { grid-template-columns: repeat(8, 1fr); gap: 6px; }
+
+  .letter-tile {
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
+    height: 50px;
+    font-size: clamp(16px, 3.5vw, 20px);
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
   .game-input {
     min-width: 0;
     font-size: 24px;
@@ -392,6 +411,7 @@
   .game-input-wrap {
     padding: 0 12px;
     max-width: 100%;
+    align-items: stretch;
   }
   .letter-actions {
     width: 100%;

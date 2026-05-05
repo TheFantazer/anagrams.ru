@@ -418,7 +418,7 @@ const sortedDisplayWords = computed(() => {
         </div>
 
         <!-- Letter Tiles -->
-        <div class="letters-grid">
+        <div class="letters-grid" :data-letter-count="gameStore.gameLetters.length">
           <div
             v-for="(letter, i) in gameStore.gameLetters"
             :key="i"
