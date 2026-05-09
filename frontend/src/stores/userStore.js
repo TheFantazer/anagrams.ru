@@ -19,6 +19,9 @@ export const useUserStore = defineStore('user', () => {
   const soloLetters = ref(7)
   const soloLang = ref('ru')
 
+  // UI language preference (separate from game language)
+  const uiLanguage = ref(localStorage.getItem('anagram_ui_lang') || 'en')
+
   const loadUser = () => {
     const stored = localStorage.getItem('anagram_user')
     if (stored) {
@@ -190,6 +193,11 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function setUiLanguage(lang) {
+    uiLanguage.value = lang
+    localStorage.setItem('anagram_ui_lang', lang)
+  }
+
   return {
     userId,
     username,
@@ -204,6 +212,7 @@ export const useUserStore = defineStore('user', () => {
     soloTime,
     soloLetters,
     soloLang,
+    uiLanguage,
     loginTab,
     lbPeriod,
     easterEgg,
@@ -215,6 +224,7 @@ export const useUserStore = defineStore('user', () => {
     setShowSoloSettings,
     setLoginTab,
     setLbPeriod,
+    setUiLanguage,
     triggerEasterEgg,
     checkKonami,
     signOut,

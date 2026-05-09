@@ -9,7 +9,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "settings": "Settings",
-    "help": "How to play"
+    "help": "How to play",
+    "language": "Language"
   },
   "history": {
     "loginToSee": "Log In to see your match history",

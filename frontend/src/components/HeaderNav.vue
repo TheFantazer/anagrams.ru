@@ -5,7 +5,7 @@ import { useUserStore } from '../stores/userStore'
 import { useGameStore } from '../stores/gameStore'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
@@ -111,6 +111,17 @@ const userInitial = computed(() => {
   if (!userStore.user?.username) return '?'
   return userStore.user.username[0].toUpperCase()
 })
+
+// Language toggle - sync locale with userStore on mount
+if (userStore.uiLanguage) {
+  locale.value = userStore.uiLanguage
+}
+
+function toggleLanguage() {
+  const newLang = locale.value === 'en' ? 'ru' : 'en'
+  locale.value = newLang
+  userStore.setUiLanguage(newLang)
+}
 </script>
 
 <template>
@@ -166,6 +177,11 @@ const userInitial = computed(() => {
             <circle cx="12" cy="12" r="10"/>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
           </svg>
+        </button>
+
+        <!-- Language Toggle -->
+        <button class="nav-lang" :title="$t('nav.language')" @click="toggleLanguage">
+          {{ locale === 'en' ? 'RU' : 'EN' }}
         </button>
 
         <!-- Sign In / Avatar -->
@@ -238,6 +254,17 @@ const userInitial = computed(() => {
         </svg>
         {{ link.label }}
         <span v-if="link.badge && link.badge > 0" class="nav-badge">{{ link.badge }}</span>
+      </button>
+
+      <div class="hr" />
+
+      <!-- Language Toggle -->
+      <button class="nav-link" @click="toggleLanguage">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M1 12h6M17 12h6M12 1v6M12 17v6"/>
+        </svg>
+        {{ $t('nav.language') }}: {{ locale === 'en' ? 'RU' : 'EN' }}
       </button>
 
       <div class="hr" />
@@ -425,6 +452,32 @@ const userInitial = computed(() => {
   background: var(--milk-2);
   color: var(--navy);
   border-color: var(--border-default);
+}
+
+.nav-lang {
+  min-width: 42px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  color: var(--fg-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-std);
+  text-transform: uppercase;
+}
+
+.nav-lang:hover {
+  background: var(--milk-2);
+  color: var(--navy);
+  border-color: var(--border-default);
+  transform: translateY(-1px);
 }
 
 .nav-pill {
